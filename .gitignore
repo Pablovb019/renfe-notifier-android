@@ -22,10 +22,17 @@
 .DS_Store
 Thumbs.db
 
+# Backend Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.*
+
 # Secrets
 *.keystore
 *.jks
 *.p12
 *.pem
-.env
-*.env

@@ -1,0 +1,10 @@
+{
+  "MADRID (TODAS)": {
+    "cdgoEstacion": "2800",
+    "nmroPrioridad": 1
+  },
+  "BARCELONA SANTS": {
+    "cdgoEstacion": "0875",
+    "nmroPrioridad": 1
+  }
+}
