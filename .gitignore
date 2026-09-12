@@ -1,0 +1,31 @@
+# Claude Code
+.claude/
+
+# Android
+/.gradle
+/app/build/
+/build/
+/local.properties
+/.idea/
+/*.iml
+
+# Java/Kotlin
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.keystore
+*.jks
+*.p12
+*.pem
+.env
+*.env
