@@ -1,38 +1,114 @@
-# Claude Code
-.claude/
+# ==========================================
+# Secretos y Credenciales
+# ==========================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+*firebase*.json
+service-account*.json
+token.json
+credentials.json
 
-# Android
-/.gradle
-/app/build/
-/build/
-/local.properties
-/.idea/
-/*.iml
+# ==========================================
+# Bases de datos y almacenamiento local
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
+data/*.db
+data/*.sqlite*
 
-# Java/Kotlin
-*.class
-*.jar
-*.war
-*.ear
-
-# Logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Backend Python
+# ==========================================
+# Python (Backend)
+# ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Environment variables
-.env
-.env.*
+# ==========================================
+# Android & Gradle
+# ==========================================
+.gradle/
+build/
+*/build/
+captures/
+*.apk
+*.ap_
+*.aab
+local.properties
+.bundle/
 
-# Secrets
-*.keystore
-*.jks
-*.p12
-*.pem
+# ==========================================
+# IDEs y Editores de código
+# ==========================================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# ==========================================
+# Logs y Archivos Temporales
+# ==========================================
+*.log
+logs/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# ==========================================
+# Backups y Archivos de Seguridad
+# ==========================================
+*.bak
+*.backup
+backups/
+*.old
+
+# ==========================================
+# Skills de desarrollo local (Antigravity)
+# ==========================================
+.agents/

@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-09-14T21:13:42.121204+00:00",
+  "environment": "local-windows",
+  "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "results": [
+    {
+      "name": "1 seguimiento, 1 grupo",
+      "followups": 1,
+      "groups": 1,
+      "concurrency": 2,
+      "duration_s": 0.061,
+      "cpu_percent_avg": 9.1,
+      "memory_mb_start": 42.8,
+      "memory_mb_end": 44.3,
+      "memory_delta_mb": 1.5,
+      "disk_delta_kb": 0.0,
+      "http_requests": 5,
+      "bytes_received": 12450,
+      "logical_queries": 1,
+      "search_calls": 1
+    },
+    {
+      "name": "5 seguimientos, 5 grupos (sin agrupaci\u00f3n)",
+      "followups": 5,
+      "groups": 5,
+      "concurrency": 2,
+      "duration_s": 0.067,
+      "cpu_percent_avg": 12.6,
+      "memory_mb_start": 44.3,
+      "memory_mb_end": 44.4,
+      "memory_delta_mb": 0.1,
+      "disk_delta_kb": 0.0,
+      "http_requests": 10,
+      "bytes_received": 24900,
+      "logical_queries": 2,
+      "search_calls": 2
+    },
+    {
+      "name": "5 seguimientos, 1 grupo (agrupaci\u00f3n total)",
+      "followups": 5,
+      "groups": 1,
+      "concurrency": 2,
+      "duration_s": 0.142,
+      "cpu_percent_avg": 6.2,
+      "memory_mb_start": 44.4,
+      "memory_mb_end": 43.6,
+      "memory_delta_mb": -0.7,
+      "disk_delta_kb": 0.0,
+      "http_requests": 5,
+      "bytes_received": 12450,
+      "logical_queries": 1,
+      "search_calls": 1
+    },
+    {
+      "name": "5 seguimientos, 1 grupo, concurrencia 1",
+      "followups": 5,
+      "groups": 1,
+      "concurrency": 1,
+      "duration_s": 0.151,
+      "cpu_percent_avg": 11.8,
+      "memory_mb_start": 43.6,
+      "memory_mb_end": 44.3,
+      "memory_delta_mb": 0.6,
+      "disk_delta_kb": 0.0,
+      "http_requests": 5,
+      "bytes_received": 12450,
+      "logical_queries": 1,
+      "search_calls": 1
+    },
+    {
+      "name": "5 seguimientos, 1 grupo, concurrencia 2",
+      "followups": 5,
+      "groups": 1,
+      "concurrency": 2,
+      "duration_s": 0.142,
+      "cpu_percent_avg": 15.6,
+      "memory_mb_start": 44.3,
+      "memory_mb_end": 44.3,
+      "memory_delta_mb": 0.0,
+      "disk_delta_kb": 0.0,
+      "http_requests": 5,
+      "bytes_received": 12450,
+      "logical_queries": 1,
+      "search_calls": 1
+    }
+  ],
+  "analysis": {
+    "grouping_saves_requests": 5,
+    "grouping_saves_bytes": 12450,
+    "selenium_needed": false,
+    "selenium_rationale": "HTTP DWR funciona; Selenium a\u00f1ade 150-300 MB RAM en e2-micro (1 GB), riesgo OOM",
+    "missing_vm_measurements": [
+      "Latencia real Renfe desde GCP",
+      "CPU/RAM carga sostenida 1h",
+      "GC Python bajo carga",
+      "SQLite WAL concurrente",
+      "Bytes facturados vs app",
+      "Arranque docker compose + health check"
+    ]
+  }
+}
