@@ -1,0 +1,90 @@
+# CI de Android (paso 27). Compilación debug + análisis estático + tests unitarios.
+# No usa secretos de producción; la app compila y corre tests sin google-services.json
+# (guards en tiempo de ejecución). Acciones fijadas por SHA.
+#
+# - Disparo: push y pull requests sobre main.
+# - Detección de cambios con dorny/paths-filter: paths android/** y este workflow.
+# - Gate all-checks-ok con if: always() para que ningún check obligatorio quede
+#   bloqueado por filtros de ruta (aprueba si success o skipped).
+# - JDK 17 (Temurin) coincide con la compilación local (AGP 8.5.2, Gradle 8.9).
+# - Caché Gradle con gradle/actions/setup-gradle.
+# - Permisos mínimos, concurrency cancel-in-progress, timeout 15 min.
+# - Artefacto APK debug con retención 1 día (corta, ahorra cuota gratuita).
+
+name: android-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Filtrar cambios Android
+        id: filter
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
+        with:
+          filters: |
+            android:
+              - 'android/**'
+              - '.github/workflows/android-ci.yml'
+
+  android-ci:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Configurar JDK 17 (Temurin) + caché Gradle
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      - name: Configurar caché Gradle (wrapper + deps)
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+      - name: Análisis estático (lintDebug)
+        run: ./gradlew :app:lintDebug --no-daemon
+      - name: Pruebas unitarias (testDebugUnitTest)
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Compilar APK debug (assembleDebug)
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Subir APK debug (retención 1 día)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+
+  all-checks-ok:
+    needs: android-ci
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar resultado de CI Android
+        run: |
+          result="${{ needs.android-ci.result }}"
+          if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+            echo "CI de Android finalizo con estado: $result"
+            exit 1
+          fi
+          echo "CI de Android OK ($result)"

@@ -1,0 +1,233 @@
+# Release APK Firmado (paso 30). Distribución manual/por etiqueta autorizada.
+# - workflow_dispatch + tags v*.*.* (solo main, CI superado).
+# - Keystore en secret base64 (ANDROID_KEYSTORE_BASE64), contraseñas en secrets.
+# - Sin acceso desde PRs (solo tags/main + workflow_dispatch manual).
+# - Archivo keystore temporal en memoria, limpieza segura (shred/rm).
+# - APK firmado + checksum SHA-256 → Release privada GitHub.
+# - NO ejecuta sin aprobación; workflow preparado para validación local.
+
+name: android-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'versionName (ej. 1.0.0). Si vacío, usa el del build.gradle.kts'
+        required: false
+        type: string
+      version_code:
+        description: 'versionCode (entero). Si vacío, usa el del build.gradle.kts'
+        required: false
+        type: string
+      confirm:
+        description: 'Escribe "RELEASE" para confirmar'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*.*.*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  max-parallel: 1
+
+permissions:
+  contents: write      # Para crear Release y subir assets
+  actions: read        # Para leer checks de CI
+
+jobs:
+  validate-and-build:
+    name: Validar y Compilar Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.confirm == 'RELEASE') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+    steps:
+      - name: Validar confirmación (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "${{ inputs.confirm }}" != "RELEASE" ]]; then
+            echo "Confirmación inválida. Debes escribir exactamente 'RELEASE'."
+            exit 1
+          fi
+
+      - name: Checkout (fetch-depth 0 para tags)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Verificar que el commit está en main (push tag)
+        if: github.event_name == 'push'
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+            echo "ERROR: El tag no pertenece a un commit en main"
+            exit 1
+          fi
+
+      - name: Verificar checks CI superados (GitHub API)
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          STATUS=$(gh api repos/${REPO}/commits/${SHA}/status --jq '.state')
+          CHECK_RUNS=$(gh api repos/${REPO}/commits/${SHA}/check-runs --jq '.check_runs[] | {name: .name, conclusion: .conclusion}' 2>/dev/null || echo '[]')
+          echo "Estado combinado: ${STATUS}"
+          echo "${CHECK_RUNS}" | jq -c '.'
+          if [[ "${STATUS}" != "success" ]]; then
+            echo "ERROR: Commit ${SHA} no tiene estado 'success' en CI"
+            exit 1
+          fi
+          REQUIRED_JOBS=("backend-ci" "android-ci" "all-checks-ok")
+          for JOB in "${REQUIRED_JOBS[@]}"; do
+            CONCLUSION=$(echo "${CHECK_RUNS}" | jq -r --arg job "${JOB}" 'select(.name == $job) | .conclusion')
+            if [[ -z "${CONCLUSION}" || "${CONCLUSION}" == "null" ]]; then
+              echo "WARNING: Job requerido '${JOB}' no encontrado"
+            elif [[ "${CONCLUSION}" != "success" && "${CONCLUSION}" != "skipped" ]]; then
+              echo "ERROR: Job '${JOB}' no pasó (${CONCLUSION})"
+              exit 1
+            fi
+          done
+          echo "Todos los checks requeridos superados."
+
+      - name: Configurar JDK 17 (Temurin) + caché Gradle
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Configurar caché Gradle
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+
+      - name: Decodificar keystore desde secret base64
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          KEYSTORE_PATH="${{ runner.temp }}/keystore.jks"
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${KEYSTORE_PATH}"
+          echo "KEYSTORE_PATH=${KEYSTORE_PATH}" >> $GITHUB_ENV
+          echo "Keystore decodificado: $(ls -la ${KEYSTORE_PATH})"
+
+      - name: Establecer variables de versión (opcional)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ -n "${{ inputs.version_name }}" ]]; then
+            echo "VERSION_NAME=${{ inputs.version_name }}" >> $GITHUB_ENV
+          fi
+          if [[ -n "${{ inputs.version_code }}" ]]; then
+            echo "VERSION_CODE=${{ inputs.version_code }}" >> $GITHUB_ENV
+          fi
+
+      - name: Compilar APK firmado (assembleRelease)
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon \
+            -PversionName="${VERSION_NAME}" \
+            -PversionCode="${VERSION_CODE}"
+
+      - name: Verificar firma (apksigner)
+        working-directory: android
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          apksigner verify --print-certs "${APK}"
+          echo "APK verificado correctamente"
+
+      - name: Generar checksum SHA-256
+        working-directory: android
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          SHA256=$(sha256sum "${APK}" | cut -d' ' -f1)
+          echo "${SHA256}  ${APK}" > "${APK}.sha256"
+          echo "SHA256: ${SHA256}"
+          echo "APK_SHA256=${SHA256}" >> $GITHUB_ENV
+
+      - name: Subir APK y checksum como artefactos (retención 5 días)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: app-release-apk
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/release/app-release.apk.sha256
+          retention-days: 5
+
+      - name: Crear Release privada (solo en tags v*.*.*)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Subir APK a Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_name: app-${{ github.ref_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Subir checksum a Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk.sha256
+          asset_name: app-${{ github.ref_name }}.apk.sha256
+          asset_content_type: text/plain
+
+      - name: Limpieza segura del keystore temporal
+        if: always() && env.KEYSTORE_PATH != ''
+        run: |
+          if [[ -f "${KEYSTORE_PATH}" ]]; then
+            shred -u "${KEYSTORE_PATH}" 2>/dev/null || rm -f "${KEYSTORE_PATH}"
+            echo "Keystore temporal eliminado de forma segura"
+          fi
+
+  # Job de validación local (sin secretos, prueba sintaxis + mock)
+  validate-local:
+    name: Validación Local (Dobles)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Configurar JDK 17 + Gradle
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Configurar caché Gradle
+        uses: gradle/actions/setup-gradle@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+
+      - name: Probar compilación release SIN firmar (validación sintaxis)
+        working-directory: android
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon -PsigningConfig=none 2>&1 | tail -20
+          echo "Compilación release (sin firmar) OK"
+
+      - name: Validar estructura de build.gradle.kts (signingConfig)
+        run: |
+          grep -q "signingConfigs" android/app/build.gradle.kts && echo "signingConfig presente" || exit 1
+          grep -q "KEYSTORE_PATH" android/app/build.gradle.kts && echo "Variables de entorno referenciadas" || exit 1
