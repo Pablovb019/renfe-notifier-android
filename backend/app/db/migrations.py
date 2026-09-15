@@ -126,7 +126,9 @@ def apply_migrations(connection: sqlite3.Connection) -> None:
             if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
                 logger.warning(f"Migración {version} ya aplicada parcialmente, continuando: {e}")
                 # Marcar la versión como aplicada aunque falle parcialmente
-                connection.execute("INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)", (version,))
+                connection.execute(
+                    "INSERT OR IGNORE INTO schema_migrations(version) VALUES (?)", (version,)
+                )
                 connection.commit()
             else:
                 connection.rollback()

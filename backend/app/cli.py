@@ -39,18 +39,28 @@ def build_parser() -> argparse.ArgumentParser:
     devices.add_argument("--revoke", metavar="DEVICE_ID", help="Revoca un dispositivo")
     devices.add_argument("--revoke-all", action="store_true", help="Revoca todos los dispositivos")
 
-    backup_cmd = sub.add_parser("backup", help="Crea backup consistente de la base de datos (WAL-aware)")
+    backup_cmd = sub.add_parser(
+        "backup", help="Crea backup consistente de la base de datos (WAL-aware)"
+    )
     backup_cmd.add_argument("--output", "-o", metavar="PATH", help="Ruta del archivo de backup")
 
     restore_cmd = sub.add_parser("restore", help="Restaura base de datos desde backup")
-    restore_cmd.add_argument("--input", "-i", metavar="PATH", required=True, help="Ruta del backup a restaurar")
-    restore_cmd.add_argument("--force", action="store_true", help="Sobrescribe BD existente sin confirmar")
+    restore_cmd.add_argument(
+        "--input", "-i", metavar="PATH", required=True, help="Ruta del backup a restaurar"
+    )
+    restore_cmd.add_argument(
+        "--force", action="store_true", help="Sobrescribe BD existente sin confirmar"
+    )
 
     verify_cmd = sub.add_parser("verify", help="Verifica integridad de la base de datos")
-    verify_cmd.add_argument("--path", metavar="PATH", help="Ruta de la BD a verificar (por defecto la configurada)")
+    verify_cmd.add_argument(
+        "--path", metavar="PATH", help="Ruta de la BD a verificar (por defecto la configurada)"
+    )
 
     version_cmd = sub.add_parser("version", help="Muestra versión de esquema aplicada")
-    version_cmd.add_argument("--path", metavar="PATH", help="Ruta de la BD (por defecto la configurada)")
+    version_cmd.add_argument(
+        "--path", metavar="PATH", help="Ruta de la BD (por defecto la configurada)"
+    )
 
     return parser
 
@@ -111,7 +121,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         target = settings.database_path
         if target.exists() and not args.force:
-            print(f"La BD destino ya existe: {target}. Usa --force para sobrescribir.", file=sys.stderr)
+            print(
+                f"La BD destino ya existe: {target}. Usa --force para sobrescribir.",
+                file=sys.stderr,
+            )
             return 1
         ok, msg = verify_database_integrity(input_path)
         if not ok:

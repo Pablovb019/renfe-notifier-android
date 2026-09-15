@@ -166,7 +166,10 @@
   ```python
   def _match_followup_train(available_trains, dep, arr):
       for train in available_trains:
-          if train["SALIDA"].strftime("%H:%M") == dep and train["LLEGADA"].strftime("%H:%M") == arr:
+          if (
+              train["SALIDA"].strftime("%H:%M") == dep
+              and train["LLEGADA"].strftime("%H:%M") == arr
+          ):
               return train
       return None
   ```

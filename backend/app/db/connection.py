@@ -68,9 +68,7 @@ def get_database_version(db_path: Path) -> int | None:
         return None
     conn = sqlite3.connect(db_path)
     try:
-        cursor = conn.execute(
-            "SELECT MAX(version) FROM schema_migrations"
-        )
+        cursor = conn.execute("SELECT MAX(version) FROM schema_migrations")
         row = cursor.fetchone()
         return row[0] if row and row[0] is not None else None
     except sqlite3.DatabaseError:

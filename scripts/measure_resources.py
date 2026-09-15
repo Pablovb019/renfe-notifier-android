@@ -38,7 +38,9 @@ class FakeSearch:
         self._delay = delay_s
         self.call_count = 0
 
-    async def __call__(self, *, origin, destination, travel_date, plaza_h) -> SearchResult:
+    async def __call__(
+        self, *, origin, destination, travel_date, plaza_h
+    ) -> SearchResult:
         self.call_count += 1
         await asyncio.sleep(self._delay)  # Simula latencia de red
         return self._results[(self.call_count - 1) % len(self._results)]
@@ -50,13 +52,25 @@ def create_test_followups(count: int, same_group: bool = False) -> list[FollowUp
     now = datetime.now(UTC)
     followups = []
     # Usar códigos reales del catálogo: MADRI (60000), BARCE (71801), etc.
-    origin_codes = ["60000", "17000", "51003", "48020", "15000"]  # Madrid, Girona, Valencia, Bilbao, A Coruña
-    dest_codes = ["71801", "17000", "51003", "48020", "15000"]    # Barcelona, Girona, Valencia, Bilbao, A Coruña
-    
+    origin_codes = [
+        "60000",
+        "17000",
+        "51003",
+        "48020",
+        "15000",
+    ]  # Madrid, Girona, Valencia, Bilbao, A Coruña
+    dest_codes = [
+        "71801",
+        "17000",
+        "51003",
+        "48020",
+        "15000",
+    ]  # Barcelona, Girona, Valencia, Bilbao, A Coruña
+
     for i in range(count):
         if same_group:
             # Mismo grupo: misma ruta, fecha, plaza_h
-            origin_code = "60000"   # Madrid
+            origin_code = "60000"  # Madrid
             destination_code = "71801"  # Barcelona
             travel_date = base_date
             plaza_h = False
@@ -87,39 +101,66 @@ def create_test_followups(count: int, same_group: bool = False) -> list[FollowUp
 def create_fake_search_results() -> list[SearchResult]:
     """Crea resultados de búsqueda simulados con métricas realistas."""
     from decimal import Decimal
+
     # Tren con disponibilidad
     trains_with_availability = [
-        type('Train', (), {
-            'identifier': 'AVE-123',
-            'departure': dtime(8, 0),
-            'arrival': dtime(10, 30),
-            'availability': Availability.AVAILABLE,
-            'price': Decimal('45.50'),
-        })()
+        type(
+            "Train",
+            (),
+            {
+                "identifier": "AVE-123",
+                "departure": dtime(8, 0),
+                "arrival": dtime(10, 30),
+                "availability": Availability.AVAILABLE,
+                "price": Decimal("45.50"),
+            },
+        )()
     ]
     # Tren sin disponibilidad
     trains_no_availability = [
-        type('Train', (), {
-            'identifier': 'AVE-456',
-            'departure': dtime(12, 0),
-            'arrival': dtime(14, 30),
-            'availability': Availability.NO_AVAILABILITY,
-            'price': None,
-        })()
+        type(
+            "Train",
+            (),
+            {
+                "identifier": "AVE-456",
+                "departure": dtime(12, 0),
+                "arrival": dtime(14, 30),
+                "availability": Availability.NO_AVAILABILITY,
+                "price": None,
+            },
+        )()
     ]
 
     results = [
         SearchResult(
-            trains=TrainList(status=ParseStatus.OK, plaza_h_requested=False, trains=trains_with_availability),
-            metrics=type('Metrics', (), {'request_count': 5, 'bytes_received': 12450})()
+            trains=TrainList(
+                status=ParseStatus.OK,
+                plaza_h_requested=False,
+                trains=trains_with_availability,
+            ),
+            metrics=type(
+                "Metrics", (), {"request_count": 5, "bytes_received": 12450}
+            )(),
         ),
         SearchResult(
-            trains=TrainList(status=ParseStatus.OK, plaza_h_requested=False, trains=trains_no_availability),
-            metrics=type('Metrics', (), {'request_count': 5, 'bytes_received': 12450})()
+            trains=TrainList(
+                status=ParseStatus.OK,
+                plaza_h_requested=False,
+                trains=trains_no_availability,
+            ),
+            metrics=type(
+                "Metrics", (), {"request_count": 5, "bytes_received": 12450}
+            )(),
         ),
         SearchResult(
-            trains=TrainList(status=ParseStatus.OK, plaza_h_requested=True, trains=trains_with_availability),
-            metrics=type('Metrics', (), {'request_count': 8, 'bytes_received': 18750})()
+            trains=TrainList(
+                status=ParseStatus.OK,
+                plaza_h_requested=True,
+                trains=trains_with_availability,
+            ),
+            metrics=type(
+                "Metrics", (), {"request_count": 8, "bytes_received": 18750}
+            )(),
         ),
     ]
     return results
@@ -148,10 +189,13 @@ async def run_measurement(
     # Guardar followups
     for fu in followups:
         repo.create(fu)
-        repo.add_episode(fu.followup_id, 0, datetime.now(UTC), fu.seen_available_train_ids)
+        repo.add_episode(
+            fu.followup_id, 0, datetime.now(UTC), fu.seen_available_train_ids
+        )
 
     # Monitoring: resetear contadores del singleton existente (evita problemas de import order)
     from app import monitoring as monitoring_module
+
     with monitoring_module.monitoring._lock:
         monitoring_module.monitoring._logical_queries = 0
         monitoring_module.monitoring._http_requests = 0
@@ -162,6 +206,7 @@ async def run_measurement(
 
     # Scheduler (importar DESPUÉS de resetear monitoring)
     from app.scheduler.service import SchedulerService as _SchedulerService
+
     fake_search = FakeSearch(search_results, delay_s=0.02)
     scheduler = _SchedulerService(
         repository=repo,
@@ -177,7 +222,11 @@ async def run_measurement(
     await asyncio.sleep(0.1)
     cpu_start = process.cpu_percent()
     mem_start = process.memory_info().rss / 1024 / 1024  # MB
-    disk_start = sum(f.stat().st_size for f in Path(settings.database_path).parent.rglob("*") if f.is_file())
+    disk_start = sum(
+        f.stat().st_size
+        for f in Path(settings.database_path).parent.rglob("*")
+        if f.is_file()
+    )
     start_time = time.perf_counter()
 
     # Ejecutar un ciclo
@@ -189,7 +238,11 @@ async def run_measurement(
     await asyncio.sleep(0.1)
     cpu_end = process.cpu_percent()
     mem_end = process.memory_info().rss / 1024 / 1024
-    disk_end = sum(f.stat().st_size for f in Path(settings.database_path).parent.rglob("*") if f.is_file())
+    disk_end = sum(
+        f.stat().st_size
+        for f in Path(settings.database_path).parent.rglob("*")
+        if f.is_file()
+    )
 
     duration = end_time - start_time
     cpu_avg = (cpu_start + cpu_end) / 2
@@ -198,6 +251,7 @@ async def run_measurement(
 
     # Leer métricas del monitoring del módulo
     from app import monitoring as monitoring_module
+
     snap = monitoring_module.monitoring.snapshot()
 
     return {
@@ -221,28 +275,39 @@ async def run_measurement(
 def format_table(results: list[dict]) -> str:
     """Formatea resultados en tabla legible."""
     headers = [
-        "Escenario", "Seguimientos", "Grupos", "Concurrencia",
-        "Duración (s)", "CPU %", "RAM Inicio (MB)", "RAM Delta (MB)",
-        "Disco Delta (KB)", "Peticiones HTTP", "Bytes Recibidos",
-        "Queries Lógicas", "Llamadas Search"
+        "Escenario",
+        "Seguimientos",
+        "Grupos",
+        "Concurrencia",
+        "Duración (s)",
+        "CPU %",
+        "RAM Inicio (MB)",
+        "RAM Delta (MB)",
+        "Disco Delta (KB)",
+        "Peticiones HTTP",
+        "Bytes Recibidos",
+        "Queries Lógicas",
+        "Llamadas Search",
     ]
     rows = []
     for r in results:
-        rows.append([
-            r["name"],
-            str(r["followups"]),
-            str(r["groups"]),
-            str(r["concurrency"]),
-            str(r["duration_s"]),
-            str(r["cpu_percent_avg"]),
-            str(r["memory_mb_start"]),
-            str(r["memory_delta_mb"]),
-            str(r["disk_delta_kb"]),
-            str(r["http_requests"]),
-            str(r["bytes_received"]),
-            str(r["logical_queries"]),
-            str(r["search_calls"]),
-        ])
+        rows.append(
+            [
+                r["name"],
+                str(r["followups"]),
+                str(r["groups"]),
+                str(r["concurrency"]),
+                str(r["duration_s"]),
+                str(r["cpu_percent_avg"]),
+                str(r["memory_mb_start"]),
+                str(r["memory_delta_mb"]),
+                str(r["disk_delta_kb"]),
+                str(r["http_requests"]),
+                str(r["bytes_received"]),
+                str(r["logical_queries"]),
+                str(r["search_calls"]),
+            ]
+        )
 
     # Calcular anchos
     col_widths = [len(h) for h in headers]
@@ -272,16 +337,34 @@ async def main():
     scenarios = [
         # (nombre, followups, same_group, concurrency)
         ("1 seguimiento, 1 grupo", create_test_followups(1, same_group=True), 2),
-        ("5 seguimientos, 5 grupos (sin agrupación)", create_test_followups(5, same_group=False), 2),
-        ("5 seguimientos, 1 grupo (agrupación total)", create_test_followups(5, same_group=True), 2),
-        ("5 seguimientos, 1 grupo, concurrencia 1", create_test_followups(5, same_group=True), 1),
-        ("5 seguimientos, 1 grupo, concurrencia 2", create_test_followups(5, same_group=True), 2),
+        (
+            "5 seguimientos, 5 grupos (sin agrupación)",
+            create_test_followups(5, same_group=False),
+            2,
+        ),
+        (
+            "5 seguimientos, 1 grupo (agrupación total)",
+            create_test_followups(5, same_group=True),
+            2,
+        ),
+        (
+            "5 seguimientos, 1 grupo, concurrencia 1",
+            create_test_followups(5, same_group=True),
+            1,
+        ),
+        (
+            "5 seguimientos, 1 grupo, concurrencia 2",
+            create_test_followups(5, same_group=True),
+            2,
+        ),
     ]
 
     results = []
     for name, followups, concurrency in scenarios:
         print(f"Ejecutando: {name}...")
-        result = await run_measurement(name, followups, search_results, concurrency=concurrency)
+        result = await run_measurement(
+            name, followups, search_results, concurrency=concurrency
+        )
         results.append(result)
 
     print()
@@ -296,23 +379,39 @@ async def main():
 
     # Comparar 1 vs 5 seguimientos sin agrupación
     r1 = next(r for r in results if r["name"] == "1 seguimiento, 1 grupo")
-    r5_nogroup = next(r for r in results if r["name"] == "5 seguimientos, 5 grupos (sin agrupación)")
-    r5_group = next(r for r in results if r["name"] == "5 seguimientos, 1 grupo (agrupación total)")
+    r5_nogroup = next(
+        r for r in results if r["name"] == "5 seguimientos, 5 grupos (sin agrupación)"
+    )
+    r5_group = next(
+        r for r in results if r["name"] == "5 seguimientos, 1 grupo (agrupación total)"
+    )
 
-    print(f"1 seguimiento:           {r1['duration_s']:.3f}s, {r1['http_requests']} req, {r1['bytes_received']:,} bytes")
-    print(f"5 seguimientos (5 grupos): {r5_nogroup['duration_s']:.3f}s, {r5_nogroup['http_requests']} req, {r5_nogroup['bytes_received']:,} bytes")
-    print(f"5 seguimientos (1 grupo):  {r5_group['duration_s']:.3f}s, {r5_group['http_requests']} req, {r5_group['bytes_received']:,} bytes")
+    print(
+        f"1 seguimiento:           {r1['duration_s']:.3f}s, {r1['http_requests']} req, {r1['bytes_received']:,} bytes"
+    )
+    print(
+        f"5 seguimientos (5 grupos): {r5_nogroup['duration_s']:.3f}s, {r5_nogroup['http_requests']} req, {r5_nogroup['bytes_received']:,} bytes"
+    )
+    print(
+        f"5 seguimientos (1 grupo):  {r5_group['duration_s']:.3f}s, {r5_group['http_requests']} req, {r5_group['bytes_received']:,} bytes"
+    )
     print()
 
     # Beneficio de agrupación
     group_saved_requests = r5_nogroup["http_requests"] - r5_group["http_requests"]
     group_saved_bytes = r5_nogroup["bytes_received"] - r5_group["bytes_received"]
-    print(f"Ahorro por agrupacion (5->1 grupo): {group_saved_requests} peticiones, {group_saved_bytes:,} bytes ({(group_saved_bytes/r5_nogroup['bytes_received']*100):.1f}%)")
+    print(
+        f"Ahorro por agrupacion (5->1 grupo): {group_saved_requests} peticiones, {group_saved_bytes:,} bytes ({(group_saved_bytes / r5_nogroup['bytes_received'] * 100):.1f}%)"
+    )
     print()
 
     # Concurrencia
-    r_conc1 = next(r for r in results if r["name"] == "5 seguimientos, 1 grupo, concurrencia 1")
-    r_conc2 = next(r for r in results if r["name"] == "5 seguimientos, 1 grupo, concurrencia 2")
+    r_conc1 = next(
+        r for r in results if r["name"] == "5 seguimientos, 1 grupo, concurrencia 1"
+    )
+    r_conc2 = next(
+        r for r in results if r["name"] == "5 seguimientos, 1 grupo, concurrencia 2"
+    )
     print(f"Concurrencia 1: {r_conc1['duration_s']:.3f}s")
     print(f"Concurrencia 2: {r_conc2['duration_s']:.3f}s")
     print()
@@ -342,8 +441,12 @@ async def main():
     print()
     print("CONCLUSIÓN: HTTP DWR basta. Selenium NO necesario para el caso base.")
     print("  - Selenium añadiría: Chrome (~150-300 MB RAM), ChromeDriver, complejidad")
-    print(f"  - e2-micro (1 GB) tendría: App (~{r1['memory_mb_start']:.0f} MB) + Selenium (~200 MB) = ~{r1['memory_mb_start']+200:.0f} MB")
-    print(f"  - Margen: 1 GB - {r1['memory_mb_start']+200:.0f} MB = {1024 - r1['memory_mb_start'] - 200:.0f} MB para SO + buffer")
+    print(
+        f"  - e2-micro (1 GB) tendría: App (~{r1['memory_mb_start']:.0f} MB) + Selenium (~200 MB) = ~{r1['memory_mb_start'] + 200:.0f} MB"
+    )
+    print(
+        f"  - Margen: 1 GB - {r1['memory_mb_start'] + 200:.0f} MB = {1024 - r1['memory_mb_start'] - 200:.0f} MB para SO + buffer"
+    )
     print("  - RIESGO: Muy ajustado. Si HTTP funciona, EVITAR Selenium.")
     print()
 
@@ -361,6 +464,7 @@ async def main():
 
     # Guardar resultados JSON
     import json
+
     output = {
         "timestamp": datetime.now(UTC).isoformat(),
         "environment": "local-windows",
