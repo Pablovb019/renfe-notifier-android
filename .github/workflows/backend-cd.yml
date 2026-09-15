@@ -70,15 +70,19 @@ jobs:
           echo "Commit válido en main: ${SHA} (${COMMIT_MSG})"
 
       - name: Verificar checks de CI superados (GitHub API)
-        id: check-ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SHA="${{ inputs.deploy_sha }}"
           REPO="${{ github.repository }}"
           # Obtener el estado combinado de checks del commit
-          STATUS=$(gh api repos/${REPO}/commits/${SHA}/status --jq '.state')
-          CHECK_RUNS=$(gh api repos/${REPO}/commits/${SHA}/check-runs --jq '.check_runs[] | {name: .name, conclusion: .conclusion}' 2>/dev/null || echo '[]')
+          STATUS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/commits/${SHA}/status" | jq -r '.state')
+          # Obtener check runs
+          CHECK_RUNS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/commits/${SHA}/check-runs" | jq -c '.check_runs[] | {name: .name, conclusion: .conclusion}')
           echo "Estado combinado: ${STATUS}"
           echo "Check runs:"
           echo "${CHECK_RUNS}" | jq -c '.'
