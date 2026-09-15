@@ -10,24 +10,24 @@ Usa FakeSearch para medir solo la lógica de la app (sin red real).
 import asyncio
 import gc
 import os
-import psutil
 import sys
 import time
-from datetime import UTC, date, datetime, time as dtime
+from datetime import UTC, datetime
+from datetime import time as dtime
 from pathlib import Path
+
+import psutil
 
 # Añadir backend al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.config import Settings
 from app.followups.database import FollowUpRepository
-from app.followups.domain import FollowUp, Lifecycle, FollowUpMode, Availability
-from app.monitoring import Monitoring
+from app.followups.domain import Availability, FollowUp, FollowUpMode
 from app.renfe.client import SearchResult
-from app.renfe.parser import TrainList, ParseStatus
-from app.renfe.stations import Station, StationCatalog
+from app.renfe.parser import ParseStatus, TrainList
+from app.renfe.stations import StationCatalog
 from app.scheduler.plan import build_plan
-from app.scheduler.service import SchedulerService
 
 
 class FakeSearch:
@@ -46,7 +46,7 @@ class FakeSearch:
 
 def create_test_followups(count: int, same_group: bool = False) -> list[FollowUp]:
     """Crea followups de prueba con códigos de estación reales del catálogo."""
-    base_date = date.today()
+    base_date = datetime.now(UTC).date()
     now = datetime.now(UTC)
     followups = []
     # Usar códigos reales del catálogo: MADRI (60000), BARCE (71801), etc.
@@ -174,7 +174,7 @@ async def run_measurement(
 
     # Medición inicial
     gc.collect()
-    time.sleep(0.1)
+    await asyncio.sleep(0.1)
     cpu_start = process.cpu_percent()
     mem_start = process.memory_info().rss / 1024 / 1024  # MB
     disk_start = sum(f.stat().st_size for f in Path(settings.database_path).parent.rglob("*") if f.is_file())
@@ -186,7 +186,7 @@ async def run_measurement(
     # Medición final
     end_time = time.perf_counter()
     gc.collect()
-    time.sleep(0.1)
+    await asyncio.sleep(0.1)
     cpu_end = process.cpu_percent()
     mem_end = process.memory_info().rss / 1024 / 1024
     disk_end = sum(f.stat().st_size for f in Path(settings.database_path).parent.rglob("*") if f.is_file())
@@ -336,9 +336,9 @@ async def main():
     print(f"  - Duración por grupo: {r1['duration_s']:.3f}s (simulado 20ms latencia)")
     print()
     print("En VM real con latencia real (~200-500ms por request):")
-    print(f"  - 5 requests * 300ms = 1.5s por búsqueda")
-    print(f"  - 1 grupo = 1.5s/ciclo; 5 grupos = 7.5s/ciclo (sin agrupación)")
-    print(f"  - Con agrupacion (1 grupo): 1.5s/ciclo -> 80% menos tiempo CPU")
+    print("  - 5 requests * 300ms = 1.5s por búsqueda")
+    print("  - 1 grupo = 1.5s/ciclo; 5 grupos = 7.5s/ciclo (sin agrupación)")
+    print("  - Con agrupacion (1 grupo): 1.5s/ciclo -> 80% menos tiempo CPU")
     print()
     print("CONCLUSIÓN: HTTP DWR basta. Selenium NO necesario para el caso base.")
     print("  - Selenium añadiría: Chrome (~150-300 MB RAM), ChromeDriver, complejidad")
