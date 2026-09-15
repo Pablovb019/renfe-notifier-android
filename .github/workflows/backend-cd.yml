@@ -23,8 +23,7 @@ on:
 
 concurrency:
   group: production-deploy
-  max-parallel: 1
-  # cancel-in-progress: false (implícito con max-parallel: 1)
+  cancel-in-progress: false
 
 permissions:
   id-token: write      # Para OIDC (autenticación GCP)
