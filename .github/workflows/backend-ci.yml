@@ -42,7 +42,7 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
-              - '.github/workflows/backend-ci.yml'
+              - '.github/workflows/**'
 
   backend-ci:
     needs: detect-changes

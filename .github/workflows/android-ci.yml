@@ -41,7 +41,7 @@ jobs:
           filters: |
             android:
               - 'android/**'
-              - '.github/workflows/android-ci.yml'
+              - '.github/workflows/**'
 
   android-ci:
     needs: detect-changes
