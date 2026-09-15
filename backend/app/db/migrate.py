@@ -4,7 +4,6 @@ Se ejecuta en la VM durante el despliegue. No expone secretos.
 """
 
 import sys
-from pathlib import Path
 
 from app.config import Settings
 from app.db.connection import connect
