@@ -29,6 +29,7 @@ permissions:
   id-token: write      # Para OIDC (autenticación GCP)
   contents: read       # Para checkout y API de checks
   actions: read        # Para leer resultados de checks de CI
+  checks: read         # Para leer check runs via GitHub API
 
 jobs:
   validate-and-deploy:
