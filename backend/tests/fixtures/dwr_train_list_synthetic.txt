@@ -1,0 +1,7 @@
+// FIXTURE SINTÉTICA: no procede de Renfe ni demuestra su respuesta real.
+dwr.engine.remote.handleCallback("0", "0", {
+  listadoTrenes: [
+    {numeroTren: "SYN-100", horaSalida: "08:15", horaLlegada: "10:45", disponible: true, precio: "35,20 €"},
+    {numeroTren: "SYN-200", horaSalida: "11:00", horaLlegada: "13:30", disponible: false}
+  ]
+});
