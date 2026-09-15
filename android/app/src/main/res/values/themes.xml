@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema de la Activity previo al primer encuadre de Compose (sin ActionBar). -->
+    <style name="Theme.RenfeNotifier" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
