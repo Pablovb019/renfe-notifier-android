@@ -1040,3 +1040,70 @@ Checklist §8 aprobado parcialmente por el usuario (items 1-5: Firebase, VM/OIDC
 
 ## Siguiente paso
 No avanzar; esperar instrucciones (push autorizado y/o items 6+).
+
+
+# Item 6 - Despliegue backend-cd real (post-paso 34) EN CURSO
+
+## Estado
+dry-run del backend-cd: SUCCESS. Despliegue real iniciado; bloqueado en prerequisitos de la VM (sqlite3 no instalado). Cadena de fixes aplicados durante el item 6.
+
+## Decisiones adoptadas y fixes (evidencia por run)
+- Fix 1 - Secret typo GDP_SERVICE_ACCOUNT -> GCP_SERVICE_ACCOUNT (renombrado por usuario en GitHub); verificado gh secret list (2026-09-16T20:44).
+- Fix 2 - android-release max-parallel invalido -> cancel-in-progress:false (e931b8b); run pasaba sin jobs.
+- Fix 3 - gradlew sin bit ejecutivo (100644) -> git update-index --chmod=+x (100755, 37a8493); android-ci lint exit 126 -> OK.
+- Fix 4 - WIF/OIDC: iamcredentials.googleapis.com deshabilitada; usuario la habilito en consola (run 35153841604 auth OK).
+- Fix 5 - GCP_PROJECT_ID con numero de proyecto: gcloud scp requiere PROJECT ID textual; usuario actualizo secret (run 35154616983, error --project Project number).
+- Fix 6 - roles/iap.tunnelResourceAccessor ausente: error IAP 4033 'not authorized'; usuario otorgo rol via gcloud projects add-iam-policy-binding (run 35154980863, tunel conecta OK).
+- Fix 7 - Prerequisitos VM: deploy_backend.sh aborta 'ERROR: Comando requerido no encontrado: sqlite3' (run 35154980863). La VM no tiene sqlite3 instalado. Fail-fast: no se toco BD ni contenedor.
+- dry-run (run 35153841604): SUCCESS - confirmacion, SHA en main, checks CI (backend-ci/android-ci/all-checks-ok), auth OIDC, setup gcloud; Desplegar skipped por dry_run=true.
+- Devuelta: backend-cd verifica checks por NOMBRE (jobs requeridos) en vez de estado combinado /status (contaminado por jobs del propio workflow); commit 1c3152e.
+
+## Archivos modificados/creados
+- .github/workflows/backend-cd.yml: input dry_run (boolean, default false) + paso 'Validacion dry-run completada'; verificacion de checks por nombre.
+- backend/pyproject.toml: filtros de warnings de terceros (starlette httpx UserWarning, anyio BlockingPortal DeprecationWarning) - CI limpio (166 passed, 0 warnings).
+
+## Pruebas ejecutadas y resultados (evidencia)
+- gh secret list: 12 secrets, referencias workflow == secrets (sin typos tras Fix 1).
+- backend-ci: runs 35151028433/35152059421/35151734916 OK (ruff+mypy+pytest 166).
+- android-ci: runs 35151028531/35152059543/35151735017 OK (lint+test+assemble).
+- pytest local: 166 passed in 7.59s (0 warnings tras filtros).
+- backend-cd dry-run: run 35153841604 SUCCESS completo.
+- backend-cd real: run 35154146218 (project number), 35154616983 (IAP not authorized), 35154980863 (progreso hasta prerequisitos VM, sqlite3 ausente).
+
+## Bloqueos
+- VM: sqlite3 no instalado (requiere instalacion en VM o cambio de approach). Pendiente tambien validar docker/docker compose/git presentes.
+- El resto de prerequisitos de deploy_backend.sh (sqlite3, docker, docker compose, curl, git) por confirmar en la VM.
+- Items 7-9 del checklist pendientes de aprobacion (android-release, realme, mediciones VM).
+- Push ya autorizado para CI del item 6 (commits 89cdee4, ffac7f6, 1c3152e en main).
+
+## Siguiente paso
+Instalar prerequisitos en la VM y relanzar backend-cd real (dry_run=false) con el SHA vigente.
+
+
+# Item 6 - Bootstrap de primera instalacion en la VM (systemd) EN CURSO
+
+## Estado
+Backend nuevo desplegado a mano en la VM por primera vez con runtime UVICORN + SYSTEMD (No Docker): servicio renfe-notifier-backend active/running, health ok en localhost:8000. Script deploy_backend.sh adaptado a systemd (pasos 4-5) y unit creado.
+
+## Decisiones adoptadas
+- Runtime del paso 29 (docker compose) re-evaluado: no existian Dockerfile ni docker-compose.yml del backend nuevo en el repo (solo se habian versionado scripts/workflow del paso 29; la auditoria descarto el Dockerfile pesado original). Usuario eligio UVICORN + SYSTEMD (plan real seccion 3 'systemd env').
+- Repo PRIVADO: es primera instalacion, no redeploy. Bootstrap manual en la VM autorizado por el usuario (clonar repo con PAT de lectura, crear .venv, .env, unit systemd, sudoers restringido).
+- Conectividad: workflow conecta por OS Login como el SA sa_104384329745603569192 (no como ubuntu ni pablovb01_gmail_com); /data y el repo viven bajo el SA. PATH del unit y del script usan /home/sa_104384329745603569192.
+- deploy_backend.sh reescrito: quita docker, usa systemctl restart (via sudoers NOPASSWD restringido SOLO al servicio), crea la BD vacia si no existe (primera instalacion), mantiene backup/rollback/health.
+
+## Archivos modificados/creados
+- scripts/deploy_backend.sh: reescrito a runtime systemd (primera instalacion inclusa).
+- scripts/renfe-notifier-backend.service (nuevo): unit systemd de referencia (uvicorn, EnvironmentFile .env, NoNewPrivileges).
+- VM (fuera de git): /home/sa_104384329745603569192/renfe-notifier-android (clone privado), backend/.venv (Python 3.14 del sistema + requirements.lock), backend/.env (produccion, SECRET_KEY generada con openssl, DB /data/renfe_notifier.db, FCM project), /etc/systemd/system/renfe-notifier-backend.service, /etc/sudoers.d/renfe-notifier-backend (440).
+
+## Pruebas ejecutadas y resultados (evidencia)
+- VM: uvicorn active (running), Main PID 16512, memoria 61.2M, health curl responde status ok (uptime 9.9s).
+- Requisitos previos VM comprobados por el usuario: sqlite3 3.46.1, git 2.53.0, curl 8.18.0, docker 29.1.3 + compose v2.40.3 (docker ya no es necesario para backend; queda instalado para mediciones de arranque compose del item 9).
+
+## Bloqueos
+- El unit systemd fue creado directo en la VM (aun no esta commiteado en git ni en el repo del SA; el clone es del SHA 1c3152e).
+- Falta: commit+push del script reescrito y del unit (autoria explicita; activaria CI), luego re-despachar backend-cd real con el nuevo SHA y verificar que el workflow (que copia scripts/deploy_backend.sh al SHA desplegado) ejecute el flujo systemd completo en la VM.
+- El .env de la VM apunta a RENFE_NOTIFIER_FCM_PROJECT_ID (Firebase real) y a production SECRET_KEY; valida FCM de extremo a extremo pendiente del item 8.
+
+## Siguiente paso
+Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y relanzar backend-cd real con el nuevo SHA. PENDIENTE de aprobacion del usuario para push (regla 4.2: avisar que activa CI).

@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# deploy_backend.sh — Script de despliegue backend para VM (paso 29)
+# deploy_backend.sh — Script de despliegue backend para VM (runtime systemd, paso 29_adaptado item 6)
 # Se ejecuta EN LA VM mediante gcloud compute ssh --tunnel-through-iap.
-# NO contiene secretos; la autenticación es OIDC + IAP.
+# NO contiene secretos; la autenticación es OIDC + IAP. Config de producción en .env (VM).
+#
+# Runtime: uvicorn + systemd (sin Docker). Servicio: renfe-notifier-backend.
 #
 # Flujo transaccional:
-# 1. Backup SQLite (.backup atómico, coherente con WAL)
+# 1. Backup SQLite (.backup atómico, coherente con WAL) — primera instalación: crea DB vacía.
 # 2. Checkout del commit SHA exacto
 # 3. Migraciones (python -m app.db.migrate)
-# 4. docker compose up -d
+# 4. Reinicio del servicio systemd
 # 5. Health check (GET /api/v1/diagnostics/health, 30s)
 # Rollback automático en cualquier fallo.
 
@@ -16,11 +18,12 @@ set -euo pipefail
 # =============================================================================
 # Configuración (ajustar según entorno VM)
 # =============================================================================
-PROJECT_DIR="/home/ubuntu/renfe-notifier-android"
+DEPLOY_USER="${DEPLOY_USER:-$(id -un)}"
+PROJECT_DIR="${PROJECT_DIR:-${HOME}/renfe-notifier-android}"
 DATA_DIR="/data"
 BACKUP_DIR="${DATA_DIR}/backups"
 DB_PATH="${DATA_DIR}/renfe_notifier.db"
-COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
+SERVICE_NAME="renfe-notifier-backend"
 HEALTH_ENDPOINT="http://localhost:8000/api/v1/diagnostics/health"
 HEALTH_TIMEOUT=30
 HEALTH_INTERVAL=2
@@ -39,12 +42,18 @@ require_cmd() {
 # Validación de pre-requisitos
 # =============================================================================
 require_cmd sqlite3
-require_cmd docker
-require_cmd docker compose
 require_cmd curl
 require_cmd git
+require_cmd systemctl
 
-mkdir -p "${BACKUP_DIR}"
+mkdir -p "${BACKUP_DIR}" || die "No se puede crear ${BACKUP_DIR} (¿permisos?)"
+
+# En primera instalación la DB no existe aún: se crea vacía para que las
+# migraciones del paso 3 construyan el esquema completo.
+if [[ ! -f "${DB_PATH}" ]]; then
+    log "Primera instalación: BD no encontrada en ${DB_PATH}. Creando vacía..."
+    sqlite3 "${DB_PATH}" "VACUUM;" || die "No se pudo crear BD vacía en ${DB_PATH}"
+fi
 
 # =============================================================================
 # Paso 1: Backup consistente de SQLite (WAL-aware)
@@ -52,10 +61,6 @@ mkdir -p "${BACKUP_DIR}"
 log "Paso 1/5: Backup de base de datos..."
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.db"
-
-if [[ ! -f "${DB_PATH}" ]]; then
-    die "Base de datos no encontrada: ${DB_PATH}"
-fi
 
 sqlite3 "${DB_PATH}" ".backup '${BACKUP_FILE}'"
 log "Backup creado: ${BACKUP_FILE}"
@@ -71,7 +76,7 @@ log "Backup verificado (SHA256: ${BACKUP_SHA256})"
 # Paso 2: Actualización de código (checkout SHA exacto)
 # =============================================================================
 log "Paso 2/5: Actualizando código a commit ${DEPLOY_SHA}..."
-cd "${PROJECT_DIR}"
+cd "${PROJECT_DIR}" || die "No existe el repositorio en ${PROJECT_DIR}. Bootstrap previo requerido."
 
 # Guardar commit actual para posible rollback
 PREVIOUS_SHA=$(git rev-parse HEAD)
@@ -99,24 +104,24 @@ ${PYTHON} -m app.db.migrate || {
     cd "${PROJECT_DIR}"
     git checkout "${PREVIOUS_SHA}" --quiet
     sqlite3 "${DB_PATH}" ".restore '${BACKUP_FILE}'"
-    docker compose -f "${COMPOSE_FILE}" up -d --quiet-pull
+    sudo systemctl restart "${SERVICE_NAME}" || true
     die "Rollback completado: código y BD restaurados"
 }
 log "Migraciones aplicadas correctamente"
 
 # =============================================================================
-# Paso 4: Reinicio de contenedor Docker
+# Paso 4: Reinicio del servicio systemd
 # =============================================================================
-log "Paso 4/5: Reiniciando contenedor..."
-cd "${PROJECT_DIR}"
-docker compose -f "${COMPOSE_FILE}" up -d --quiet-pull || {
-    log "docker compose up falló. Iniciando rollback..."
+log "Paso 4/5: Reiniciando servicio systemd (${SERVICE_NAME})..."
+sudo systemctl restart "${SERVICE_NAME}" || {
+    log "systemctl restart falló. Iniciando rollback..."
+    cd "${PROJECT_DIR}"
     git checkout "${PREVIOUS_SHA}" --quiet
     sqlite3 "${DB_PATH}" ".restore '${BACKUP_FILE}'"
-    docker compose -f "${COMPOSE_FILE}" up -d --quiet-pull
+    sudo systemctl restart "${SERVICE_NAME}" || true
     die "Rollback completado"
 }
-log "Contenedor reiniciado"
+log "Servicio reiniciado"
 
 # =============================================================================
 # Paso 5: Health Check con reintentos
@@ -138,6 +143,6 @@ log "Health check falló tras ${HEALTH_TIMEOUT}s. Iniciando rollback automático
 cd "${PROJECT_DIR}"
 git checkout "${PREVIOUS_SHA}" --quiet
 sqlite3 "${DB_PATH}" ".restore '${BACKUP_FILE}'"
-docker compose -f "${COMPOSE_FILE}" up -d --quiet-pull
+sudo systemctl restart "${SERVICE_NAME}" || true
 log "Rollback automático completado: código, BD y servicio restaurados"
 exit 1

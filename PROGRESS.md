@@ -656,3 +656,21 @@ uff check .: All checks passed.
 - assembleDebug sin google-services.json: BUILD SUCCESSFUL (38 tasks) - el plugin condicional no rompe CI debug.
 - processDebugGoogleServices con google-services.json de prueba temporal: BUILD SUCCESSFUL; genera values.xml con google_app_id/project_id/gcm_defaultSenderId. Archivo temporal eliminado.
 - Fin de paso 34; bloqueos iguales (items 6-9 no aprobados, push pendiente autorizacion).
+
+
+## 2026-09-16 - Item 6 - backend-cd dry-run + despliegue real EN CURSO
+- Actualizado GCP: API iamcredentials habilitada, secret GCP_PROJECT_ID corregido (numero->ID textual), rol roles/iap.tunnelResourceAccessor otorgado a la SA (fixes del despliegue).
+- Dry-run backend-cd (run 35153841604): SUCCESS completo (commit 1c3152e) - confirmacion, SHA en main, checks CI por nombre, auth OIDC (WIF), setup gcloud; despliegue skipped.
+- Despliegue real (dry_run=false): run 35154146218 fail (--project requiere ID textual), run 35154616983 fail (IAP 4033 not authorized, falta rol tunnel), run 35154980863 progreso: tunel OK via OS Login, script aborta en prerequisitos: sqlite3 NO instalado en la VM.
+- backend-ci: linea limpia de warnings third-party (backend/pyproject.toml filterwarnings): 166 passed en CI (run 35151734916) y local sin warnings.
+- Rationale fixes: endpoint combinado /status se auto-contamina con check runs del propio backend-cd (commit 1c3152e: gate valida jobs CI por nombre).
+- Commits en main: 89cdee4 (paso 34 + dry_run), ffac7f6 (warnings), 1c3152e (gate checks por nombre).
+- Bloque y siguiente paso: instalar prerequisitos en la VM (sqlite3, verificar docker/docker-compose/git/curl) y relanzar backend-cd real.
+
+
+## 2026-09-16 - Item 6 - Bootstrap primera instalacion backend (UVICORN+SYSTEMD) EN CURSO
+- Runtime: NO Docker (no existian Dockerfile/docker-compose.yml del backend nuevo). Usuario eligio uvicorn+systemd.
+- VM preparada manualmente por el usuario: repo clonado (PAT lectura), .venv python3.14 + requirements.lock, .env produccion, unit /etc/systemd/system/renfe-notifier-backend.service, sudoers NOPASSWD restringido, /data chown al SA OS Login (sa_104384329745603569192).
+- Evidencia: servicio active (running), PID 16512, memoria 61.2M, health localhost:8000 -> status ok.
+- Cambios repo: scripts/deploy_backend.sh reescrito a systemd (quita docker, primeras instalaciones crean BD vacia, rollback=systemctl restart) + nuevo scripts/renfe-notifier-backend.service (plantilla).
+- Pendiente: commit+push autorizado (activaria CI) y relanzar backend-cd real con nuevo SHA.

@@ -1,0 +1,26 @@
+# Unit systemd del backend renfe-notifier (runtime uvicorn, sin Docker).
+# Plantilla de referencia. En producción (paso 34, item 6):
+#   - Copiar a /etc/systemd/system/renfe-notifier-backend.service
+#   - Sustituir SA_USER por el usuario OS Login de la cuenta de servicio
+#     (en este proyecto: sa_104384329745603569192).
+#   - El directorio del repositorio vive en la home del SA (OS Login).
+# NO contiene secretos: la configuración de producción se lee de .env
+# (EnvironmentFile), fuera del repositorio.
+
+[Unit]
+Description=Renfe Notifier Backend (FastAPI + Uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sa_104384329745603569192
+WorkingDirectory=/home/sa_104384329745603569192/renfe-notifier-android/backend
+EnvironmentFile=/home/sa_104384329745603569192/renfe-notifier-android/backend/.env
+ExecStart=/home/sa_104384329745603569192/renfe-notifier-android/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
