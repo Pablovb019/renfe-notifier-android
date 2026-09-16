@@ -631,3 +631,12 @@ uff check .: All checks passed.
 - backend-ci: ✅ SUCCESS (GitHub Actions) - ruff check, ruff format, mypy, pytest (166 passed)
 - Bloqueos: mismos que paso 33 (aprobaciones checklist §8, push CI regla 4.2, keystore, VM, Firebase, realme/FCM)
 - No avanzar paso 34.
+
+
+## 2026-09-16 - Bloqueos revisados y CI Android verde COMPLETADO
+- Revisados los 5 bloqueos: Firebase, VM/OIDC/IAP (secret GDP_SERVICE_ACCOUNT renombrado a GCP_SERVICE_ACCOUNT por usuario), keystore y push/CI quedan RESUELTOS. Unico pendiente real: paso 35 (dispositivo real + FCM).
+- Fix mayor: secret con typo GDP_SERVICE_ACCOUNT que romperia backend-cd (ahora GCP_SERVICE_ACCOUNT).
+- Fix android-release.yml: clave invalida max-parallel en concurrency reemplazada por cancel-in-progress: false (commit e931b8b).
+- Fix android-ci Permission denied (exit 126): gradlew sin bit ejecutable (100644) -> chmod +x (100755), commit 37a8493.
+- Verificacion real: backend-ci (ruff, format, mypy, pytest 166) [ok] run 35148529308 y android-ci (lintDebug + unit tests + assembleDebug) [ok] run 35148684913.
+- Bloqueos restantes: paso 35 (realme GT Neo 2 + FCM real). No avanzar mas sin instrucciones.

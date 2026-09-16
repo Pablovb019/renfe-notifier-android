@@ -978,3 +978,30 @@ No avanzar: siguiente archivo `34-*.md` (esperar instrucciones con aprobaciones 
 
 ### Siguiente paso
 No avanzar: siguiente archivo `34-*.md` (esperar instrucciones con aprobaciones del checklist §8).
+
+
+## Bloqueos revisados y CI Android verde (post-paso 33) COMPLETADO
+
+### Estado
+**Revisados los 5 bloqueos del checklist plan configuracion real. Quedan resueltos Firebase, secrets (incl. typo GDP->GCP), keystore y push/CI. Unico pendiente real: paso 35 (dispositivo real + FCM).**
+
+### Decisiones adoptadas
+- **Secret typo corregido**: el usuario renombro el secret GDP_SERVICE_ACCOUNT a GCP_SERVICE_ACCOUNT en GitHub (evita fallo en backend-cd, referencia correcta en backend-cd.yml:113).
+- **android-release.yml**: clave invalida max-parallel: 1 en concurrency reemplazada por cancel-in-progress: false (mismo fix que backend-cd); el run previo fallaba al instante (jobs: []). Commit e931b8b.
+- **gradlew no ejecutable**: android-ci fallaba en lintDebug con exit 126 (Permission denied) porque ndroid/gradlew tenia modo 100644 en git. Corregido con git update-index --chmod=+x (ahora 100755). Commit 37a8493.
+
+### Archivos modificados/creados
+- .github/workflows/android-release.yml: concurrency fix
+- ndroid/gradlew: mode change 100644 -> 100755
+- PROGRESS.md (2)
+
+### Pruebas ejecutadas y resultados (evidencia)
+- **backend-ci [ok] run 35148529308**: ruff check + ruff format + mypy + pytest (166 passed).
+- **android-ci [ok] run 35148684913**: detect-changes, lintDebug, testDebugUnitTest, assembleDebug, all-checks-ok todos success.
+- **Verificado con gh run view**: jobs and steps all success.
+
+### Bloqueos
+- **Paso 35 (dispositivo real + FCM real)**: pendiente instalacion APK en realme GT Neo 2 + backend accesible + Firebase.
+
+### Siguiente paso
+No avanzar: siguiente archivo 34-*.md (esperar instrucciones).
