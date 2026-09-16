@@ -72,23 +72,29 @@ jobs:
         run: |
           SHA="${{ github.sha }}"
           REPO="${{ github.repository }}"
-          STATUS=$(gh api repos/${REPO}/commits/${SHA}/status --jq '.state')
-          CHECK_RUNS=$(gh api repos/${REPO}/commits/${SHA}/check-runs --jq '.check_runs[] | {name: .name, conclusion: .conclusion}' 2>/dev/null || echo '[]')
-          echo "Estado combinado: ${STATUS}"
+          # El estado combinado (/status) se auto-contamina con los check runs de
+          # ESTE workflow (se registran contra su ref). Por eso se valida
+          # nominalmente contra los jobs de CI requeridos, tolerando múltiples
+          # coincidencias y conclusiones success/skipped.
+          CHECK_RUNS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/commits/${SHA}/check-runs" | jq -c '.check_runs[]? | {name: .name, conclusion: .conclusion}')
+          echo "Check runs del commit:"
           echo "${CHECK_RUNS}" | jq -c '.'
-          if [[ "${STATUS}" != "success" ]]; then
-            echo "ERROR: Commit ${SHA} no tiene estado 'success' en CI"
-            exit 1
-          fi
           REQUIRED_JOBS=("backend-ci" "android-ci" "all-checks-ok")
           for JOB in "${REQUIRED_JOBS[@]}"; do
-            CONCLUSION=$(echo "${CHECK_RUNS}" | jq -r --arg job "${JOB}" 'select(.name == $job) | .conclusion')
-            if [[ -z "${CONCLUSION}" || "${CONCLUSION}" == "null" ]]; then
-              echo "WARNING: Job requerido '${JOB}' no encontrado"
-            elif [[ "${CONCLUSION}" != "success" && "${CONCLUSION}" != "skipped" ]]; then
-              echo "ERROR: Job '${JOB}' no pasó (${CONCLUSION})"
+            CONCLUSIONS=$(echo "${CHECK_RUNS}" | jq -r --arg job "${JOB}" 'select(.name == $job) | .conclusion')
+            if [[ -z "${CONCLUSIONS}" ]]; then
+              echo "ERROR: No hay check run requerido '${JOB}' para ${SHA}"
               exit 1
             fi
+            while IFS= read -r CONCLUSION; do
+              if [[ "${CONCLUSION}" != "success" && "${CONCLUSION}" != "skipped" ]]; then
+                echo "ERROR: Job requerido '${JOB}' no pasó (conclusion: ${CONCLUSION})"
+                exit 1
+              fi
+            done <<< "${CONCLUSIONS}"
+            echo "OK: '${JOB}' -> ${CONCLUSIONS}"
           done
           echo "Todos los checks requeridos superados."
 

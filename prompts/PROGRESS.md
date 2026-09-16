@@ -1107,3 +1107,27 @@ Backend nuevo desplegado a mano en la VM por primera vez con runtime UVICORN + S
 
 ## Siguiente paso
 Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y relanzar backend-cd real con el nuevo SHA. PENDIENTE de aprobacion del usuario para push (regla 4.2: avisar que activa CI).
+
+
+## RESULTADO FINAL Item 6 (run 35158433609, SHA cf313d58): DESPLIEGUE REAL EXITOSO
+- Paso 1/5 Backup: /data/backups/backup_20260916_223656.db (SHA256 78f52be9...) OK
+- Paso 2/5 Checkout cf313d58ec1be23e9cd199851099e39d0d04f3cd OK
+- Paso 3/5 Migraciones: aplicadas correctamente
+- Paso 4/5 systemctl restart renfe-notifier-backend OK
+- Paso 5/5 Health check 200 OK -> DESPLIEGUE EXITOSO
+- Cadena completa validada: confirmacion DEPLOY, SHA en main, checks CI (backend-ci/android-ci/all-checks-ok en cf313d58), OIDC+WIF, IAP, script systemd en VM.
+- Item 6 del checklist seccion 8 (docs/real-config-plan.md) CERRADO.
+
+
+# Item 7 - android-release (tag v0.1.0) EN CURSO
+
+## Decisiones adoptadas
+- Corregido el mismo bug de auto-contaminacion del estado combinado en android-release.yml (igual fix que 1c3152e en backend-cd): el paso de verificacion de checks usa ahora la API check-runs por NOMBRE (backend-ci, android-ci, all-checks-ok) tolerando multiples coincidencias y success/skipped, en lugar de /commits/{sha}/status.
+- El trigger por tag v*.*.* se disparara contra el commit de main elegido; antes de crear el tag hay que esperar CI verde del commit del fix.
+
+## Archivos modificados
+- .github/workflows/android-release.yml: verificación de checks nominal (curl check-runs). YAML validado con PyYAML.
+
+## Pendiente
+- Commit + push autorizado (activaria backend-ci/android-ci/all-checks-ok + luego android-release al crear tag).
+- Crear tag v0.1.0 sobre commit con CI verde y esperar run android-release (compila release firmado + release privada).

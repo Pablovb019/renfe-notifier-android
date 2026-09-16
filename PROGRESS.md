@@ -674,3 +674,14 @@ uff check .: All checks passed.
 - Evidencia: servicio active (running), PID 16512, memoria 61.2M, health localhost:8000 -> status ok.
 - Cambios repo: scripts/deploy_backend.sh reescrito a systemd (quita docker, primeras instalaciones crean BD vacia, rollback=systemctl restart) + nuevo scripts/renfe-notifier-backend.service (plantilla).
 - Pendiente: commit+push autorizado (activaria CI) y relanzar backend-cd real con nuevo SHA.
+
+
+## 2026-09-16 - Item 6 - backend-cd real EXITOSO (CD cerrado)
+- Workflow backend-cd (run 35158433609, SHA cf313d58): success. En VM: backup SQLite, checkout cf313d58, migraciones aplicadas, systemctl restart renfe-notifier-backend, health 200 -> DESPLIEGUE EXITOSO.
+- Cadena completa: confirmacion DEPLOY + checks CI + OIDC/WIF + IAP + script systemd. Item 6 del checklist (real-config-plan.md seccion 8) CERRADO.
+- Siguientes: item 7 (android-release tag v0.1.0), item 8 (realme + FCM real), item 9 (mediciones VM) - requieren aprobacion.
+
+
+## 2026-09-16 - Item 7 - android-release: fix checks nominal aplicado
+- Mismo bug auto-contaminacion que en backend-cd corregido en android-release.yml (valida backend-ci/android-ci/all-checks-ok por nombre via API check-runs, no estado combinado). YAML OK.
+- Pendiente: commit+push autorizado y tag v0.1.0 sobre CI verde (compila APK firmado + release privada).
