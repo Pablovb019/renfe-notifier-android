@@ -43,3 +43,9 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+    # Warnings de dependencias de terceros (starlette/anyio) al instanciar TestClient.
+    # No son errores de nuestro código; los filtramos para mantener el CI limpio.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
