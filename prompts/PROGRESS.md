@@ -1005,3 +1005,38 @@ No avanzar: siguiente archivo `34-*.md` (esperar instrucciones con aprobaciones 
 
 ### Siguiente paso
 No avanzar: siguiente archivo 34-*.md (esperar instrucciones).
+
+
+# Paso 34 - Configuracion real autorizada (34-configuracion-real-autorizada.md) COMPLETADO
+
+## Estado
+Checklist §8 aprobado parcialmente por el usuario (items 1-5: Firebase, VM/OIDC/IAP, secrets, keystore+backup, secrets release). Aplicada la configuracion autorizada del item 1/5 que faltaba (plugin Google Services + decodificacion segura de google-services.json en release). NO ejecutado CD (items 6-9 pendientes de aprobacion).
+
+## Decisiones adoptadas
+- Aprobaciones del usuario durante la sesion: item 1 (Firebase Spark + google-services.json), item 2 (VM/OIDC/WIF/IAP, sin Tailscale), item 3 (secrets GitHub), item 4 (keystore + backup USB encriptado + Bitwarden Free), item 5 (secrets release keystore + google-services.json).
+- Gap detectado en item 1/5: el secret ANDROID_GOOGLE_SERVICES_JSON_B64 existia pero el build Android NO aplicaba el plugin de Google Services y android-release.yml no lo decodificaba; el secret era inerte y FCM real (item 8/9) habria fallado.
+- Plugin com.google.gms.google-services 4.4.2 aplicado de forma CONDICIONAL (en build.gradle.kts raiz como apply false y en app solo si existe google-services.json). Sin el archivo, el build debug/CI sigue funcionando como antes sin Firebase.
+- android-release.yml: nuevo paso 'Decodificar google-services.json desde secret base64' (guardado por env, valida con jq project_id y mobilesdk_app_id) + limpieza segura con shred del json al final.
+- Seguridad: google-services.json nunca se commitea (gitignore) y se limpia tras el build. Ningun secret en repo. PUSH NO REALIZADO (requiere autorizacion y activaria CI).
+
+## Archivos modificados
+- android/gradle/libs.versions.toml: googleServices = 4.4.2 y plugin google-services
+- android/build.gradle.kts: alias google-services apply false
+- android/app/build.gradle.kts: aplicacion condicional del plugin si existe google-services.json
+- .github/workflows/android-release.yml: decodifica google-services.json + limpieza shred
+
+## Pruebas ejecutadas y resultados (evidencia)
+- gh secret list: 12 secrets presentes; todos los referenciados por los workflows existen (incl. GCP_SERVICE_ACCOUNT corregido).
+- git grep de secrets.* en workflows coincide con los secrets existentes sin typos.
+- git ls-files: sin google-services, keystore ni .jks trackeados.
+- YAML android-release.yml parseado con PyYAML: OK.
+- [VALIDADO LOCALMENTE con JDK 17 de Microsoft] `./gradlew :app:assembleDebug --no-daemon` (sin google-services.json): BUILD SUCCESSFUL, 38 tasks; el plugin condicional NO rompe build debug/CI sin Firebase.
+- [VALIDADO LOCALMENTE] `./gradlew :app:processDebugGoogleServices` con google-services.json de prueba (Estructura publica, sin datos reales): BUILD SUCCESSFUL; el plugin se aplica y genera `build/generated/res/processDebugGoogleServices/values/values.xml` (google_app_id, project_id, gcm_defaultSenderId). Archivo de prueba ELIMINADO tras validar; git status limpio de google-services.json.
+
+## Bloqueos
+- Items 6-9 del checklist NO aprobados (backend-cd, android-release tag, instalacion realme, mediciones VM).
+- Push pendiente de autorizacion: activaria workflows CI (backend-ci, android-ci).
+- El resto de la validacion real (FCM, backend en produccion) pendiente de items 6-9.
+
+## Siguiente paso
+No avanzar; esperar instrucciones (push autorizado y/o items 6+).

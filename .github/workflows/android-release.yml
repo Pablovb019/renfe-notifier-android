@@ -112,6 +112,16 @@ jobs:
           echo "KEYSTORE_PATH=${KEYSTORE_PATH}" >> $GITHUB_ENV
           echo "Keystore decodificado: $(ls -la ${KEYSTORE_PATH})"
 
+      - name: Decodificar google-services.json desde secret base64
+        if: env.ANDROID_GOOGLE_SERVICES_JSON_B64 != ''
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON_B64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_B64 }}
+        working-directory: android
+        run: |
+          echo "${ANDROID_GOOGLE_SERVICES_JSON_B64}" | base64 -d > app/google-services.json
+          echo "google-services.json decodificado ($(wc -c < app/google-services.json) bytes):"
+          jq -r '.project_info.project_id, .client[0].client_info.mobilesdk_app_id' app/google-services.json
+
       - name: Establecer variables de versión (opcional)
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -200,6 +210,15 @@ jobs:
           if [[ -f "${KEYSTORE_PATH}" ]]; then
             shred -u "${KEYSTORE_PATH}" 2>/dev/null || rm -f "${KEYSTORE_PATH}"
             echo "Keystore temporal eliminado de forma segura"
+          fi
+
+      - name: Limpieza de google-services.json temporal
+        if: always()
+        working-directory: android
+        run: |
+          if [[ -f "app/google-services.json" ]]; then
+            shred -u "app/google-services.json" 2>/dev/null || rm -f "app/google-services.json"
+            echo "google-services.json temporal eliminado de forma segura"
           fi
 
   # Job de validación local (sin secretos, prueba sintaxis + mock)

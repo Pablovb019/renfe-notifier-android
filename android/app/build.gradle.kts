@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Plugin de Google Services (Firebase). Solo se aplica si existe google-services.json,
+// que se inyecta en CI de release (secret ANDROID_GOOGLE_SERVICES_JSON_B64) y nunca
+// se commitea. Sin el archivo, el build debug/CI sigue funcionando sin Firebase.
+val googleServicesFile = file("google-services.json")
+if (googleServicesFile.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.pablovb019.renfenotifier"
     compileSdk = 34

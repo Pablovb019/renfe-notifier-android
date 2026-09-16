@@ -640,3 +640,19 @@ uff check .: All checks passed.
 - Fix android-ci Permission denied (exit 126): gradlew sin bit ejecutable (100644) -> chmod +x (100755), commit 37a8493.
 - Verificacion real: backend-ci (ruff, format, mypy, pytest 166) [ok] run 35148529308 y android-ci (lintDebug + unit tests + assembleDebug) [ok] run 35148684913.
 - Bloqueos restantes: paso 35 (realme GT Neo 2 + FCM real). No avanzar mas sin instrucciones.
+
+
+## 2026-09-16 - Paso 34 - Configuracion real autorizada COMPLETADO
+- Checklist §8 aprobado parcialmente (items 1-5): Firebase+google-services.json, VM/OIDC/IAP (sin Tailscale), secrets GitHub, keystore+backup, secrets release.
+- Aplicada configuracion pendiente del item 1/5: plugin com.google.gms.google-services 4.4.2 condicional + decodificacion/limpieza de google-services.json en android-release.yml (el secret existia pero era inerte).
+- Verificado sin typos: secretos en workflows == secretos existentes. YAML valido. Sin google-services/keystore en git.
+- CD NO ejecutado (items 6-9 no aprobados). Build gradle local no validado (sin JDK); pasa a CI con proximo push autorizado.
+- Bloqueos: items 6-9 pendientes de aprobacion, push pendiente de autorizacion, validacion CI del plugin condicional pendiente.
+- No avanzar paso 35.
+
+
+## 2026-09-16 - Paso 34 - Validacion local build (JDK 17) COMPLETADO
+- JDK 17 Microsoft detectado en PATH; validado build gradle local:
+- assembleDebug sin google-services.json: BUILD SUCCESSFUL (38 tasks) - el plugin condicional no rompe CI debug.
+- processDebugGoogleServices con google-services.json de prueba temporal: BUILD SUCCESSFUL; genera values.xml con google_app_id/project_id/gcm_defaultSenderId. Archivo temporal eliminado.
+- Fin de paso 34; bloqueos iguales (items 6-9 no aprobados, push pendiente autorizacion).

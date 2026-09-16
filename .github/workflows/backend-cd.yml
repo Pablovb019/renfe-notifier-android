@@ -2,7 +2,7 @@
 # - workflow_dispatch con input SHA (solo main, checks CI superados).
 # - Verificación criptográfica del commit vía GitHub API.
 # - OIDC + IAP para conectividad VM (sin claves SSH en GitHub).
-# - Serialización estricta (max-parallel: 1, sin cancel-in-progress).
+# - Serialización estricta (cancel-in-progress: false).
 # - Ejecuta script de despliegue en VM con backup/migraciones/health-check/rollback.
 # - Secretos fuera de paquetes/imágenes (OIDC, IAP, secretos GitHub para config).
 # - NO ejecuta despliegue real sin aprobación; workflow preparado para validación local.
@@ -20,6 +20,11 @@ on:
         description: 'Escribe "DEPLOY" para confirmar (prevención de ejecuciones accidentales)'
         required: true
         type: string
+      dry_run:
+        description: 'true = validar confirmación/OIDC/IAP/checks SIN desplegar en la VM'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: production-deploy
@@ -120,6 +125,7 @@ jobs:
           install_components: 'gke-gcloud-auth-plugin'
 
       - name: Desplegar en VM vía IAP
+        if: inputs.dry_run != true
         id: deploy-vm
         env:
           DEPLOY_SHA: ${{ inputs.deploy_sha }}
@@ -142,6 +148,12 @@ jobs:
             "${DEPLOY_USER}@${VM_NAME}" \
             --command="chmod +x /tmp/deploy_backend.sh && DEPLOY_SHA=${DEPLOY_SHA} /tmp/deploy_backend.sh"
           echo "Despliegue completado en VM."
+
+      - name: Validación dry-run completada (sin desplegar)
+        if: inputs.dry_run == true
+        run: |
+          echo "DRY-RUN: Confirmación, SHA en main, checks CI y autenticación OIDC validados."
+          echo "No se ha tocado la VM. Despliegue real requiere ejecutar este workflow con dry_run=false."
 
       - name: Notificar resultado
         if: always()

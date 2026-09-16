@@ -1,5 +1,6 @@
 [versions]
 agp = "8.5.2"
+googleServices = "4.4.2"
 kotlin = "2.0.21"
 coreKtx = "1.13.1"
 fragmentKtx = "1.8.5"
@@ -51,3 +52,4 @@ androidx-test-ext = { group = "androidx.test.ext", name = "junit", version.ref =
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
