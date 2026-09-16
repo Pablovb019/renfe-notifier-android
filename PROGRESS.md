@@ -624,3 +624,10 @@ uff check .: All checks passed.
 - Coste 0 € validado: GCP Free Tier (e2-micro), Firebase Spark, GitHub Actions 2000 min, Tailscale personal.
 - Checklist §8 (9 ítems) para aprobación explícita antes de paso 34. Reversión global documentada.
 - Bloqueos: aprobación explícita por ítem (Firebase, VM, secrets, keystore, CD, release, dispositivo real, mediciones VM). Push CI pendiente regla 4.2. No avanzar paso 34.
+
+## 2026-09-15 - Linting fix y backend-ci OK (post-paso 33) COMPLETADO
+- Linting corregido en 5 archivos: scripts/measure_resources.py, backend/app/db/migrate.py, backend/app/main.py, backend/app/cli.py, backend/app/db/connection.py, backend/app/db/migrations.py
+- Fixes: DTZ011, ASYNC251, F541, F401, I001, F541, W292, formato ruff
+- backend-ci: ✅ SUCCESS (GitHub Actions) - ruff check, ruff format, mypy, pytest (166 passed)
+- Bloqueos: mismos que paso 33 (aprobaciones checklist §8, push CI regla 4.2, keystore, VM, Firebase, realme/FCM)
+- No avanzar paso 34.

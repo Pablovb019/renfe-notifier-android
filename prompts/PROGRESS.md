@@ -941,3 +941,40 @@ No avanzar: siguiente archivo `33-*.md` (esperar instrucciones).
 
 ### Siguiente paso
 No avanzar: siguiente archivo `34-*.md` (esperar instrucciones con aprobaciones del checklist §8).
+
+## Linting fix y backend-ci OK (post-paso 33) COMPLETADO
+
+### Estado
+**Linting corregido y backend-ci pasando (166 tests, ruff, mypy, format).** 
+
+### Decisiones adoptadas
+- **Fix linting en 5 archivos**: `scripts/measure_resources.py`, `backend/app/db/migrate.py`, `backend/app/main.py`, `backend/app/cli.py`, `backend/app/db/connection.py`, `backend/app/db/migrations.py`
+- **Correcciones aplicadas**:
+  - DTZ011: `date.today()` → `datetime.now(UTC).date()`
+  - ASYNC251: `time.sleep()` → `await asyncio.sleep()` en funciones async
+  - F541: f-strings sin placeholders eliminadas
+  - F401: imports no usados removidos (`Lifecycle`, `Monitoring`, `Station`, `SchedulerService`, `date`)
+  - I001: imports organizados (isort/ruff)
+  - F541: f-strings sin placeholders removidas
+  - W292: newlines finales agregados
+  - Formato ruff aplicado a 5 archivos
+
+### Archivos modificados
+- `scripts/measure_resources.py`: fixes DTZ011, ASYNC251, F541, F401, I001
+- `backend/app/db/migrate.py`: trailing newline
+- `backend/app/main.py`: imports organizados, duplicado removido
+- `backend/app/cli.py`: formato ruff
+- `backend/app/db/connection.py`, `backend/app/db/migrations.py`: formato ruff
+
+### Pruebas ejecutadas y resultados (evidencia)
+- **ruff check**: All checks passed
+- **ruff format --check**: 66 files already formatted
+- **mypy app tests**: Success: no issues found in 65 source files
+- **pytest**: 166 passed, 2 warnings (deprecaciones starlette/anyio, heredadas)
+- **backend-ci workflow**: ✅ SUCCESS (GitHub Actions)
+
+### Bloqueos
+- Mismos que paso 33: requieren aprobaciones checklist §8 (Firebase, VM, secrets, keystore, CD, release, dispositivo real, mediciones VM)
+
+### Siguiente paso
+No avanzar: siguiente archivo `34-*.md` (esperar instrucciones con aprobaciones del checklist §8).
