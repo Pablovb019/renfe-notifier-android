@@ -29,7 +29,7 @@ on:
 
 concurrency:
   group: release-${{ github.ref }}
-  max-parallel: 1
+  cancel-in-progress: false
 
 permissions:
   contents: write      # Para crear Release y subir assets
