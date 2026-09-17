@@ -277,9 +277,7 @@ class RenfeDwrClient:
 
     @staticmethod
     def _create_search_id() -> str:
-        return "_" + "".join(
-            secrets.choice(string.ascii_letters + string.digits) for _ in range(4)
-        )
+        return "_" + "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(4))
 
     @staticmethod
     def _tokenify(number: int) -> str:
@@ -357,9 +355,7 @@ class RenfeDwrClient:
         )
 
     @staticmethod
-    def _update_session_payload(
-        search_id: str, script_session_id: str, batch_id: int
-    ) -> str:
+    def _update_session_payload(search_id: str, script_session_id: str, batch_id: int) -> str:
         return (
             "callCount=1\n"
             "windowName=\n"
