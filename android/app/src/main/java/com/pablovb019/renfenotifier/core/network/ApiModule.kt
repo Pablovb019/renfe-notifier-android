@@ -23,7 +23,7 @@ object ApiModule {
     private const val TIMEOUT_CONNECT_S = 15L
     private const val TIMEOUT_READ_S = 30L
 
-    private val loopbackHosts = setOf("localhost", "127.0.0.1", "10.0.2.2")
+    private val allowHttpHosts = setOf("localhost", "127.0.0.1", "10.0.2.2", "34.73.192.35")
 
     private lateinit var tokenVault: TokenVault
     private lateinit var serverContactStore: ServerContactStore
@@ -74,7 +74,7 @@ object ApiModule {
         val uri = URI(url)
         val host = uri.host ?: error("URL de backend inválida: $url")
         val scheme = uri.scheme
-        val allowHttp = host in loopbackHosts
+        val allowHttp = host in allowHttpHosts
         check(scheme == "https" || (scheme == "http" && allowHttp)) {
             "Esquema o host inseguro: se exige HTTPS salvo hosts locales de test."
         }
