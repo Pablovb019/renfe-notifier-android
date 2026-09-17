@@ -18,8 +18,10 @@ from pathlib import Path
 
 import psutil
 
-# Añadir backend al path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Añadir backend al path (repositorio y carpeta backend según dónde se ejecute)
+_SRC_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(_SRC_ROOT / "backend"))
+sys.path.insert(0, str(_SRC_ROOT))
 
 import argparse
 
