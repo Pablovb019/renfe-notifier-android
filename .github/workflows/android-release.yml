@@ -187,38 +187,17 @@ jobs:
             android/app/build/outputs/apk/release/app-release.apk.sha256
           retention-days: 5
 
-      - name: Crear Release privada (solo en tags v*.*.*)
+      - name: Crear Release y subir assets (solo en tags v*.*.*)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Subir APK a Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/release/app-release.apk
-          asset_name: app-${{ github.ref_name }}.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Subir checksum a Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/release/app-release.apk.sha256
-          asset_name: app-${{ github.ref_name }}.apk.sha256
-          asset_content_type: text/plain
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          SHA256_FILE="${APK}.sha256"
+          gh release create "${{ github.ref_name }}" \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "Release automática desde tag ${{ github.ref_name }}" \
+            "${APK}" "${SHA256_FILE}"
 
       - name: Limpieza segura del keystore temporal
         if: always() && env.KEYSTORE_PATH != ''
