@@ -275,6 +275,24 @@ def test_build_test_alert_rejects_empty_token() -> None:
 
 
 @pytest.mark.asyncio
+async def test_send_test_uses_unique_event_id_per_send() -> None:
+    event_ids: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode())
+        event_ids.append(body["message"]["data"]["event_id"])
+        return httpx.Response(200, json={"name": "projects/test-project/messages/msg"})
+
+    sender = _sender(handler)
+    await sender.send_test(fcm_token="dev-token")
+    await sender.send_test(fcm_token="dev-token")
+
+    assert len(event_ids) == 2
+    assert event_ids[0] != event_ids[1]
+    assert all(event_id.startswith("test-") for event_id in event_ids)
+
+
+@pytest.mark.asyncio
 async def test_static_token_provider_returns_token() -> None:
     provider = StaticTokenProvider("static-token")
     assert await provider.access_token() == "static-token"

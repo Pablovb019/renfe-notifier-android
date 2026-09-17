@@ -1211,7 +1211,7 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 - Pendiente de instrucciones del usuario (siguiente item del checklist real-config-plan.md o cierre de proyecto).
 
 
-# Paso 35 - Validacion real controlada EN CURSO (correccion DWR implementada, pendiente revalidacion real)
+# Paso 35 - Validacion real controlada EN CURSO (escenario 1 VALIDADO; pruebas en realme en curso 2026-09-18)
 
 ## Decisiones adoptadas
 - El usuario autorizo el paso 35 completo: 1 busqueda DWR real controlada (escenario 1), notificacion end-to-end + acciones (escenario 3-4) y resiliencia en el realme (escenario 5).
@@ -1219,24 +1219,30 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 - Tras el hallazgo del protocolo DWR, el usuario autorizo corregir el flujo replicando el bot original en produccion.
 
 ## Pruebas ejecutadas y resultados (evidencia real)
-- **Escenario 1 (busqueda DWR real Madrid 60000 -> Barcelona 71801, +2 dias, mode ALL, plaza_h=False)**:
-  - Fases 1-2 (search / generateId #1): OK (HTTP 200).
-  - **Fase generateId #2 FALLO**: `RenfeResponseError: La segunda respuesta generateId no contiene token DWR`.
-  - Diagnostico de la respuesta real (sanitizada): `r.handleBatchException({name:'java.lang.RuntimeException', message:'Failed to find parameter: windowName (check server log for more info).'})`. Renfe espera el campo `windowName=`, que nuestro payload no enviaba.
-- **Comparacion con el bot original en produccion** (`renfe-notifier-bot-2/python/renfechecker.py`), que SI funciona con Renfe en vivo:
-  - `_create_generate_id_payload`: incluye `windowName=\n`, `instanceId=0\n`, `c0-id=0\n`, `scriptSessionId=\n`, page=`buscarTrenEnlaces.do`, y NO incluye `c0-param0` ni `httpSessionState`.
-  - Flujo previo: POST a buscarTren.do con payload extendido + cookie `Search` (domain .renfe.com, path /) ANTES del generateId.
-  - El cliente anterior usaba `c0-param0=string:{batch_id:04d}`, `c0-id=0:{search_id}`, `httpSessionState=!`, page=`buscarTren.do` y omitia `windowName`/`instanceId`: firma de metodo distinta -> error DWR.
-- **Correccion implementada (probada localmente)**:
-  - `app/renfe/client.py`: payloads DWR replicados (generateId con `windowName=`/`instanceId=0`/`c0-id=0` y sin `c0-param0`; update_session y getTrainsList con `c0-eN`/`Object_Object`; page `buscarTrenEnlaces.do`); POST de busqueda extendido + cookie `Search`; `scriptSessionId` con el `_tokenify` original; DWR_ENDPOINT con barra final; User-Agent Chrome.
+- **Escenario 1 - primera consulta (FALLO parcial)**: fases search/generateId#1 OK; generateId#2 fallo con `handleBatchException: Failed to find parameter: windowName`. Diagnostico sanitizado real. Causa: payload DWR distinto al del bot original.
+- **Escenario 1 - segunda consulta (FALLO parcial)**: tras corregir el handshake, `getTrainsList` devolvio `handleException U014 ("Ha pasado demasiado tiempo. Debe volver a iniciar la sesion")`. Causa: POST de busqueda enviado sin `Content-Type` de formulario, por lo que `buscarTren.do` no registraba el contexto.
+- **Escenario 1 - tercera consulta (VALIDADO, commit 613bd5a)**:
+  - Madrid (60000) -> Barcelona (71801) el 2026-09-19, plaza_h=False, 5 POSTs, todos HTTP 200.
+  - Metricas por fase: search 702 ms/160021 B; generate_id_0 104 ms/168 B; generate_id_1 104 ms/168 B; update_session 104 ms/143 B; train_list 542 ms/73516 B. Total 2,247 s y 234016 B.
+  - `ParseStatus: OK`, **14 trenes reales** con horas y precios reales (p. ej. 06:43->10:12 99,6; 09:27->13:04 87,15; 12:27->16:09 124,5).
+  - Sin reservar billetes ni crear seguimientos persistentes.
+- **Correccion implementada (probada localmente y validada en VM)**:
+  - `app/renfe/client.py`: payloads DWR replicados (generateId con `windowName=`/`instanceId=0`/`c0-id=0` y sin `c0-param0`; update_session y getTrainsList con `c0-eN`/`Object_Object`; page `buscarTrenEnlaces.do`); POST de busqueda como formulario real (`data=dict` + Content-Type) con cookie `Search`; `scriptSessionId` con `_tokenify`; DWR_ENDPOINT con barra final; UA Chrome.
   - `app/renfe/parser.py`: soporta la estructura real anidada (`listadoTrenes` -> grupos -> `listviajeViewEnlaceBean`) y disponibilidad/`tarifaMinima`/`razonNoDisponible`; trata `"NaN"` como sin precio. Mantiene compatibilidad con la estructura plana sintetica.
-  - Tests anadidos: forma exacta de los payloads (`test_renfe_client.py`) y parseo de la estructura agrupada real (`test_dwr_parser.py`).
-  - Resultados locales: **168 tests pasan**, `ruff check` OK, `mypy app` OK (Windows, Python 3.14.7).
-- **Escenarios 3-5 (FCM end-to-end, acciones, Doze, reinicio, ahorro) NO EJECUTADOS**: dependen de que el flujo DWR real devuelva trenes.
+  - Tests anadidos: forma exacta de los payloads y del formulario en `test_renfe_client.py`; parseo de la estructura agrupada real en `test_dwr_parser.py`.
+  - Resultados locales: **168 tests pasan**, `ruff format --check` OK, `ruff check` OK, `mypy app` OK (Windows, Python 3.14.7). CI backend y android verdes.
+- **Pruebas en realme GT Neo 2 (RMX3370) por USB (2026-09-18)**; app v0.1.5/code6.
+  - Diagnostico en dispositivo: Google Play Services OK, permiso de notificaciones concedido, canal de avisos activo; dispositivos=1, seguimientos=0, episodios=0, consultas logicas=0, peticiones HTTP=0, bytes=0 B. La etapa "Deteccion" muestra "Revisar" (logical_queries=0), coherente con que el backend aun no ejecuta el planificador.
+  - Canales confirmados por el sistema: `disponibilidad_plazas` (importance=4, sonido/vibracion) y `resumen_y_servicio` (importance=2); ambos `mBypassDnd=false`. Desactivar/reactivar el canal responde en la app.
+  - **Hallazgo de arquitectura (no es fallo del paso)**: el backend no ejecuta el planificador ni entrega avisos reales (`SchedulerService` sin instanciar; `AlertQueue.enqueue/due_events` y `FcmNotificationSender.send_alert` sin llamadores; `create_followup` no encola). Coherente con `prompts/34` ("no actives sondeo del nuevo backend") y pendiente para la transicion (paso 37). Por eso el escenario "alerta real con acciones" aun no es validable.
+  - **Defecto real detectado y corregido**: `send_test` reutilizaba `event_id="test"` fijo y la app deduplica por `event_id` durante 30 dias (`FcmTokenGateway.kt:36`, `EventIdStore.kt:56-57`), descartando silenciosamente las pruebas repetidas. Evidencia con adb y DND desactivado (`zen_mode=0`): logcat muestra recepcion FCM `FirebaseInstanceIdReceiver ... act=com.google.android.c2dm.intent.RECEIVE pkg=com.pablovb019.renfenotifier` y `dumpsys notification` no muestra ninguna notificacion de la app. Fix en `backend/app/notifications/fcm.py` (`event_id=f"test-{uuid4().hex}"`) + test `test_send_test_uses_unique_event_id_per_send`. Verificacion local: ruff format/check OK, mypy OK, 169 tests OK.
 
 ## Bloqueos
-- **Revalidacion real pendiente**: requiere (a) autorizacion para una segunda consulta DWR controlada en la VM y (b) llevar el fix a la VM (commit+push; activa CI/CD) o copiar los ficheros, ya que alli el codigo sigue sin corregir.
-- **Escenarios 3-5** siguen bloqueados en cadena hasta validar el escenario 1.
+- Ninguno tecnico para el escenario 1 (cerrado).
+- "Alerta real con acciones" NO validable aun: la entrega de avisos reales no esta cableada (ver hallazgo) y el paso 34 prohibe activar el sondeo; corresponde a la transicion (paso 37).
+- Pruebas del realme pendientes: reintento de notificacion de prueba tras desplegar el fix, pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro de bateria, cierre desde recientes vs forzar detencion y actualizacion con la misma firma. No se inventaran resultados sin verificacion real.
 
 ## Siguiente paso
-- Con autorizacion: publicar el fix a `main` (aviso: dispara backend-ci/android-ci), `git pull` en la VM y repetir el one-shot del escenario 1 para confirmar que el parser recibe trenes reales; despues ejecutar escenarios 3-5.
+- Desplegar el fix (commit+push; aviso: dispara CI) y `git pull` + `systemctl restart renfe-notifier-backend.service` en la VM.
+- Repetir la notificacion de prueba en el realme para confirmar el fix; continuar con pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro, cierre desde recientes vs forzar detencion y actualizacion con la misma firma.
+- Actualizar PROGRESS.md y detenerse (no avanzar al paso 36).

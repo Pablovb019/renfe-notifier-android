@@ -717,12 +717,23 @@ uff check .: All checks passed.
 - Item 9 del checklist (real-config-plan.md seccion 8) CERRADO.
 
 
-## 2026-09-17 - Paso 35 - Validacion real controlada EN CURSO (correccion DWR implementada; pendiente revalidacion real)
+## 2026-09-17 - Paso 35 - Escenario 1 VALIDADO en real; faltan escenarios 3-5
 - Autorizacion recibida: 1 busqueda DWR real controlada (escenario 1) + FCM end-to-end/acciones (3-4) + resiliencia realme (5).
-- One-shot de validacion ejecutado en VM (heredoc, sin tocar git; usa el motor real del backend).
-- Hallazgo real: generateId #2 responde `handleBatchException: Failed to find parameter: windowName`. El payload del cliente NO enviaba `windowName=` (ni `instanceId=0`, usaba `c0-id=0:{id}` y mandaba `c0-param0`/`httpSessionState` que el protocolo real de Renfe no espera en esa llamada).
-- Bot original en produccion (renfechecker.py) si envia `windowName=`, `instanceId=0`, `c0-id=0`, sin `c0-param0` en generateId, y hace POST previo con cookie Search. El usuario autorizo corregir el flujo replicandolo.
-- **Correccion implementada**: `app/renfe/client.py` con payloads DWR reales (windowName/instanceId, c0-eN+Object_Object, page buscarTrenEnlaces.do, cookie Search, scriptSessionId _tokenify) y `app/renfe/parser.py` con estructura anidada real (`listviajeViewEnlaceBean`, `tarifaMinima`/`razonNoDisponible`, "NaN"->sin precio). Tests nuevos de payload y parser.
-- **Verificado localmente**: 168 tests pasan, `ruff check` OK, `mypy app` OK (Windows, Python 3.14.7).
-- Escenarios 3-5 bloqueados en cadena (no hay trenes que notificar hasta revalidar el flujo DWR).
-- Siguiente: con autorizacion, publicar el fix (dispara CI), `git pull` en la VM y repetir el one-shot del escenario 1.
+- 1er intento: generateId #2 fallo con `handleBatchException: Failed to find parameter: windowName`.
+- 2o intento (tras corregir handshake): `getTrainsList` devolvio DWR U014 (sesion reiniciada) porque el POST de busqueda no llevaba Content-Type de formulario.
+- **Correccion implementada** (commits a3f2e8a, 7654c08, 613bd5a): `app/renfe/client.py` con payloads DWR reales (windowName/instanceId, c0-eN+Object_Object, page buscarTrenEnlaces.do, cookie Search, scriptSessionId _tokenify) y busqueda como formulario; `app/renfe/parser.py` con estructura anidada real (`listviajeViewEnlaceBean`, `tarifaMinima`/`razonNoDisponible`, "NaN"->sin precio).
+- **Verificado localmente y en CI**: 168 tests, ruff format/check OK, mypy OK; backend-ci y android-ci verdes.
+- **3er intento (VALIDADO, commit 613bd5a)**: Madrid 60000 -> Barcelona 71801 el 2026-09-19, plaza_h=False; 5 POSTs HTTP 200; `ParseStatus: OK`, 14 trenes reales con horas/precios; 2,247 s y 234016 B. Sin reservar ni crear seguimientos.
+- Escenarios 3-5 (FCM/acciones/Doze/reinicio/ahorro) pendientes de ejecutar en el realme GT Neo 2.
+- Siguiente: escenario 3-4 con seguimiento real breve y acciones; despues escenario 5. No avanzar al paso 36.
+
+
+## 2026-09-18 - Paso 35 - Pruebas en realme (adb) y fix de notificacion de prueba
+- **Hallazgo de arquitectura (no es fallo del paso)**: el backend no ejecuta el planificador ni entrega avisos reales (`SchedulerService` sin instanciar; `AlertQueue.enqueue/due_events` y `FcmNotificationSender.send_alert` sin llamadores; `create_followup` no encola). Coherente con `prompts/34` ("no actives sondeo del nuevo backend") y pendiente para la transicion (paso 37). Por eso la etapa "Deteccion" de la app muestra "Revisar" (logical_queries=0) y el escenario "alerta real con acciones" no es validable aun.
+- Realme GT Neo 2 (RMX3370) conectado por USB; app v0.1.5/code6 (firstInstall 2026-09-17 23:09).
+- Diagnostico en dispositivo: Google Play Services OK, permiso de notificaciones concedido, canal de avisos activo; dispositivos=1, seguimientos=0, episodios=0, consultas logicas=0, peticiones HTTP=0, bytes=0 B.
+- Canales confirmados por el sistema: `disponibilidad_plazas` (importance=4, sonido/vibracion) y `resumen_y_servicio` (importance=2); ambos `mBypassDnd=false`. Desactivar/reactivar el canal responde en la app.
+- Notificacion de prueba FCM: 1er envio recibido (id `projects/renfe-notifier-android/messages/0:1789686040309188%7ee20577f9fd7ecd`); los siguientes NO aparecian.
+- **Defecto real detectado**: `send_test` reutilizaba `event_id="test"` fijo y la app deduplica por `event_id` 30 dias (`FcmTokenGateway.kt:36`, `EventIdStore.kt:56-57`), descartando silenciosamente las pruebas repetidas. Evidencia (adb, DND desactivado `zen_mode=0`): logcat muestra recepcion FCM `FirebaseInstanceIdReceiver ... act=com.google.android.c2dm.intent.RECEIVE pkg=com.pablovb019.renfenotifier` y `dumpsys notification` sin ninguna notificacion de la app.
+- **Correccion implementada**: `backend/app/notifications/fcm.py` `send_test` usa `event_id=f"test-{uuid4().hex}"` por envio; test nuevo `test_send_test_uses_unique_event_id_per_send`. Verificado local: ruff format/check OK, mypy OK, 169 tests OK.
+- Pendiente en el realme: reintentar prueba tras desplegar; pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro de bateria, cierre desde recientes vs forzar detencion y actualizacion con la misma firma. Acciones Confirmar/Pausar pendientes (requieren aviso real o envio controlado tipo alert). No se inventaran resultados sin verificacion real.

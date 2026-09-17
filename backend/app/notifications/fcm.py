@@ -13,6 +13,7 @@ acota intentos y deduplica por ``event_id``. Este módulo es idempotente por
 mensaje y nunca reintenta por su cuenta.
 """
 
+import uuid
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -243,10 +244,16 @@ class FcmNotificationSender:
         return await self.send(message)
 
     async def send_test(self, *, fcm_token: str) -> str:
-        """Implementa el protocolo de diagnóstico; devuelve el id de FCM."""
+        """Implementa el protocolo de diagnóstico; devuelve el id de FCM.
+
+        Cada envío usa un ``event_id`` único para que la deduplicación de la app
+        (pensada para avisos reales reentregados) no descarte las pruebas
+        repetidas.
+        """
         alert = build_test_alert(
             token=fcm_token,
             ttl_s=self._default_ttl_s,
+            event_id=f"test-{uuid.uuid4().hex}",
         )
         result = await self.send(
             FcmMessage(
