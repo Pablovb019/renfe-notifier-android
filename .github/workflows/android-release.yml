@@ -115,6 +115,9 @@ jobs:
           packages: 'build-tools;34.0.0'
           accept-android-sdk-licenses: true
 
+      - name: Añadir build-tools al PATH
+        run: echo "/usr/local/lib/android/sdk/build-tools/34.0.0" >> $GITHUB_PATH
+
       - name: Decodificar keystore desde secret base64
         if: env.ANDROID_KEYSTORE_BASE64 != ''
         env:
