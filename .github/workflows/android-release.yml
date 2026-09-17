@@ -34,6 +34,7 @@ concurrency:
 permissions:
   contents: write      # Para crear Release y subir assets
   actions: read        # Para leer checks de CI
+  checks: read         # Para leer check runs via GitHub API
 
 jobs:
   validate-and-build:
