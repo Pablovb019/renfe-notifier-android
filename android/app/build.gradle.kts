@@ -32,7 +32,7 @@ android {
 
         // Backend por defecto (emulador -> host local). La URL se configura en
         // pantalla en un paso posterior; el cliente solo acepta https salvo loopback.
-        buildConfigField("String", "BACKEND_URL", "\"http://10.0.2.2:8000/\"")
+        buildConfigField("String", "BACKEND_URL", "\"http://34.73.192.35:8000/\"")
     }
 
     signingConfigs {
