@@ -21,13 +21,25 @@ import psutil
 # Añadir backend al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import argparse
+
 from app.config import Settings
+from app.db import apply_migrations, connect
 from app.followups.database import FollowUpRepository
 from app.followups.domain import Availability, FollowUp, FollowUpMode
 from app.renfe.client import SearchResult
 from app.renfe.parser import ParseStatus, TrainList
 from app.renfe.stations import StationCatalog
 from app.scheduler.plan import build_plan
+
+
+def _db_files(db_path: Path) -> list[Path]:
+    """Devuelve la BD y sus compañeros WAL/SHM (nunca todo el directorio)."""
+    return [
+        path
+        for path in db_path.parent.rglob(db_path.name + "*")
+        if path.is_file()
+    ]
 
 
 class FakeSearch:
@@ -172,13 +184,16 @@ async def run_measurement(
     search_results: list[SearchResult],
     concurrency: int = 2,
     interval_s: float = 0.1,
+    db_path: Path | None = None,
 ) -> dict:
     """Ejecuta una medición completa y retorna métricas."""
     process = psutil.Process(os.getpid())
 
     # Configuración
     settings = Settings()
-    repo = FollowUpRepository(settings.database_path)
+    db_path = db_path or settings.database_path
+    repo = FollowUpRepository(db_path)
+    apply_migrations(connect(db_path))
     # La BD ya está inicializada (tests previos), solo limpiar datos
     with repo._session() as conn:
         conn.execute("DELETE FROM followups")
@@ -219,14 +234,11 @@ async def run_measurement(
 
     # Medición inicial
     gc.collect()
+    gc_stats_start = gc.get_stats()
     await asyncio.sleep(0.1)
     cpu_start = process.cpu_percent()
     mem_start = process.memory_info().rss / 1024 / 1024  # MB
-    disk_start = sum(
-        f.stat().st_size
-        for f in Path(settings.database_path).parent.rglob("*")
-        if f.is_file()
-    )
+    disk_start = sum(f.stat().st_size for f in _db_files(db_path))
     start_time = time.perf_counter()
 
     # Ejecutar un ciclo
@@ -235,14 +247,11 @@ async def run_measurement(
     # Medición final
     end_time = time.perf_counter()
     gc.collect()
+    gc_stats_end = gc.get_stats()
     await asyncio.sleep(0.1)
     cpu_end = process.cpu_percent()
     mem_end = process.memory_info().rss / 1024 / 1024
-    disk_end = sum(
-        f.stat().st_size
-        for f in Path(settings.database_path).parent.rglob("*")
-        if f.is_file()
-    )
+    disk_end = sum(f.stat().st_size for f in _db_files(db_path))
 
     duration = end_time - start_time
     cpu_avg = (cpu_start + cpu_end) / 2
@@ -253,6 +262,11 @@ async def run_measurement(
     from app import monitoring as monitoring_module
 
     snap = monitoring_module.monitoring.snapshot()
+
+    gc_delta = sum(
+        (g_end["collected"] - g_start["collected"])
+        for g_start, g_end in zip(gc_stats_start, gc_stats_end)
+    )
 
     return {
         "name": name,
@@ -265,6 +279,7 @@ async def run_measurement(
         "memory_mb_end": round(mem_end, 1),
         "memory_delta_mb": round(mem_delta, 1),
         "disk_delta_kb": round(disk_delta / 1024, 1),
+        "gc_collected_delta": gc_delta,
         "http_requests": snap.http_requests,
         "bytes_received": snap.bytes_received,
         "logical_queries": snap.logical_queries,
@@ -284,6 +299,7 @@ def format_table(results: list[dict]) -> str:
         "RAM Inicio (MB)",
         "RAM Delta (MB)",
         "Disco Delta (KB)",
+        "GC Delta",
         "Peticiones HTTP",
         "Bytes Recibidos",
         "Queries Lógicas",
@@ -302,6 +318,7 @@ def format_table(results: list[dict]) -> str:
                 str(r["memory_mb_start"]),
                 str(r["memory_delta_mb"]),
                 str(r["disk_delta_kb"]),
+                str(r["gc_collected_delta"]),
                 str(r["http_requests"]),
                 str(r["bytes_received"]),
                 str(r["logical_queries"]),
@@ -325,10 +342,36 @@ def format_table(results: list[dict]) -> str:
 
 
 async def main():
+    parser = argparse.ArgumentParser(
+        description="Medición de recursos del scheduler usando una BD temporal propia"
+    )
+    parser.add_argument(
+        "--db",
+        default=None,
+        help="Ruta SQLite temporal (por defecto: un archivo nuevo bajo /tmp)",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Ruta del JSON de resultados (por defecto: docs/measurements.json)",
+    )
+    parser.add_argument(
+        "--environment",
+        default="local-windows",
+        help="Etiqueta del entorno (p. ej. vm-e2-micro-real)",
+    )
+    args = parser.parse_args()
+
+    import tempfile
+
+    temp_db = Path(tempfile.gettempdir()) / "renfe-measure-resources.db"
+    db_path = Path(args.db) if args.db else temp_db
+
     print("=" * 80)
     print("MEDICIÓN DE RECURSOS - PASO 32")
     print("=" * 80)
     print()
+    print(f"Base de datos temporal: {db_path}")
 
     # Preparar resultados de búsqueda
     search_results = create_fake_search_results()
@@ -363,7 +406,7 @@ async def main():
     for name, followups, concurrency in scenarios:
         print(f"Ejecutando: {name}...")
         result = await run_measurement(
-            name, followups, search_results, concurrency=concurrency
+            name, followups, search_results, concurrency=concurrency, db_path=db_path
         )
         results.append(result)
 
@@ -467,8 +510,9 @@ async def main():
 
     output = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "environment": "local-windows",
+        "environment": args.environment,
         "python_version": sys.version,
+        "database": str(db_path),
         "results": results,
         "analysis": {
             "grouping_saves_requests": group_saved_requests,
@@ -485,7 +529,9 @@ async def main():
             ],
         },
     }
-    out_path = Path(__file__).parent.parent / "docs" / "measurements.json"
+    out_path = Path(args.output) if args.output else (
+        Path(__file__).parent.parent / "docs" / "measurements.json"
+    )
     out_path.write_text(json.dumps(output, indent=2))
     print(f"Resultados guardados en: {out_path}")
 
