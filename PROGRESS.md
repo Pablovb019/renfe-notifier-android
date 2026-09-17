@@ -715,3 +715,14 @@ uff check .: All checks passed.
 - Resultados completos en docs/measurements.json (run vm-e2-micro-real).
 - Selenium descartado de nuevo: con latencia real ~0.42s/peticion y agrupacion, el costo por ciclo es viable en e2-micro sin Chrome (-150-300 MB RAM).
 - Item 9 del checklist (real-config-plan.md seccion 8) CERRADO.
+
+
+## 2026-09-17 - Paso 35 - Validacion real controlada EN CURSO (correccion DWR implementada; pendiente revalidacion real)
+- Autorizacion recibida: 1 busqueda DWR real controlada (escenario 1) + FCM end-to-end/acciones (3-4) + resiliencia realme (5).
+- One-shot de validacion ejecutado en VM (heredoc, sin tocar git; usa el motor real del backend).
+- Hallazgo real: generateId #2 responde `handleBatchException: Failed to find parameter: windowName`. El payload del cliente NO enviaba `windowName=` (ni `instanceId=0`, usaba `c0-id=0:{id}` y mandaba `c0-param0`/`httpSessionState` que el protocolo real de Renfe no espera en esa llamada).
+- Bot original en produccion (renfechecker.py) si envia `windowName=`, `instanceId=0`, `c0-id=0`, sin `c0-param0` en generateId, y hace POST previo con cookie Search. El usuario autorizo corregir el flujo replicandolo.
+- **Correccion implementada**: `app/renfe/client.py` con payloads DWR reales (windowName/instanceId, c0-eN+Object_Object, page buscarTrenEnlaces.do, cookie Search, scriptSessionId _tokenify) y `app/renfe/parser.py` con estructura anidada real (`listviajeViewEnlaceBean`, `tarifaMinima`/`razonNoDisponible`, "NaN"->sin precio). Tests nuevos de payload y parser.
+- **Verificado localmente**: 168 tests pasan, `ruff check` OK, `mypy app` OK (Windows, Python 3.14.7).
+- Escenarios 3-5 bloqueados en cadena (no hay trenes que notificar hasta revalidar el flujo DWR).
+- Siguiente: con autorizacion, publicar el fix (dispara CI), `git pull` en la VM y repetir el one-shot del escenario 1.

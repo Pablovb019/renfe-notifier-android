@@ -114,13 +114,31 @@ def _find_train_rows(decoded: Any) -> list[dict[str, Any]]:
         raise DwrParseError("El payload DWR no tiene formato de listado")
     if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
         raise DwrParseError("listadoTrenes no es una lista de trenes válida")
-    return cast(list[dict[str, Any]], rows)
+    return _flatten_groups(cast(list[dict[str, Any]], rows))
+
+
+def _flatten_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Expande los grupos reales (``listviajeViewEnlaceBean``) en filas de tren."""
+    flattened: list[dict[str, Any]] = []
+    for row in rows:
+        group = row.get("listviajeViewEnlaceBean")
+        if isinstance(group, list) and all(isinstance(item, dict) for item in group):
+            flattened.extend(cast(list[dict[str, Any]], group))
+        else:
+            flattened.append(row)
+    return flattened
 
 
 def _parse_train(row: dict[str, Any]) -> Train:
     departure = _parse_time(row.get("horaSalida"))
     arrival = _parse_time(row.get("horaLlegada"))
-    service = _string_value(row.get("numeroTren")) or _string_value(row.get("tren")) or "unknown"
+    service = (
+        _string_value(row.get("numeroTren"))
+        or _string_value(row.get("tren"))
+        or _string_value(row.get("tipoTrenUno"))
+        or _string_value(row.get("tipoTren"))
+        or "unknown"
+    )
     departure_key = departure.isoformat() if departure else "unknown"
     arrival_key = arrival.isoformat() if arrival else "unknown"
     availability = _parse_availability(row)
@@ -128,7 +146,7 @@ def _parse_train(row: dict[str, Any]) -> Train:
         identifier=f"{service}|{departure_key}|{arrival_key}",
         departure=departure,
         arrival=arrival,
-        price=_parse_price(row.get("precio")),
+        price=_parse_price(row.get("precio", row.get("tarifaMinima"))),
         availability=availability,
     )
 
@@ -151,6 +169,8 @@ def _parse_time(value: Any) -> time | None:
 def _parse_price(value: Any) -> Decimal | None:
     if value is None or value == "":
         return None
+    if isinstance(value, str) and value.strip().lower() == "nan":
+        return None
     if isinstance(value, (int, float, Decimal)) and not isinstance(value, bool):
         return Decimal(str(value))
     if isinstance(value, str):
@@ -172,7 +192,22 @@ def _parse_availability(row: dict[str, Any]) -> Availability:
         return Availability.AVAILABLE
     if value is False:
         return Availability.NO_AVAILABILITY
+    if "completo" in row or "razonNoDisponible" in row or "tarifaMinima" in row:
+        return _parse_dwr_availability(row)
     return Availability.UNKNOWN
+
+
+def _parse_dwr_availability(row: dict[str, Any]) -> Availability:
+    """Disponibilidad del esquema real, sin interpretar Plaza H como regla."""
+    reason = str(row.get("razonNoDisponible") or "")
+    fare = row.get("tarifaMinima")
+    if bool(row.get("completo")):
+        return Availability.NO_AVAILABILITY
+    if reason not in ("", "8"):
+        return Availability.NO_AVAILABILITY
+    if fare in (None, "", "NaN"):
+        return Availability.NO_AVAILABILITY
+    return Availability.AVAILABLE
 
 
 def _string_value(value: Any) -> str | None:

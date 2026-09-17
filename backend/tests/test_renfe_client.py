@@ -62,6 +62,40 @@ async def test_client_executes_the_five_documented_posts_with_metrics() -> None:
 
 
 @pytest.mark.asyncio
+async def test_client_replicates_the_verified_dwr_payload_shape() -> None:
+    bodies: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if request.url.path.endswith("generateId.dwr"):
+            bodies.setdefault("generate_id", body)
+            return httpx.Response(200, text='r.handleCallback("0", "0", "synthetictoken123");')
+        if request.url.path.endswith("getTrainsList.dwr"):
+            bodies["train_list"] = body
+            return httpx.Response(200, text=TRAIN_LIST)
+        if request.url.path.endswith("buscarTren.do"):
+            bodies["search"] = body
+        return httpx.Response(200, text="ok")
+
+    client = RenfeDwrClient(transport=httpx.MockTransport(handler), jitter=lambda: 0.0)
+    await client.search(
+        origin=ORIGIN, destination=DESTINATION, travel_date=date(2026, 9, 12), plaza_h=False
+    )
+
+    generate = bodies["generate_id"]
+    assert "windowName=\n" in generate
+    assert "instanceId=0\n" in generate
+    assert "c0-id=0\n" in generate
+    assert "c0-param0" not in generate
+    assert "httpSessionState" not in generate
+    assert "page=%2Fvol%2FbuscarTrenEnlaces.do" in generate
+    assert bodies["search"].startswith("tipoBusqueda=autocomplete")
+    assert "cdgoOrigen=00001" in bodies["search"]
+    assert bodies["train_list"].startswith("callCount=1\nwindowName=\n")
+    assert "c0-param0=Object_Object:{atendo:reference:c0-e1" in bodies["train_list"]
+
+
+@pytest.mark.asyncio
 async def test_client_honours_retry_after_for_rate_limiting() -> None:
     calls: list[str] = []
     waits: list[float] = []

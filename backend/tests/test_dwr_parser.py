@@ -26,3 +26,24 @@ def test_parser_distinguishes_no_availability_from_invalid_response() -> None:
     assert result.status is ParseStatus.NO_AVAILABILITY
     with pytest.raises(DwrParseError, match="callback DWR"):
         parse_train_list("respuesta no válida", plaza_h_requested=False)
+
+
+def test_parser_flattens_grouped_payload_from_the_real_dwr_shape() -> None:
+    payload = (
+        'r.handleCallback("0", "0", {listadoTrenes: ['
+        "{listviajeViewEnlaceBean: ["
+        '{horaSalida: "07:30", horaLlegada: "10:10", tarifaMinima: "45,90", '
+        'tipoTrenUno: "AVE", completo: false, razonNoDisponible: ""}, '
+        '{horaSalida: "08:00", horaLlegada: "10:40", tarifaMinima: "NaN", '
+        'tipoTrenUno: "AVE", completo: true, razonNoDisponible: "1"}'
+        "]}]});"
+    )
+
+    result = parse_train_list(payload, plaza_h_requested=False)
+
+    assert result.status is ParseStatus.OK
+    assert result.trains[0].identifier == "AVE|07:30:00|10:10:00"
+    assert str(result.trains[0].price) == "45.90"
+    assert result.trains[0].availability is Availability.AVAILABLE
+    assert result.trains[1].price is None
+    assert result.trains[1].availability is Availability.NO_AVAILABILITY

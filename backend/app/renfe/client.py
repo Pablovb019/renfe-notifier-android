@@ -8,11 +8,13 @@ import asyncio
 import random
 import re
 import secrets
+import string
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
+from urllib.parse import quote, quote_plus, urlencode
 
 import httpx
 
@@ -20,10 +22,17 @@ from app.renfe.parser import TrainList, parse_train_list
 from app.renfe.stations import Station
 
 SEARCH_URL = "https://venta.renfe.com/vol/buscarTren.do?Idioma=es&Pais=ES"
-DWR_ENDPOINT = "https://venta.renfe.com/vol/dwr/call/plaincall"
-SYSTEM_ID_URL = f"{DWR_ENDPOINT}/__System.generateId.dwr"
-UPDATE_SESSION_URL = f"{DWR_ENDPOINT}/buyEnlacesManager.actualizaObjetosSesion.dwr"
-TRAIN_LIST_URL = f"{DWR_ENDPOINT}/trainEnlacesManager.getTrainsList.dwr"
+DWR_ENDPOINT = "https://venta.renfe.com/vol/dwr/call/plaincall/"
+SYSTEM_ID_URL = f"{DWR_ENDPOINT}__System.generateId.dwr"
+UPDATE_SESSION_URL = f"{DWR_ENDPOINT}buyEnlacesManager.actualizaObjetosSesion.dwr"
+TRAIN_LIST_URL = f"{DWR_ENDPOINT}trainEnlacesManager.getTrainsList.dwr"
+_DWR_PAGE = "%2Fvol%2FbuscarTrenEnlaces.do"
+_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+_TOKEN_CHARS = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ*$"
+_COOKIE_SAFE = "".join(char for char in string.punctuation if char != "%") + " "
 _TOKEN_CALLBACK = re.compile(
     r"(?:dwr\.engine\.remote\.|r\.)handleCallback\s*\(\s*['\"]\d+['\"]\s*,\s*"
     r"['\"]\d+['\"]\s*,\s*['\"]([A-Za-z0-9]+)['\"]"
@@ -122,9 +131,20 @@ class RenfeDwrClient:
                     timeout=timeout,
                     transport=self._transport,
                     follow_redirects=True,
+                    headers={
+                        "User-Agent": _USER_AGENT,
+                        "Accept": "*/*",
+                        "Connection": "keep-alive",
+                    },
                 ) as session:
-                    search_id = secrets.token_hex(4)
+                    search_id = self._create_search_id()
                     date_text = travel_date.strftime("%d/%m/%Y")
+                    session.cookies.set(
+                        "Search",
+                        self._search_cookie_value(origin, destination),
+                        domain=".renfe.com",
+                        path="/",
+                    )
                     await self._post(
                         session,
                         "search",
@@ -162,7 +182,9 @@ class RenfeDwrClient:
                         session,
                         "train_list",
                         TRAIN_LIST_URL,
-                        self._train_list_payload(search_id, script_session_id, 3, plaza_h),
+                        self._train_list_payload(
+                            search_id, script_session_id, 3, plaza_h, date_text
+                        ),
                         metrics,
                     )
                     trains = parse_train_list(train_response.text, plaza_h_requested=plaza_h)
@@ -187,13 +209,13 @@ class RenfeDwrClient:
         session: httpx.AsyncClient,
         phase: str,
         url: str,
-        data: dict[str, str],
+        body: str,
         metrics: list[RequestMetric],
     ) -> httpx.Response:
         for attempt in range(self._max_retries + 1):
             started_at = time.monotonic()
             try:
-                response = await session.post(url, data=data)
+                response = await session.post(url, content=body)
             except httpx.TransportError as error:
                 metrics.append(RequestMetric(phase, None, time.monotonic() - started_at, 0))
                 if attempt == self._max_retries:
@@ -254,73 +276,137 @@ class RenfeDwrClient:
         return match.group(1)
 
     @staticmethod
-    def _script_session_id(dwr_token: str) -> str:
-        return f"{dwr_token}/{int(time.time() * 1000)}-{secrets.token_hex(4)}"
+    def _create_search_id() -> str:
+        return "_" + "".join(
+            secrets.choice(string.ascii_letters + string.digits) for _ in range(4)
+        )
+
+    @staticmethod
+    def _tokenify(number: int) -> str:
+        token: list[str] = []
+        remainder = number
+        while remainder > 0:
+            token.append(_TOKEN_CHARS[remainder & 0x3F])
+            remainder //= 64
+        return "".join(token)
+
+    @classmethod
+    def _script_session_id(cls, dwr_token: str) -> str:
+        now_token = cls._tokenify(int(time.time() * 1000))
+        random_token = cls._tokenify(secrets.randbelow(10**16))
+        return f"{dwr_token}/{now_token}-{random_token}"
+
+    @staticmethod
+    def _search_cookie_value(origin: Station, destination: Station) -> str:
+        search = {
+            "origen": {"code": origin.code, "name": origin.name},
+            "destino": {"code": destination.code, "name": destination.name},
+            "pasajerosAdultos": 1,
+            "pasajerosNinos": 0,
+            "pasajerosSpChild": 0,
+        }
+        # httpx exige cookies ASCII: se codifican solo los caracteres no ASCII
+        # (el bot original los enviaba en latin-1 vía requests).
+        return quote(str(search), safe=_COOKIE_SAFE)
 
     @staticmethod
     def _search_payload(
         origin: Station, destination: Station, date_text: str, plaza_h: bool
-    ) -> dict[str, str]:
-        return {
-            "idGo": date_text,
-            "idVuelta": "",
-            "idOrig": origin.code,
-            "idDest": destination.code,
-            "nombOrig": origin.name,
-            "nombDest": destination.name,
-            "FechaIda": date_text,
-            "FechaVuelta": "",
-            "horaIda": "",
-            "horaVuelta": "",
-            "Plaza": "H" if plaza_h else "N",
-            "df": "false",
-        }
+    ) -> str:
+        return urlencode(
+            {
+                "tipoBusqueda": "autocomplete",
+                "currenLocation": "menuBusqueda",
+                "vengoderenfecom": "SI",
+                "desOrigen": origin.name,
+                "desDestino": destination.name,
+                "cdgoOrigen": origin.code,
+                "cdgoDestino": destination.code,
+                "idiomaBusqueda": "ES",
+                "FechaIdaSel": date_text,
+                "FechaVueltaSel": "",
+                "_fechaIdaVisual": date_text,
+                "_fechaVueltaVisual": "",
+                "adultos_": "1",
+                "ninos_": "0",
+                "ninosMenores": "0",
+                "codPromocional": "",
+                "plazaH": "true" if plaza_h else "false",
+                "sinEnlace": "false",
+                "asistencia": "false",
+                "franjaHoraI": "",
+                "franjaHoraV": "",
+                "Idioma": "es",
+                "Pais": "ES",
+            }
+        )
 
     @staticmethod
-    def _generate_id_payload(search_id: str, batch_id: int) -> dict[str, str]:
-        return {
-            "callCount": "1",
-            "page": "/vol/buscarTren.do?Idioma=es&Pais=ES",
-            "httpSessionState": "!",
-            "scriptSessionId": "",
-            "c0-scriptName": "__System",
-            "c0-methodName": "generateId",
-            "c0-id": f"0:{search_id}",
-            "c0-param0": f"string:{batch_id:04d}",
-            "batchId": str(batch_id),
-        }
+    def _generate_id_payload(search_id: str, batch_id: int) -> str:
+        page = f"page={_DWR_PAGE}%3Fc%3D{search_id}\n" if search_id else f"page={_DWR_PAGE}\n"
+        return (
+            "callCount=1\n"
+            "c0-scriptName=__System\n"
+            "c0-methodName=generateId\n"
+            "c0-id=0\n"
+            f"batchId={batch_id}\n"
+            "instanceId=0\n"
+            f"{page}"
+            "scriptSessionId=\n"
+            "windowName=\n"
+        )
 
     @staticmethod
     def _update_session_payload(
         search_id: str, script_session_id: str, batch_id: int
-    ) -> dict[str, str]:
-        return {
-            "callCount": "1",
-            "page": "/vol/buscarTren.do?Idioma=es&Pais=ES",
-            "httpSessionState": "!",
-            "scriptSessionId": script_session_id,
-            "c0-scriptName": "buyEnlacesManager",
-            "c0-methodName": "actualizaObjetosSesion",
-            "c0-id": f"0:{search_id}",
-            "c0-param0": f"string:{search_id}",
-            "c0-param1": f"string:{script_session_id}",
-            "batchId": str(batch_id),
-        }
+    ) -> str:
+        return (
+            "callCount=1\n"
+            "windowName=\n"
+            "c0-scriptName=buyEnlacesManager\n"
+            "c0-methodName=actualizaObjetosSesion\n"
+            "c0-id=0\n"
+            f"c0-e1=string:{search_id}\n"
+            "c0-e2=string:\n"
+            "c0-param0=array:[reference:c0-e1,reference:c0-e2]\n"
+            f"batchId={batch_id}\n"
+            "instanceId=0\n"
+            f"page={_DWR_PAGE}%3Fc%3D{search_id}\n"
+            f"scriptSessionId={script_session_id}\n"
+        )
 
     @staticmethod
     def _train_list_payload(
-        search_id: str, script_session_id: str, batch_id: int, plaza_h: bool
-    ) -> dict[str, str]:
-        return {
-            "callCount": "1",
-            "page": "/vol/buscarTren.do?Idioma=es&Pais=ES",
-            "httpSessionState": "!",
-            "scriptSessionId": script_session_id,
-            "c0-scriptName": "trainEnlacesManager",
-            "c0-methodName": "getTrainsList",
-            "c0-id": f"0:{search_id}",
-            "c0-param0": f"string:{script_session_id}",
-            "c0-param1": f"string:{search_id}",
-            "c0-param2": "string:H" if plaza_h else "string:N",
-            "batchId": str(batch_id),
-        }
+        search_id: str, script_session_id: str, batch_id: int, plaza_h: bool, date_text: str
+    ) -> str:
+        return (
+            "callCount=1\n"
+            "windowName=\n"
+            "c0-scriptName=trainEnlacesManager\n"
+            "c0-methodName=getTrainsList\n"
+            "c0-id=0\n"
+            "c0-e1=string:false\n"
+            "c0-e2=string:false\n"
+            f"c0-e3=string:{'true' if plaza_h else 'false'}\n"
+            "c0-e4=string:\n"
+            "c0-e5=string:\n"
+            "c0-e6=string:\n"
+            "c0-e7=string:\n"
+            f"c0-e8=string:{quote_plus(date_text)}\n"
+            "c0-e9=string:\n"
+            "c0-e10=string:1\n"
+            "c0-e11=string:0\n"
+            "c0-e12=string:0\n"
+            "c0-e13=string:I\n"
+            "c0-e14=string:\n"
+            "c0-param0=Object_Object:{atendo:reference:c0-e1, sinEnlace:reference:c0-e2, "
+            "plazaH:reference:c0-e3, tipoFranjaI:reference:c0-e4, tipoFranjaV:reference:c0-e5, "
+            "horaFranjaIda:reference:c0-e6, horaFranjaVuelta:reference:c0-e7, "
+            "fechaSalida:reference:c0-e8, fechaVuelta:reference:c0-e9, adultos:reference:c0-e10, "
+            "ninos:reference:c0-e11, ninosMenores:reference:c0-e12, trayecto:reference:c0-e13, "
+            "idaVuelta:reference:c0-e14}\n"
+            f"batchId={batch_id}\n"
+            "instanceId=0\n"
+            f"page={_DWR_PAGE}%3Fc%3D{search_id}\n"
+            f"scriptSessionId={script_session_id}\n"
+        )

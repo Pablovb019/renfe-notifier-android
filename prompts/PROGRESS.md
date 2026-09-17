@@ -1209,3 +1209,34 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 
 ## Siguiente paso
 - Pendiente de instrucciones del usuario (siguiente item del checklist real-config-plan.md o cierre de proyecto).
+
+
+# Paso 35 - Validacion real controlada EN CURSO (correccion DWR implementada, pendiente revalidacion real)
+
+## Decisiones adoptadas
+- El usuario autorizo el paso 35 completo: 1 busqueda DWR real controlada (escenario 1), notificacion end-to-end + acciones (escenario 3-4) y resiliencia en el realme (escenario 5).
+- Se preparo un one-shot de validacion SIN tocar git (heredoc en VM), reutilizando el motor real del backend (RenfeDwrClient + TrainSearchEngine + StationCatalog), sin crear seguimientos ni reservar billetes.
+- Tras el hallazgo del protocolo DWR, el usuario autorizo corregir el flujo replicando el bot original en produccion.
+
+## Pruebas ejecutadas y resultados (evidencia real)
+- **Escenario 1 (busqueda DWR real Madrid 60000 -> Barcelona 71801, +2 dias, mode ALL, plaza_h=False)**:
+  - Fases 1-2 (search / generateId #1): OK (HTTP 200).
+  - **Fase generateId #2 FALLO**: `RenfeResponseError: La segunda respuesta generateId no contiene token DWR`.
+  - Diagnostico de la respuesta real (sanitizada): `r.handleBatchException({name:'java.lang.RuntimeException', message:'Failed to find parameter: windowName (check server log for more info).'})`. Renfe espera el campo `windowName=`, que nuestro payload no enviaba.
+- **Comparacion con el bot original en produccion** (`renfe-notifier-bot-2/python/renfechecker.py`), que SI funciona con Renfe en vivo:
+  - `_create_generate_id_payload`: incluye `windowName=\n`, `instanceId=0\n`, `c0-id=0\n`, `scriptSessionId=\n`, page=`buscarTrenEnlaces.do`, y NO incluye `c0-param0` ni `httpSessionState`.
+  - Flujo previo: POST a buscarTren.do con payload extendido + cookie `Search` (domain .renfe.com, path /) ANTES del generateId.
+  - El cliente anterior usaba `c0-param0=string:{batch_id:04d}`, `c0-id=0:{search_id}`, `httpSessionState=!`, page=`buscarTren.do` y omitia `windowName`/`instanceId`: firma de metodo distinta -> error DWR.
+- **Correccion implementada (probada localmente)**:
+  - `app/renfe/client.py`: payloads DWR replicados (generateId con `windowName=`/`instanceId=0`/`c0-id=0` y sin `c0-param0`; update_session y getTrainsList con `c0-eN`/`Object_Object`; page `buscarTrenEnlaces.do`); POST de busqueda extendido + cookie `Search`; `scriptSessionId` con el `_tokenify` original; DWR_ENDPOINT con barra final; User-Agent Chrome.
+  - `app/renfe/parser.py`: soporta la estructura real anidada (`listadoTrenes` -> grupos -> `listviajeViewEnlaceBean`) y disponibilidad/`tarifaMinima`/`razonNoDisponible`; trata `"NaN"` como sin precio. Mantiene compatibilidad con la estructura plana sintetica.
+  - Tests anadidos: forma exacta de los payloads (`test_renfe_client.py`) y parseo de la estructura agrupada real (`test_dwr_parser.py`).
+  - Resultados locales: **168 tests pasan**, `ruff check` OK, `mypy app` OK (Windows, Python 3.14.7).
+- **Escenarios 3-5 (FCM end-to-end, acciones, Doze, reinicio, ahorro) NO EJECUTADOS**: dependen de que el flujo DWR real devuelva trenes.
+
+## Bloqueos
+- **Revalidacion real pendiente**: requiere (a) autorizacion para una segunda consulta DWR controlada en la VM y (b) llevar el fix a la VM (commit+push; activa CI/CD) o copiar los ficheros, ya que alli el codigo sigue sin corregir.
+- **Escenarios 3-5** siguen bloqueados en cadena hasta validar el escenario 1.
+
+## Siguiente paso
+- Con autorizacion: publicar el fix a `main` (aviso: dispara backend-ci/android-ci), `git pull` en la VM y repetir el one-shot del escenario 1 para confirmar que el parser recibe trenes reales; despues ejecutar escenarios 3-5.
