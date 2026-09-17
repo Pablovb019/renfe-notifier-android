@@ -22,8 +22,8 @@ android {
         minSdk = 26
         // Android 13 y superiores; nunca un targetSdk antiguo para eludir restricciones.
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.1.4"
+        versionCode = 6
+        versionName = "0.1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -32,7 +32,7 @@ android {
 
         // Backend por defecto (emulador -> host local). La URL se configura en
         // pantalla en un paso posterior; el cliente solo acepta https salvo loopback.
-        buildConfigField("String", "BACKEND_URL", "\"http://34.73.192.35:8000/\"")
+        buildConfigField("String", "BACKEND_URL", "\"http://34.26.252.164:8000/\"")
     }
 
     signingConfigs {

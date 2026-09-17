@@ -23,7 +23,7 @@ object ApiModule {
     private const val TIMEOUT_CONNECT_S = 15L
     private const val TIMEOUT_READ_S = 30L
 
-    private val allowHttpHosts = setOf("localhost", "127.0.0.1", "10.0.2.2", "34.73.192.35")
+    private val allowHttpHosts = setOf("localhost", "127.0.0.1", "10.0.2.2", "34.26.252.164")
 
     private lateinit var tokenVault: TokenVault
     private lateinit var serverContactStore: ServerContactStore
