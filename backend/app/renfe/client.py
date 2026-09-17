@@ -14,7 +14,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from email.utils import parsedate_to_datetime
-from urllib.parse import quote, quote_plus, urlencode
+from urllib.parse import quote, quote_plus
 
 import httpx
 
@@ -209,13 +209,16 @@ class RenfeDwrClient:
         session: httpx.AsyncClient,
         phase: str,
         url: str,
-        body: str,
+        body: str | dict[str, str],
         metrics: list[RequestMetric],
     ) -> httpx.Response:
         for attempt in range(self._max_retries + 1):
             started_at = time.monotonic()
             try:
-                response = await session.post(url, content=body)
+                if isinstance(body, dict):
+                    response = await session.post(url, data=body)
+                else:
+                    response = await session.post(url, content=body)
             except httpx.TransportError as error:
                 metrics.append(RequestMetric(phase, None, time.monotonic() - started_at, 0))
                 if attempt == self._max_retries:
@@ -310,34 +313,34 @@ class RenfeDwrClient:
     @staticmethod
     def _search_payload(
         origin: Station, destination: Station, date_text: str, plaza_h: bool
-    ) -> str:
-        return urlencode(
-            {
-                "tipoBusqueda": "autocomplete",
-                "currenLocation": "menuBusqueda",
-                "vengoderenfecom": "SI",
-                "desOrigen": origin.name,
-                "desDestino": destination.name,
-                "cdgoOrigen": origin.code,
-                "cdgoDestino": destination.code,
-                "idiomaBusqueda": "ES",
-                "FechaIdaSel": date_text,
-                "FechaVueltaSel": "",
-                "_fechaIdaVisual": date_text,
-                "_fechaVueltaVisual": "",
-                "adultos_": "1",
-                "ninos_": "0",
-                "ninosMenores": "0",
-                "codPromocional": "",
-                "plazaH": "true" if plaza_h else "false",
-                "sinEnlace": "false",
-                "asistencia": "false",
-                "franjaHoraI": "",
-                "franjaHoraV": "",
-                "Idioma": "es",
-                "Pais": "ES",
-            }
-        )
+    ) -> dict[str, str]:
+        # Se envia como formulario real (data=dict) para que httpx fije
+        # Content-Type: application/x-www-form-urlencoded, que buscarTren.do exige.
+        return {
+            "tipoBusqueda": "autocomplete",
+            "currenLocation": "menuBusqueda",
+            "vengoderenfecom": "SI",
+            "desOrigen": origin.name,
+            "desDestino": destination.name,
+            "cdgoOrigen": origin.code,
+            "cdgoDestino": destination.code,
+            "idiomaBusqueda": "ES",
+            "FechaIdaSel": date_text,
+            "FechaVueltaSel": "",
+            "_fechaIdaVisual": date_text,
+            "_fechaVueltaVisual": "",
+            "adultos_": "1",
+            "ninos_": "0",
+            "ninosMenores": "0",
+            "codPromocional": "",
+            "plazaH": "true" if plaza_h else "false",
+            "sinEnlace": "false",
+            "asistencia": "false",
+            "franjaHoraI": "",
+            "franjaHoraV": "",
+            "Idioma": "es",
+            "Pais": "ES",
+        }
 
     @staticmethod
     def _generate_id_payload(search_id: str, batch_id: int) -> str:

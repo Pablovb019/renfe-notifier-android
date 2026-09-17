@@ -75,6 +75,7 @@ async def test_client_replicates_the_verified_dwr_payload_shape() -> None:
             return httpx.Response(200, text=TRAIN_LIST)
         if request.url.path.endswith("buscarTren.do"):
             bodies["search"] = body
+            bodies["search_content_type"] = request.headers.get("content-type", "")
         return httpx.Response(200, text="ok")
 
     client = RenfeDwrClient(transport=httpx.MockTransport(handler), jitter=lambda: 0.0)
@@ -90,6 +91,7 @@ async def test_client_replicates_the_verified_dwr_payload_shape() -> None:
     assert "httpSessionState" not in generate
     assert "page=%2Fvol%2FbuscarTrenEnlaces.do" in generate
     assert bodies["search"].startswith("tipoBusqueda=autocomplete")
+    assert bodies["search_content_type"].startswith("application/x-www-form-urlencoded")
     assert "cdgoOrigen=00001" in bodies["search"]
     assert bodies["train_list"].startswith("callCount=1\nwindowName=\n")
     assert "c0-param0=Object_Object:{atendo:reference:c0-e1" in bodies["train_list"]
