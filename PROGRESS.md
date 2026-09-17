@@ -685,3 +685,22 @@ uff check .: All checks passed.
 ## 2026-09-16 - Item 7 - android-release: fix checks nominal aplicado
 - Mismo bug auto-contaminacion que en backend-cd corregido en android-release.yml (valida backend-ci/android-ci/all-checks-ok por nombre via API check-runs, no estado combinado). YAML OK.
 - Pendiente: commit+push autorizado y tag v0.1.0 sobre CI verde (compila APK firmado + release privada).
+
+
+## 2026-09-17 - Item 7 - android-release: SUCCESS (v0.1.0)
+- Run 35265221397 (SHA f9e9b7a): success. APK firmado + verificado (apksigner), checksum SHA256, Release privada creada con gh release create.
+- Fixes aplicados: checks:read permission, android-actions/setup-android build-tools + PATH, gh release create (reemplaza create-release deprecated).
+- Item 7 del checklist (real-config-plan.md seccion 8) CERRADO.
+- Siguientes: item 8 (instalar APK en realme GT Neo 2 + FCM real), item 9 (mediciones VM).
+
+
+## 2026-09-17 - Item 8 - Emparejamiento + FCM real CERRADO
+- Releases lanzadas del arreglo de crash y conexion: v0.1.1 (b0b857f), v0.1.2 (48d3b9f), v0.1.3 (f895220), v0.1.4 (ff33d0e), v0.1.5 (a925112). Todas con android-release success.
+- Crash "se exige HTTPS salvo hosts locales" con la IP de produccion: causa real en ApiModule.validateBaseUrl (allowHttpHosts no incluia la IP), no en network_security_config (aunque se fijo includeSubdomains=false por lint). Fix db8b220.
+- Conectividad: backend escuchaba solo en 127.0.0.1. Fix: unit systemd bind 0.0.0.0 (7aa749d) + regla firewall GCP allow-renfe-backend (tcp:8000, 0.0.0.0/0, tag renfe-backend).
+- IP efimera cambia al parar la VM: reservada IP estatica 34.26.252.164 y reasignada (app apunta ahi: build.gradle.kts BACKEND_URL, network_security_config, ApiModule.allowHttpHosts).
+- FCM 403 PERMISSION_DENIED (ACCESS_TOKEN_SCOPE_INSUFFICIENT): VM tenia scopes restringidos. Fix: set-service-account --scopes=cloud-platform + rol roles/firebase.admin a 337831457324-compute@developer.gserviceaccount.com + API fcm.googleapis.com.
+- SenderId mismatch en FCM: la app usaba el proyecto Firebase renfe-notifier-android, pero el backend enviava a renfe-notifier-bot. Fix: RENFE_NOTIFIER_FCM_PROJECT_ID=renfe-notifier-android en .env de la VM + rol firebase.admin en ese proyecto.
+- Validacion FCM end-to-end: "Enviar Notificacion de Prueba" desde Diagnostico y ajustes -> notificacion recibida correctamente en realme GT Neo 2 (com.pablovb019.renfenotifier 0.1.5).
+- Ajuste de versiones alineadas: cada tag lleva su versionName/versionCode (v0.1.3+).
+- Siguientes: item 9 (mediciones VM) pendiente de aprobacion.

@@ -1131,3 +1131,44 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 ## Pendiente
 - Commit + push autorizado (activaria backend-ci/android-ci/all-checks-ok + luego android-release al crear tag).
 - Crear tag v0.1.0 sobre commit con CI verde y esperar run android-release (compila release firmado + release privada).
+
+
+## RESULTADO FINAL Item 7 (run 35265221397, SHA f9e9b7a): RELEASE v0.1.0 EXITOSA
+- apksigner verificación OK (tras fix PATH build-tools)
+- gh release create v0.1.0 → APK + checksum subidos a Release privada
+- URL Release: https://github.com/Pablovb019/renfe-notifier-android/releases/tag/v0.1.0
+- Item 7 del checklist seccion 8 (docs/real-config-plan.md) CERRADO.
+
+
+# Item 8 - Instalar APK en realme GT Neo 2 + Emparejamiento + FCM real CERRADO
+
+## Decisiones adoptadas
+- **Crash en botones (v0.1.1/0.1.2/0.1.3)**: el mensaje "Esquema o host inseguro: se exige HTTPS salvo hosts locales de test." era IllegalStateException de ApiModule.validateBaseUrl (backend no-loopback con http), no del network_security_config. Fix: allowHttpHosts incluye la IP (db8b220). El network_security_config se ajusto a includeSubdomains=false por lint (f895220).
+- **Conectividad**: el backend solo escuchaba en 127.0.0.1 dentro de la VM. Fix en unit systemd: --host 0.0.0.0 (7aa749d) + firewall GCP allow-renfe-backend (tcp:8000, sources 0.0.0.0/0, target-tag renfe-backend) + tag en la VM.
+- **IP estatica**: la IP efimera 34.73.192.35 se perdio al parar/arrancar (la app al 0.1.3 apuntaba ahi). Se reservo 34.26.252.164 como estatica y se reasigno a la VM; la app 0.1.5 apunta a esa (build.gradle.kts BACKEND_URL, network_security_config, allowHttpHosts).
+- **FCM 403**: dos causas encadenadas:
+  1. ACCESS_TOKEN_SCOPE_INSUFFICIENT: la VM tenia scopes restringidos. Fix: set-service-account --scopes=cloud-platform (requiere VM parada) + rol roles/firebase.admin a 337831457324-compute@developer.gserviceaccount.com en renfe-notifier-bot + fcm.googleapis.com habilitada.
+  2. SenderId mismatch despues: la app usaba el proyecto Firebase renfe-notifier-android, el backend enviava a renfe-notifier-bot. Fix: .env RENFE_NOTIFIER_FCM_PROJECT_ID=renfe-notifier-android + rol firebase.admin de la SA de la VM en el proyecto renfe-notifier-android + fcm.googleapis.com habilitada ahi.
+- Validacion final: "Enviar Notificacion de Prueba" (Diagnostico y ajustes) -> notificacion FCM recibida correctamente en realme GT Neo 2 con la app 0.1.5. Emparejamiento OK previamente.
+- Versionado alineado: desde v0.1.3 cada release tag coincide con versionName/versionCode del APK (0.1.3/code4, 0.1.4/code5, 0.1.5/code6).
+
+## Archivos modificados
+- android/app/build.gradle.kts: BACKEND_URL=http://34.26.252.164:8000/, versionCode/versionName por release.
+- android/app/src/main/res/xml/network_security_config.xml: dominio 34.26.252.164 (cleartext) con includeSubdomains=false.
+- android/app/src/main/java/com/pablovb019/renfenotifier/core/network/ApiModule.kt: allowHttpHosts incluye la IP de produccion.
+- scripts/renfe-notifier-backend.service: plantilla con --host 0.0.0.0.
+- VM (fuera de git): unit /etc/systemd/system (0.0.0.0), .env RENFE_NOTIFIER_FCM_PROJECT_ID=renfe-notifier-android, IP estatica 34.26.252.164, scopes cloud-platform de la instancia.
+
+## Pruebas ejecutadas y resultados (evidencia)
+- adb logcat: IllegalStateException "Esquema o host inseguro..." -> crasheo al pulsar botones.
+- Test-NetConnection 34.73.192.35:8000 -> True tras abrir firewall y bind 0.0.0.0.
+- curl salud backend 34.26.252.164:8000/api/v1/diagnostics/health -> {"status":"ok"}.
+- FCM manual desde VM con token real: CODE PERMISSION_DENIED (antiguo) -> tras fixes, 400 INVALID_ARGUMENT en pruebas con token fake (auth OK) y notificacion 200 entregada en el movil.
+- systemctl is-active renfe-notifier-backend -> active; journal muestra POST fcm 200/403 segun estado.
+- Notificacion de prueba recibida correctamente en realme GT Neo 2 (validacion real).
+
+## Bloqueos
+- Cuota/tiempo de espera de codigo de emparejamiento: el codigo caduca a los 600s; si expira hay que regenerarlo en VM (app.cli pairing-code --generate).
+
+## Siguiente paso
+- item 9 (mediciones de recursos de la VM e2-micro) pendiente de aprobacion del usuario.
