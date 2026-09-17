@@ -704,3 +704,14 @@ uff check .: All checks passed.
 - Validacion FCM end-to-end: "Enviar Notificacion de Prueba" desde Diagnostico y ajustes -> notificacion recibida correctamente en realme GT Neo 2 (com.pablovb019.renfenotifier 0.1.5).
 - Ajuste de versiones alineadas: cada tag lleva su versionName/versionCode (v0.1.3+).
 - Siguientes: item 9 (mediciones VM) pendiente de aprobacion.
+
+
+## 2026-09-17 - Item 9 - Mediciones VM reales (paso 32) CERRADO
+- Autorizado 1 GET controlado a venta.renfe.com desde la VM para latencia real.
+- `scripts/measure_resources.py` parametrizado: `--db` (BD temporal migrada, NO toca /data/renfe_notifier.db), `--output`, `--environment`; mide solo ficheros .db/.db-wal/.db-shm y añade GC Delta; sys.path incluye backend/ para venvs sin editable install. Commits 8a58448 y 0a4ca09 (CI backend/android verdes).
+- Scheduler con mocks (BD /tmp/renfe-measure-vm.db) en e2-micro: RAM base ~47 MB, delta max +0.9 MB, CPU hasta 15.2%, GC delta 0, disco 0 KB, 5 req/12450 bytes por grupo y 10 req/24900 bytes sin agrupar.
+- Latencia real Renfe (GET autorizado, 1 peticion): DNS 0.030s, connect 0.121s, TLS 0.317s, TTFB 0.424s, total 0.424s, HTTP 200, 11083 bytes.
+- Health + restart: primer request tras restart 26ms, siguientes ~2.1ms de mediana (10 req, 200 OK). Ruta real es /health (el router no lleva prefijo; /api/v1/health devuelve 404).
+- Resultados completos en docs/measurements.json (run vm-e2-micro-real).
+- Selenium descartado de nuevo: con latencia real ~0.42s/peticion y agrupacion, el costo por ciclo es viable en e2-micro sin Chrome (-150-300 MB RAM).
+- Item 9 del checklist (real-config-plan.md seccion 8) CERRADO.

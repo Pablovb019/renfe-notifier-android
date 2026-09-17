@@ -1172,3 +1172,40 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 
 ## Siguiente paso
 - item 9 (mediciones de recursos de la VM e2-micro) pendiente de aprobacion del usuario.
+
+
+# Item 9 - Mediciones de recursos de la VM e2-micro CERRADO
+
+## Decisiones adoptadas
+- Autorizado 1 GET controlado a venta.renfe.com desde la VM para medir latencia real (regla 3: consulta unica, sin reservar ni buscar).
+- `scripts/measure_resources.py` adaptado a ejecucion segura en produccion:
+  - Nuevos argumentos `--db`, `--output`, `--environment`; por defecto usa BD temporal en /tmp (solo medicion, nunca /data/renfe_notifier.db).
+  - Aplica `apply_migrations` a la BD temporal antes de medir (venvs sin editable install).
+  - Mide el tamano solo de .db/.db-wal/.db-shm (antes sumaba todo el directorio).
+  - Nueva columna GC Delta (gc.get_stats collected delta por escenario).
+  - sys.path incluye `backend/` ademas del repo root (en la VM el venv no tiene install editable).
+- En la VM no estaba instalado psutil en .venv (7.2.2 ya existia al reintentar); se instalo via .venv/bin/pip install psutil.
+- Rutas health: el router health.py no lleva prefijo -> endpoint real GET /health (a /api/v1/health responde 404). Medido contra /health.
+- No se ejecuta Selenium: la medicion confirma que HTTP DWR con agrupacion es viable en e2-micro sin Chrome (-150-300 MB RAM).
+
+## Archivos modificados
+- scripts/measure_resources.py: parametrizacion segura + GC delta + medicion solo de ficheros de la BD + sys.path backend.
+- docs/measurements.json: reestructurado como `runs` (local-windows 2026-09-14 + vm-e2-micro-real 2026-09-17T22:22Z con latencia_renfe_real y health_restart).
+- PROGRESS.md (raiz) y prompts/PROGRESS.md.
+
+## Pruebas ejecutadas y resultados (evidencia)
+- Local (Windows): smoke `py_compile` OK; run con BD temporal y `--environment local-windows-smoke`: 5 escenarios OK (RAM base ~43 MB, CPU 9-15%, GC 0). Sin regresiones.
+- VM e2-micro (BD /tmp/renfe-measure-vm.db, FakeSearch): 5 escenarios OK. Numeros clave:
+  - 1 seguimiento/1 grupo: 0.037s, CPU 9.4%, RAM 46.9->47.8 MB, 5 req, 12450 B.
+  - 5 seguimientos/5 grupos: 0.039s, CPU 12.6%, 10 req, 24900 B, RAM ~47.9 MB.
+  - 5 seguimientos/1 grupo: 0.040s, CPU 15.2%, 5 req, 12450 B, RAM ~48 MB.
+  - Concurrencia 1 y 2: 0.040s/0.041s, CPU 9.2%/12.4%. GC delta 0 en todos, disco 0 KB.
+- Latencia real Renfe (1 GET autorizado): dns 0.030s, connect 0.121s, tls 0.317s, ttfb 0.424s, total 0.424s, HTTP 200, 11083 bytes.
+- Restart systemd + health: primer curl 0.026s, siguientes ~0.002s (mediana), 10x 200 OK; journal muestra GET /health 200.
+- CI/CD: push 8a58448 + 0a4ca09 -> backend-ci y android-ci verdes en main.
+
+## Bloqueos
+- Ninguno. La VM usa IP estatica 34.26.252.164; el backend sigue activo tras el restart (health 200).
+
+## Siguiente paso
+- Pendiente de instrucciones del usuario (siguiente item del checklist real-config-plan.md o cierre de proyecto).
