@@ -1236,13 +1236,16 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
   - Canales confirmados por el sistema: `disponibilidad_plazas` (importance=4, sonido/vibracion) y `resumen_y_servicio` (importance=2); ambos `mBypassDnd=false`. Desactivar/reactivar el canal responde en la app.
   - **Hallazgo de arquitectura (no es fallo del paso)**: el backend no ejecuta el planificador ni entrega avisos reales (`SchedulerService` sin instanciar; `AlertQueue.enqueue/due_events` y `FcmNotificationSender.send_alert` sin llamadores; `create_followup` no encola). Coherente con `prompts/34` ("no actives sondeo del nuevo backend") y pendiente para la transicion (paso 37). Por eso el escenario "alerta real con acciones" aun no es validable.
   - **Defecto real detectado y corregido**: `send_test` reutilizaba `event_id="test"` fijo y la app deduplica por `event_id` durante 30 dias (`FcmTokenGateway.kt:36`, `EventIdStore.kt:56-57`), descartando silenciosamente las pruebas repetidas. Evidencia con adb y DND desactivado (`zen_mode=0`): logcat muestra recepcion FCM `FirebaseInstanceIdReceiver ... act=com.google.android.c2dm.intent.RECEIVE pkg=com.pablovb019.renfenotifier` y `dumpsys notification` no muestra ninguna notificacion de la app. Fix en `backend/app/notifications/fcm.py` (`event_id=f"test-{uuid4().hex}"`) + test `test_send_test_uses_unique_event_id_per_send`. Verificacion local: ruff format/check OK, mypy OK, 169 tests OK.
+  - **Fix desplegado y validado**: la VM estaba en HEAD desacoplado; se paso a `main` (d95733f) y `systemctl restart`. Notificacion de prueba enviada 2 veces -> **llegaron 2** (antes solo la primera).
+  - **Defecto de audio detectado**: el canal `disponibilidad_plazas` usa `AudioAttributes.USAGE_ALARM` (`NotificationChannels.kt:35`), por lo que suena por el stream de alarmas e **ignora** el modo vibracion/silencio/volumen de notificaciones (confirmado por el sistema: `mAudioAttributes usage=USAGE_ALARM`). Fix: `USAGE_NOTIFICATION` + migracion que borra y recrea el canal si conserva el uso antiguo (los atributos del canal son inmutables). Version subida a v0.1.6/code7; el APK firmado se genera por tag (misma firma) y se instalara encima.
 
 ## Bloqueos
 - Ninguno tecnico para el escenario 1 (cerrado).
 - "Alerta real con acciones" NO validable aun: la entrega de avisos reales no esta cableada (ver hallazgo) y el paso 34 prohibe activar el sondeo; corresponde a la transicion (paso 37).
-- Pruebas del realme pendientes: reintento de notificacion de prueba tras desplegar el fix, pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro de bateria, cierre desde recientes vs forzar detencion y actualizacion con la misma firma. No se inventaran resultados sin verificacion real.
+- Pruebas del realme pendientes: validar el canal tras instalar v0.1.6, pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro de bateria, cierre desde recientes vs forzar detencion y actualizacion con la misma firma (esta ultima se cubre al instalar v0.1.6 encima de v0.1.5). No se inventaran resultados sin verificacion real.
 
 ## Siguiente paso
-- Desplegar el fix (commit+push; aviso: dispara CI) y `git pull` + `systemctl restart renfe-notifier-backend.service` en la VM.
-- Repetir la notificacion de prueba en el realme para confirmar el fix; continuar con pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro, cierre desde recientes vs forzar detencion y actualizacion con la misma firma.
+- Commit+push del fix de audio y version, esperar CI verde, crear/pushear tag v0.1.6 (release APK firmado, misma firma).
+- Instalar el APK encima y validar: canal recreado con uso de notificacion (respeta vibracion/silencio) y que la actualizacion mantiene firma y datos.
+- Despues: pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro y cierre desde recientes vs forzar detencion.
 - Actualizar PROGRESS.md y detenerse (no avanzar al paso 36).

@@ -21,6 +21,14 @@ object NotificationChannels {
 
     fun create(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Migración: los atributos de sonido de un canal son inmutables. Si el
+        // canal de avisos quedó creado con uso de alarma (sonaba aunque el
+        // sistema estuviera en silencio o vibración), hay que borrarlo para
+        // poder recrearlo con uso de notificación.
+        val existing = manager.getNotificationChannel(CHANNEL_ALERT)
+        if (existing?.audioAttributes?.usage == AudioAttributes.USAGE_ALARM) {
+            manager.deleteNotificationChannel(CHANNEL_ALERT)
+        }
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ALERT,
@@ -32,7 +40,7 @@ object NotificationChannels {
                 setSound(
                     Settings.System.DEFAULT_NOTIFICATION_URI,
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build(),
                 )
