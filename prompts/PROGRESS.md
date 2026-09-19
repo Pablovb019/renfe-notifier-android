@@ -1535,3 +1535,16 @@ Commit `68f779d` en main con los 5 fixes. CI verde (backend-ci success, android-
 
 ## Bloqueos y siguiente paso
 Deploy en VM: `git pull --ff-only origin main` + `sudo systemctl restart renfe-notifier-backend` (sudo requerido). Backend fixes (disponibilidad soloPlazaH, papelera) activos sin reinstalar app. Fixes Android (dialogos, no-seguimiento con plazas, horarios) requieren APK v0.1.8. Luego re-ejecutar §6.4.
+# Paso 37 - Transicion aprobada: LOTE §6.4 DESPLEGADO EN VM (68f779d)
+
+## Estado
+Commit `68f779d` desplegado. Planificador activo, unico proceso, health 200.
+
+## Evidencia (2026-09-19)
+- `git pull --ff-only`: a1398fd..68f779d fast-forward (11 ficheros, +348/-25).
+- `sudo systemctl restart renfe-notifier-backend` OK.
+- `curl http://localhost:8000/health` -> `{"status":"ok","uptime_s":59.3}` (ruta real `/health`).
+- Log: PID viejo 27418 parado limpio; nuevo **27685** unico uvicorn (Planificador activado + startup complete + Uvicorn :8000).
+
+## Bloqueos y siguiente paso
+Build/sign APK v0.1.8 con fixes Android; instalar en realme; re-ejecutar §6.4 completo. Luego Bloque D.

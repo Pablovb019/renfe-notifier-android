@@ -955,3 +955,13 @@ uff check .: All checks passed.
 - **Nota**: el primer push fallo en CI solo por `ruff format --check` (2 ficheros sin formatear); corregido con `ruff format` (solo estilo, sin cambios logicos; 191 passed de nuevo) en commit aparte 68f779d (sin amend ni force-push).
 - **Pruebas locales previas**: backend 191 passed + ruff check + mypy (43 ficheros); android compileDebugKotlin/testDebugUnitTest/lintDebug BUILD SUCCESSFUL.
 - **Bloqueos / siguiente paso**: DEPLOY en VM: `git pull --ff-only origin main` y `sudo systemctl restart renfe-notifier-backend` (el restart exige sudo por polkit); verificar health 200 y log. Los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos sin reinstalar la app. Los fixes Android (dialogos, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme. Luego re-ejecutar §6.4.
+
+## Paso 37: Transicion aprobada - LOTE VALIDACION §6.4 DESPLEGADO EN VM (68f779d)
+- **Estado**: commit `68f779d` (5 fixes) desplegado en la VM con exito. Planificador activo, unico proceso, health 200.
+- **Evidencia (2026-09-19, solo algunos datos (del usuario respecto a la VM))**: el usuario ejecuto `git pull --ff-only origin main` (a1398fd..68f779d, fast-forward, 11 ficheros +348/-25) y `sudo systemctl restart renfe-notifier-backend`.
+  - Health: `curl http://localhost:8000/health` -> `{"status":"ok","uptime_s":59.3}` (la ruta es `/health`, no `/api/v1/health`).
+  - Log: **PID viejo 27418 parado limpio** ("Backend detenido correctamente"); **nuevo PID 27685** unico uvicorn: "Planificador y entrega de avisos activados." + "Arrancando renfe-notifier-backend" + "Application startup complete." + "Uvicorn running on http://0.0.0.0:8000".
+  - `pgrep -af uvicorn`: unico proceso 27685 (`.venv/bin/python3 ... uvicorn app.main:app`).
+- **Decisiones adoptadas**: los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos en produccion sin reinstalar la app. Los fixes Android (dialogo Aceptar->Home, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme.
+- **Pruebas**: git pull/restart/health/log/pgrep en la VM (usuario), verificadas aqui.
+- **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar §6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
