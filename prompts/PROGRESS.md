@@ -1415,3 +1415,26 @@ Bloque B cerrado con evidencia: inventarios (§2.1 + -2 + -3 confirmaron que NO 
 
 ## Bloqueos y siguiente paso
 Siguiente: **Bloque C** - deploy del commit autorizado en la VM (`git pull --ff-only origin main` -> b133a9c+docs), activar `RENFE_NOTIFIER_SCHEDULER_ENABLED=true` en `.env` de produccion, `systemctl restart renfe-notifier-backend`, verificar health 200 y **unico propietario** (un solo proceso, tasks renfe-scheduler/renfe-delivery), emparejamiento/token FCM vigente, y crear seguimiento de prueba desde la app.
+
+# Paso 37 - Transicion aprobada: BLOQUE C FASE 1-2 COMPLETADO (deploy + scheduler activado)
+
+## Estado
+Backend en `dfaf14f` (== origin/main) en la VM. Scheduler y entrega ACTIVADOS (`RENFE_NOTIFIER_SCHEDULER_ENABLED=true`), servicio reiniciado limpio, un solo proceso uvicorn (26879), health 200, sin errores en journal. Dispositivo realme activo y con token FCM.
+
+## Evidencia (2026-09-19)
+- `git pull --ff-only`: 34bcbbb -> dfaf14f fast-forward. Grep confirma bloque A: config.py:41 scheduler_enabled; main.py:28/108 AlertDeliveryService.
+- `.env`: se añadió `RENFE_NOTIFIER_SCHEDULER_ENABLED=true` (solo se listaron nombres de claves; sin valores).
+- `systemctl restart`: 23869 (viejo) Deactivated successfully; 26879 Started. Journal 17:37:08: "Planificador y entrega de avisos activados." + Startup complete. GET /health 200. Primer curl durante arranque dio 000 (estado Ds de disco) -> tras 5s 200.
+- `app.cli devices --list`: 1 dispositivo activo `43308a07ef24c81d | realme RMX3370 | activo` (sin tokens). Esquema v5.
+- Ficheros sin seguir en repo VM: v0.1.0..v0.1.5 (APKs antiguos) - anotados, no tocados.
+
+## Decisiones adoptadas
+- El planificador real queda ARRANCADO en produccion: un unico propietario del sondeo (sin duplicados). El payload de aviso usa el canal v2 y el dispositivo activo tiene token para FCM.
+- No se tocaron dichos APK sin seguir ni el resto.
+
+## Archivos modificados / creados
+- En VM: git pull + edicion del `.env` de produccion (scheduler_enabled=true). Commit previo local b133a9c gestionado en Bloque A.
+- docs registrados en ../PROGRESS.md.
+
+## Bloqueos y siguiente paso
+§6.4: crear seguimiento de prueba desde la app (realme) y validar el flujo completo: deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones. Luego Bloque D (medicion de recursos en VM con medidas del planificador activo vs linea base).

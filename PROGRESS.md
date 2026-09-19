@@ -887,3 +887,16 @@ uff check .: All checks passed.
 - **Archivos modificados / creados**: `docs/real-config-plan.md` (§2 nota "DATO REAL DE INFRAESTRUCTURA" con proyecto GCP renfe-notifier-bot, IP, zona, OS Login/SA, firma host SSH), `docs/transicion.md` (§1 nota proyecto GCP).
 - **Pruebas**: `gh api workflows/devplue.yml disable` + `gh secret delete VM_SSH_KEY` verificados vía API (sin interactuar con la VM).
 - **Bloqueos / siguiente paso**: Bloque C (deploy del commit autorizado en la VM, activar `scheduler_enabled`, verificar unico propietario).
+
+## Paso 37: Transicion aprobada - BLOQUE C FASE 1-2 (deploy + scheduler ACTIVADO)
+- **Estado**: Bloque A deployado en la VM y planificador ACTIVADO con exito. Unico propietario verificado. Pendiente: crear seguimiento de prueba desde la app (§6.4) y Bloque D.
+- **Evidencia (2026-09-19, salidas pegadas)**:
+  - `git pull --ff-only origin main`: la VM paso de 34bcbbb a `dfaf14f` (fast-forward 15 ficheros), HEAD=origin/main. Bloque A presente: `scheduler_enabled` en config.py:41 y `AlertDeliveryService` en main.py:28/108.
+  - `.env`: `RENFE_NOTIFIER_SCHEDULER_ENABLED=true` anadido (antes solo ENVIRONMENT/HOST/PORT/SECRET_KEY/DATABASE_PATH/FCM_PROJECT_ID/FCM_APP_PACKAGE). Se mostraron solo nombres de claves.
+  - `systemctl restart renfe-notifier-backend`: proceso viejo 23869 parado limpio; nuevo PID **26879**. Log 17:37:08: "Planificador y entrega de avisos activados." / "Arrancando renfe-notifier-backend" / "Application startup complete." / "Uvicorn running on http://0.0.0.0:8000". Health 200 (tras 5s; el primer curl dio 000 por arranque en curso, en estado Ds de disco).
+  - Un unico proceso uvicorn (26879, sin tracebacks/errores en journal).
+  - `app.cli devices --list`: 1 dispositivo activo `43308a07ef24c81d | realme RMX3370 | creado 2026-09-17 21:29 | activo` (sin exponer token). Health 200. Esquema v5.
+  - Nota: quedaron ficheros sin seguir en el repo de la VM `v0.1.0`..`v0.1.5` (APK antiguos); anotados para limpieza opcional posterior (no tocados).
+- **Decisiones adoptadas**: el sensor/entrega de avisos reales queda ARRANCADO en produccion (un unico propietario). Sin errores arranque. Resta validar el flujo completo real.
+- **Pruebas**: las de deploy/restart/log/health/devices en la VM (usuario); verificadas aqui.
+- **Bloqueos / siguiente paso**: §6.4 - crear un seguimiento de prueba desde la app (realme) y confirmar el flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion v2). Luego Bloque D (medicion recursos en VM y validacion telefonia).
