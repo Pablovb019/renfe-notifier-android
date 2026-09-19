@@ -35,7 +35,7 @@ adicional de red** (el backend ya la verificó antes de enviar).
 | `event_id`        | cadena estable del aviso                   | Deduplicación cliente + servidor    |
 | `followup_id`     | id del seguimiento                         | Abrir detalle, acciones             |
 | `episode_id`      | entero del episodio                        | Sincronización de estado            |
-| `title`/`body`    | texto visible                              | Notificación `disponibilidad_plazas`|
+| `title`/`body`    | texto visible                              | Notificación `disponibilidad_plazas_v2`|
 | `origin_code`     | `60000` (Atocha)                           | Abrir detalle sin consultar          |
 | `origin`          | `MADRID (TODAS)`                           | Texto visible                       |
 | `destination_code`| `71801` (Barcelona-Sants)                  | Idem                                |
@@ -46,7 +46,7 @@ adicional de red** (el backend ya la verificó antes de enviar).
 | `price`           | `42.50`                                    | Texto visible                       |
 | `observed_at`     | ISO 8601 con offset                        | Ordenar/descartar avisos viejos     |
 | `expires_at`      | ISO 8601 con offset                        | Caducidad breve (servidor y app)    |
-| `channel_id`      | `disponibilidad_plazas`                    | Canal Android                       |
+| `channel_id`      | `disponibilidad_plazas_v2`                 | Canal Android                       |
 | `priority`        | `high`                                     | Decoración (el high se controla en ``android``) |
 
 Todas las claves son válidas para `data` de FCM (≤150 caracteres, `[A-Za-z0-9_-]+`,

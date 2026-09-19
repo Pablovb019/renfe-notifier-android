@@ -13,21 +13,24 @@ import com.pablovb019.renfenotifier.R
  * - [CHANNEL_ALERT]: avisos de plazas, urgente y visible (sonido y vibración).
  * - [CHANNEL_SERVICE]: resúmenes y servicio (baja prioridad, silencioso).
  * El usuario puede gestionar sonido/vibración desde los ajustes del sistema.
+ * [CHANNEL_ALERT] usa un id versionado (`..._v2`): Android no permite cambiar
+ * los atributos de sonido de un canal ya creado y, al borrarlo y recrearlo con
+ * el mismo id, el sistema restaura los ajustes bloqueados por el usuario
+ * (por eso el id original usaba USAGE_ALARM, que ignoraba vibración/silencio).
  */
 object NotificationChannels {
 
-    const val CHANNEL_ALERT = "disponibilidad_plazas"
+    const val CHANNEL_ALERT = "disponibilidad_plazas_v2"
     const val CHANNEL_SERVICE = "resumen_y_servicio"
+
+    private const val LEGACY_CHANNEL_ALERT = "disponibilidad_plazas"
 
     fun create(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        // Migración: los atributos de sonido de un canal son inmutables. Si el
-        // canal de avisos quedó creado con uso de alarma (sonaba aunque el
-        // sistema estuviera en silencio o vibración), hay que borrarlo para
-        // poder recrearlo con uso de notificación.
-        val existing = manager.getNotificationChannel(CHANNEL_ALERT)
-        if (existing?.audioAttributes?.usage == AudioAttributes.USAGE_ALARM) {
-            manager.deleteNotificationChannel(CHANNEL_ALERT)
+        // Migración: eliminar el canal antiguo de avisos (quedó con uso de
+        // alarma y no se puede corregir en sistema instalado).
+        if (manager.getNotificationChannel(LEGACY_CHANNEL_ALERT) != null) {
+            manager.deleteNotificationChannel(LEGACY_CHANNEL_ALERT)
         }
         manager.createNotificationChannel(
             NotificationChannel(

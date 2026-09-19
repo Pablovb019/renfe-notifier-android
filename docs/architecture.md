@@ -207,7 +207,7 @@ com.pablovb019.renfenotifier/
 
 ### 4.3. Notificaciones y Gestión de Energía en Realme UI 4
 - **Canales de Notificación**:
-  1. `disponibilidad_plazas` (Canal de Alta Prioridad): Sonido distintivo, vibración, heads-up notification en pantalla.
+  1. `disponibilidad_plazas_v2` (Canal de Alta Prioridad): Sonido distintivo, vibración, heads-up notification en pantalla. Id versionado: los atributos de sonido de un canal son inmutables y el borrado/recreación con el mismo id restaura los ajustes bloqueados por el usuario (v0.1.5 usaba `USAGE_ALARM`, que ignoraba vibración/silencio).
   2. `resumen_y_servicio` (Canal de Prioridad Baja/Normal): Notificaciones silenciosas para resumen diario o sincronización.
 - **Data Payload Completo**: Los mensajes FCM viajan como `data payload` (sin bloque `notification` genérico). Esto permite a `FirebaseMessagingService` procesar el mensaje tanto con la app en primer plano como en segundo plano, mostrando una notificación nativa enriquecida con botones de acción interactivos:
   - `[Abrir Detalle]`

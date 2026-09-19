@@ -37,7 +37,7 @@ Priority = Literal["high", "normal"]
 # Claves del payload y su semántica (contrato con la app, ver docs/notificaciones-fcm.md).
 MESSAGE_TYPE_ALERT = "alert"
 MESSAGE_TYPE_TEST = "test"
-CHANNEL_ALERT = "disponibilidad_plazas"
+CHANNEL_ALERT = "disponibilidad_plazas_v2"
 CHANNEL_SERVICE = "resumen_y_servicio"
 
 

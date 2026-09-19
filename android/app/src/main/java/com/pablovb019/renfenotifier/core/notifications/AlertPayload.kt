@@ -57,7 +57,7 @@ object AlertPayloadKeys {
     const val TYPE_ALERT = "alert"
     const val TYPE_TEST = "test"
     const val PRIORITY_HIGH = "high"
-    const val CHANNEL_ALERT = "disponibilidad_plazas"
+    const val CHANNEL_ALERT = "disponibilidad_plazas_v2"
     const val CHANNEL_SERVICE = "resumen_y_servicio"
 }
 
