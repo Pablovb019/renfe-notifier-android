@@ -1548,3 +1548,14 @@ Commit `68f779d` desplegado. Planificador activo, unico proceso, health 200.
 
 ## Bloqueos y siguiente paso
 Build/sign APK v0.1.8 con fixes Android; instalar en realme; re-ejecutar §6.4 completo. Luego Bloque D.
+# Paso 37 (continuacion): BLOQUE C §6.4 VALIDADOS (v0.1.8) + lote v0.1.9
+
+## Estado
+5 fixes §6.4 confirmados en realme con v0.1.8/code9. Lote v0.1.9 en curso: popups sin id, autocompletado no-focal, log 503.
+
+## Evidencia
+- Realme v0.1.8/code9: 1-5 OK (ver raiz PROGRESS para el detalle del usuario).
+- Bugs nuevos: popups muestran id interno (crear + borrar); autocompletado "caracter a caracter" por robo de foco del ExposedDropdownMenuBox; 503 aleatorio de Renfe (misma busqueda falla/reintenta OK).
+
+## Siguiente paso
+Commit+push + CI; fecha para el 503 por log (tipo exacto); build v0.1.9 + validacion borrado fluido.

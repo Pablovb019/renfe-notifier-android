@@ -107,8 +107,13 @@ async def search_trains(
         )
     except StationNotFoundError as error:
         raise HTTPException(status_code=400, detail=str(error)) from None
-    except RenfeClientError:
-        logger.warning("Búsqueda de %s falló contra Renfe", payload.origin_code)
+    except RenfeClientError as error:
+        logger.warning(
+            "Búsqueda de %s falló contra Renfe: %s (%s)",
+            payload.origin_code,
+            error,
+            type(error).__name__,
+        )
         raise HTTPException(
             status_code=503, detail="Renfe no responde o rechazó la consulta"
         ) from None

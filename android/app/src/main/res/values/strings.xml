@@ -53,7 +53,7 @@
     <string name="search_specific_hint">Selecciona un tren de los resultados</string>
     <string name="search_create">Crear seguimiento</string>
     <string name="search_created">Seguimiento creado</string>
-    <string name="search_created_hint">Seguimiento %1$s creado. Se avisará cuando haya plazas.</string>
+    <string name="search_created_hint">Seguimiento creado. Se avisará cuando haya plazas.</string>
     <string name="search_train_available">Este tren ya tiene plazas</string>
     <string name="search_train_available_hint">El tren seleccionado tiene plazas disponibles: no hace falta vigilarlo. Vuelve a la pantalla principal.</string>
 
@@ -97,7 +97,7 @@
     <string name="followups_acknowledge_note">Confirmar el aviso no borra el seguimiento: seguirá vigilando nuevas apariciones.</string>
     <string name="followups_delete">Eliminar seguimiento</string>
     <string name="followups_delete_dialog_title">Eliminar seguimiento</string>
-    <string name="followups_delete_dialog_message">¿Eliminar el seguimiento %1$s? Se cancelarán sus avisos. Esta acción no puede deshacerse.</string>
+    <string name="followups_delete_dialog_message">¿Eliminar el seguimiento? Se cancelarán sus avisos. Esta acción no puede deshacerse.</string>
     <string name="followups_delete_confirm">Sí, eliminar</string>
     <string name="followups_detail_title">Seguimiento</string>
     <string name="followups_back_cd">Volver</string>

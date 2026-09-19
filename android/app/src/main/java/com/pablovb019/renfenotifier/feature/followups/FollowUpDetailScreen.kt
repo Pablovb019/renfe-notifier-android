@@ -215,7 +215,6 @@ private fun FollowUpDetailContent(
                 Text(
                     text = stringResource(
                         R.string.followups_delete_dialog_message,
-                        detail?.followupId.orEmpty(),
                     ),
                 )
             },

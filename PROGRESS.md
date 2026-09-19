@@ -965,3 +965,17 @@ uff check .: All checks passed.
 - **Decisiones adoptadas**: los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos en produccion sin reinstalar la app. Los fixes Android (dialogo Aceptar->Home, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme.
 - **Pruebas**: git pull/restart/health/log/pgrep en la VM (usuario), verificadas aqui.
 - **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar §6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
+
+## Paso 37: Bloque C §6.4 VALIDADOS EN REALME (v0.1.8/code9) + lote v0.1.9
+- **Estado**: los 5 fixes del lote §6.4 validados en el realme con la app v0.1.8 (code9). Nuevos hallazgos de UX/estabilidad de la revalidacion.
+- **Evidencia / reporte del usuario (2026-09-19, realme, app v0.1.8/code9)**:
+  - (1) soloPlazaH: ruta Sevilla-San Bernardo->Jerez aparece "Sin Plazas" (fix confirmado, verificado vs app de Renfe).
+  - (2) Aceptar del dialogo -> vuelve a Home (OK). PERO el popup "Seguimiento ECjNBa_FIGOt63q creado" muestra el id interno -> se elimina el id del string.
+  - (3) tren con plazas -> no crea seguimiento, aviso "Este tren ya tiene plazas" + Home (OK).
+  - (4) papelera: eliminar desaparece del listado; filtro Eliminados lo muestra (OK). PERO el dialogo de confirmacion de borrado muestra el id interno -> se elimina.
+  - (5) detalle en modo concreto muestra "Tren de 11:08 a 12:13" (OK confirmado).
+  - Nuevo bug UX: autocompletado de estaciones. Al mantener pulsado el boton de borrar solo se borra un caracter porque el desplegable predictivo roba el foco (ExposedDropdownMenuBox). Fix: DropdownMenu con PopupProperties(focusable=false).
+  - Nuevo reporte: error aleatorio "Renfe no respondio" (503). La misma busqueda falla a veces y al reintentar funciona. Sospecha: rate-limit/temporal de Renfe desde la IP de cloud. Fix diagnosticador: log del backend ahora registra la clase de error exacta (RenfeTransportError/RenfeBudgetExceededError/RenfeRateLimitedError/RenfeResponseError), pendiente de observar en produccion.
+- **Decisiones adoptadas**: popups sin ids internos; estaciones con Dropdown no-focal; diagnostico del 503 por logs (sin consultas de prueba contra Renfe).
+- **Pruebas**: tests Android (testDebugUnitTest OK), compileDebugKotlin OK, lintDebug OK; backend 191 passed + ruff + mypy (43 files) OK.
+- **Bloqueos / siguiente paso**: commit+push (CI) y deploy; build/sign v0.1.9 para validar borrado fluido y popups sin id; observacion del log del 503.

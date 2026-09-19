@@ -19,9 +19,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -299,7 +300,6 @@ private fun SearchDatePickerDialog(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StationField(
     label: String,
@@ -310,48 +310,45 @@ private fun StationField(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
-        ExposedDropdownMenuBox(
+        OutlinedTextField(
+            value = value,
+            onValueChange = {
+                onQueryChange(it)
+                expanded = it.isNotEmpty()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(text = label) },
+            singleLine = true,
+        )
+        // DropdownMenu con PopupProperties(focusable=false): el menú no roba el
+        // foco del texto, así mantener pulsado el borrado (key-repeat) funciona.
+        DropdownMenu(
             expanded = expanded,
-            onExpandedChange = { expanded = it },
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(),
+            properties = PopupProperties(focusable = false),
         ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = {
-                    onQueryChange(it)
-                    expanded = it.isNotEmpty()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
-                label = { Text(text = label) },
-                singleLine = true,
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                if (suggestions.isEmpty()) {
+            if (suggestions.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text(text = stringResource(R.string.search_no_matches)) },
+                    onClick = { expanded = false },
+                    enabled = false,
+                )
+            } else {
+                suggestions.forEach { station ->
                     DropdownMenuItem(
-                        text = { Text(text = stringResource(R.string.search_no_matches)) },
-                        onClick = { expanded = false },
-                        enabled = false,
+                        text = {
+                            if (station.isGroup) {
+                                Text(text = stringResource(R.string.search_station_group, station.name))
+                            } else {
+                                Text(text = station.name)
+                            }
+                        },
+                        onClick = {
+                            onSelected(station)
+                            expanded = false
+                        },
                     )
-                } else {
-                    suggestions.forEach { station ->
-                        DropdownMenuItem(
-                            text = {
-                                if (station.isGroup) {
-                                    Text(text = stringResource(R.string.search_station_group, station.name))
-                                } else {
-                                    Text(text = station.name)
-                                }
-                            },
-                            onClick = {
-                                onSelected(station)
-                                expanded = false
-                            },
-                        )
-                    }
                 }
             }
         }
@@ -472,11 +469,11 @@ private fun FollowUpCreator(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        uiState.createdFollowUpId?.let { id ->
+        uiState.createdFollowUpId?.let {
             AlertDialog(
                 onDismissRequest = {},
                 title = { Text(text = stringResource(R.string.search_created)) },
-                text = { Text(text = stringResource(R.string.search_created_hint, id)) },
+                text = { Text(text = stringResource(R.string.search_created_hint)) },
                 confirmButton = {
                     TextButton(onClick = onCreatedAccepted) {
                         Text(text = stringResource(R.string.dialog_accept))
