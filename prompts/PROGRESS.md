@@ -1242,15 +1242,15 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
   - **v0.1.7 (code8) - fix definitivo (implementado y validado el canal)**: canal de avisos con **id versionado** `disponibilidad_plazas_v2` (`NotificationChannels.kt`, `AlertPayload.kt`), migracion que borra el canal antiguo, y backend + docs + tests coherentes (`fcm.py`, `notificaciones-fcm.md`, `architecture.md`, `AlertPayloadParserTest.kt`). La app ya mapea cualquier `channel_id` no-servicio a su canal (`NotificationDisplayer.kt:115-120`), asi que el envio de prueba funciona con el id nuevo.
   - **Validado en realme (v0.1.7/code8, instalado encima de v0.1.6; firstInstall intacto)**: `disponibilidad_plazas_v2` con `usage=USAGE_NOTIFICATION` y `mUserLockedFields=0` (importancia 4); el canal antiguo `disponibilidad_plazas` queda `mDeleted=true`; `resumen_y_servicio` intacto. La actualizacion con la misma firma se valido dos veces (v0.1.6 y v0.1.7).
   - **Entrega end-to-end por el canal v2 (16:49, realme desbloqueado)**: se pulso "Enviar notificacion de prueba" en Diagnostico; FCM recibido (`FirebaseInstanceIdReceiver ... c2dm.intent.RECEIVE`), vibracion del sistema y `NotificationRecord` activo con `channel=disponibilidad_plazas_v2` (importance=4).
-  - **Pendiente de verificacion funcional (accion del usuario)**: confirmacion auditiva de que respeta el modo vibracion/silencio (movil en silencio/vibracion y pulsar "Enviar notificacion de prueba"). No se pide ni se lee el PIN (secreto).
+  - **Pendiente de verificacion funcional (accion del usuario)**: confirmacion auditiva de que respeta el modo vibracion/silencio (movil en silencio/vibracion y pulsar "Enviar notificacion de prueba"). No se pide ni se lee el PIN (secreto). **YA CONFIRMADO por el usuario** (vibra/silencioso/sonoro OK).
 
 ## Bloqueos
 - Ninguno tecnico para el escenario 1 (cerrado).
 - "Alerta real con acciones" NO validable aun: la entrega de avisos reales no esta cableada (ver hallazgo) y el paso 34 prohibe activar el sondeo; corresponde a la transicion (paso 37).
-- El realme quedo bloqueado con PIN durante la sesion y no se desbloquea via adb (keyguard seguro); los pasos que necesitan UI requieren desbloqueo manual del usuario (ya desbloqueado). Pruebas pendientes: confirmacion auditiva de vibracion/silencio tras el canal v2, pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro de bateria, cierre desde recientes vs forzar detencion.
+- El realme quedo bloqueado con PIN durante la sesion y no se desbloquea via adb (keyguard seguro); los pasos que necesitan UI requieren desbloqueo manual del usuario (ya desbloqueado). Pruebas pendientes: entrega activo/desbloqueado, entrega bloqueado/pantalla apagada (no debe ser limitante), Doze, reinicio, Wi-Fi/datos y **sin conexion -> recuperacion al volver** (FCM alta prioridad, TTL 300 s). El envio para estas pruebas usa el nuevo `renfe-notifier-cli test-notification` (en la VM), no el boton de la app.
 
 ## Siguiente paso
-- El usuario ejecuta en la VM (redeploy del backend para que `channel_id` del payload sea `disponibilidad_plazas_v2`): `sudo su - sa_104384329745603569192`; `cd renfe-notifier-android`; `git pull --ff-only`; `sudo systemctl restart renfe-notifier-backend.service`; verificar `systemctl status` y `curl localhost:8000/health`.
-- El usuario desbloquea el realme y confirma de oido que la notificacion de prueba respeta el modo vibracion/silencio (canal v2).
-- Despues: pantalla apagada, Doze, reinicio, Wi-Fi/datos, ahorro y cierre desde recientes vs forzar detencion.
+- Commit+push del subcomando `test-notification` (aviso: dispara CI) y `git pull` en la VM (no requiere restart: el CLI corre desde el repo).
+- Ejecutar el plan de entrega en el realme: activo+desbloqueado -> bloqueado/pantalla apagada -> Doze -> reinicio -> sin conexion/recuperacion.
+- Terreno sin conexion: apagar Wi-Fi/datos en el realme, enviar desde la VM, reactivar y comprobar que llega dentro del TTL de 300 s (o marca caducidad si pasó).
 - Actualizar PROGRESS.md y detenerse (no avanzar al paso 36).

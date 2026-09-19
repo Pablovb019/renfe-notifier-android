@@ -5,6 +5,7 @@ no expone operaciones administrativas. Nunca imprime tokens ni hashes.
 """
 
 import argparse
+import asyncio
 import hashlib
 import sys
 from pathlib import Path
@@ -38,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
     devices.add_argument("--list", action="store_true", help="Lista los dispositivos")
     devices.add_argument("--revoke", metavar="DEVICE_ID", help="Revoca un dispositivo")
     devices.add_argument("--revoke-all", action="store_true", help="Revoca todos los dispositivos")
+
+    sub.add_parser(
+        "test-notification",
+        help="Envía una notificación de prueba al primer dispositivo activo con token FCM",
+    )
 
     backup_cmd = sub.add_parser(
         "backup", help="Crea backup consistente de la base de datos (WAL-aware)"
@@ -105,6 +111,38 @@ def main(argv: list[str] | None = None) -> int:
                     f"{device.device_id} | {device.device_name} | creado {device.created_at:%Y-%m-%d %H:%M} | {state}"
                 )
             return 0
+
+    if args.command == "test-notification":
+        if not settings.fcm_project_id:
+            print(
+                "FCM no configurado (RENFE_NOTIFIER_FCM_PROJECT_ID ausente).",
+                file=sys.stderr,
+            )
+            return 1
+        active_device = next((d for d in service.list_devices() if d.is_active), None)
+        if active_device is None:
+            print("No hay un dispositivo activo.", file=sys.stderr)
+            return 1
+        fcm_token = active_device.fcm_token
+        if fcm_token is None:
+            print("El dispositivo no tiene token FCM.", file=sys.stderr)
+            return 1
+        from app.notifications.fcm import AutoTokenProvider, FcmNotificationSender
+
+        sender = FcmNotificationSender(
+            project_id=settings.fcm_project_id,
+            token_provider=AutoTokenProvider(),
+            timeout_s=settings.fcm_timeout_s,
+            default_ttl_s=settings.fcm_default_ttl_s,
+            package=settings.fcm_app_package,
+        )
+        try:
+            message_id = asyncio.run(sender.send_test(fcm_token=fcm_token))
+        except Exception as error:  # noqa: BLE001 - motivo sin exponer datos sensibles
+            print(f"Fallo al enviar la notificación de prueba: {error}", file=sys.stderr)
+            return 1
+        print(f"Notificación de prueba enviada: {message_id}")
+        return 0
 
     if args.command == "backup":
         output = Path(args.output) if args.output else settings.database_path.with_suffix(".db.bak")
