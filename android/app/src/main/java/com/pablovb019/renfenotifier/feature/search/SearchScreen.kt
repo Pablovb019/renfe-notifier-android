@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -19,14 +22,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -308,47 +309,44 @@ private fun StationField(
     onQueryChange: (String) -> Unit,
     onSelected: (StationOut) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.fillMaxWidth()) {
+    // Las sugerencias se muestran EN FLUJO (no popup) justo debajo del campo:
+    // siempre aparecen debajo, nunca por encima ni "popean" por carácter. Solo
+    // se muestran cuando ya hay sugerencias cargadas (tras el debounce, cuando
+    // el usuario deja de teclear) y con scroll para no alargar la pantalla.
+    val showSuggestions = value.isNotEmpty() && suggestions.isNotEmpty()
+    Column(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = value,
-            onValueChange = {
-                onQueryChange(it)
-                expanded = it.isNotEmpty()
-            },
+            onValueChange = { onQueryChange(it) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text(text = label) },
             singleLine = true,
         )
-        // DropdownMenu con PopupProperties(focusable=false): el menú no roba el
-        // foco del texto, así mantener pulsado el borrado (key-repeat) funciona.
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.fillMaxWidth(),
-            properties = PopupProperties(focusable = false),
-        ) {
-            if (suggestions.isEmpty()) {
-                DropdownMenuItem(
-                    text = { Text(text = stringResource(R.string.search_no_matches)) },
-                    onClick = { expanded = false },
-                    enabled = false,
-                )
-            } else {
-                suggestions.forEach { station ->
-                    DropdownMenuItem(
-                        text = {
-                            if (station.isGroup) {
-                                Text(text = stringResource(R.string.search_station_group, station.name))
+        if (showSuggestions) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 192.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 4.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Column {
+                    suggestions.forEach { station ->
+                        Text(
+                            text = if (station.isGroup) {
+                                stringResource(R.string.search_station_group, station.name)
                             } else {
-                                Text(text = station.name)
-                            }
-                        },
-                        onClick = {
-                            onSelected(station)
-                            expanded = false
-                        },
-                    )
+                                station.name
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelected(station) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
                 }
             }
         }

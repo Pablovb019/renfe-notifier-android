@@ -67,7 +67,9 @@ class SearchViewModel(
     private var destinationSuggestionsJob: Job? = null
 
     fun onOriginQueryChange(query: String) {
-        _uiState.update { it.copy(originQuery = query, searchError = null) }
+        _uiState.update {
+            it.copy(originQuery = query, originSuggestions = emptyList(), searchError = null)
+        }
         originSuggestionsJob?.cancel()
         originSuggestionsJob = debounceSuggestions(query.trim()) { suggestions ->
             _uiState.update { it.copy(originSuggestions = suggestions) }
@@ -75,7 +77,9 @@ class SearchViewModel(
     }
 
     fun onDestinationQueryChange(query: String) {
-        _uiState.update { it.copy(destinationQuery = query, searchError = null) }
+        _uiState.update {
+            it.copy(destinationQuery = query, destinationSuggestions = emptyList(), searchError = null)
+        }
         destinationSuggestionsJob?.cancel()
         destinationSuggestionsJob = debounceSuggestions(query.trim()) { suggestions ->
             _uiState.update { it.copy(destinationSuggestions = suggestions) }
