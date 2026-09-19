@@ -1523,3 +1523,15 @@ Commit `a1398fd` (dedup backend + key unica Android) pusheado con CI verde y DES
 
 ## Bloqueos y siguiente paso
 Sin commit/push aun (autorizacion). Proximo: commit + push (backend-ci/android-ci), deploy en VM (git pull + sudo systemctl restart), re-ejecutar ï¿½6.4: ruta solo-plaza-H => "Sin plazas"; Aceptar vuelve a Home; tren con plazas => no crea; eliminar => desaparece; detalle muestra horario. Requiere APK nuevo (v0.1.8) para ver fixes Android.
+# Paso 37 - Transicion aprobada: LOTE §6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
+
+## Estado
+Commit `68f779d` en main con los 5 fixes. CI verde (backend-ci success, android-ci success; all-checks-ok incluido en backend-ci). Deploy en VM pendiente.
+
+## Evidencia
+- `098007a` (lote fixes) pusheado; CI fallo en backend-ci por `ruff format --check` (solo estilo).
+- `68f779d` (style: ruff format) pusheado; `gh run list` -> backend-ci y android-ci completed/success en 68f779d.
+- Sin amend ni force-push; commit de estilo separado.
+
+## Bloqueos y siguiente paso
+Deploy en VM: `git pull --ff-only origin main` + `sudo systemctl restart renfe-notifier-backend` (sudo requerido). Backend fixes (disponibilidad soloPlazaH, papelera) activos sin reinstalar app. Fixes Android (dialogos, no-seguimiento con plazas, horarios) requieren APK v0.1.8. Luego re-ejecutar §6.4.
