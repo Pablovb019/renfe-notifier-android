@@ -204,11 +204,7 @@ async def list_followups(
     """
     if lifecycle is None:
         raw = repository.list()
-        items = [
-            followup
-            for followup in raw
-            if followup.lifecycle is not Lifecycle.DELETED
-        ]
+        items = [followup for followup in raw if followup.lifecycle is not Lifecycle.DELETED]
     else:
         items = list(repository.list(lifecycle))
     out = [_to_out(followup, catalog) for followup in items]

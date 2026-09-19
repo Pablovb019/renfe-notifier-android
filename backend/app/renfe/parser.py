@@ -197,9 +197,7 @@ def _parse_availability(row: dict[str, Any], plaza_h_requested: bool) -> Availab
     return Availability.UNKNOWN
 
 
-def _parse_dwr_availability(
-    row: dict[str, Any], plaza_h_requested: bool
-) -> Availability:
+def _parse_dwr_availability(row: dict[str, Any], plaza_h_requested: bool) -> Availability:
     """Disponibilidad del esquema real replicando la regla heredada de Plaza H.
 
     El bot original considera un tren disponible si base_available y, cuando se
@@ -209,17 +207,13 @@ def _parse_dwr_availability(
     reason = str(row.get("razonNoDisponible") or "")
     fare = row.get("tarifaMinima")
     base_available = (
-        not bool(row.get("completo"))
-        and reason in ("", "8")
-        and fare not in (None, "", "NaN")
+        not bool(row.get("completo")) and reason in ("", "8") and fare not in (None, "", "NaN")
     )
     plaza_h_only = bool(row.get("soloPlazaH"))
     if not base_available:
         return Availability.NO_AVAILABILITY
     if plaza_h_requested:
-        return (
-            Availability.AVAILABLE if plaza_h_only else Availability.NO_AVAILABILITY
-        )
+        return Availability.AVAILABLE if plaza_h_only else Availability.NO_AVAILABILITY
     return Availability.AVAILABLE if not plaza_h_only else Availability.NO_AVAILABILITY
 
 
