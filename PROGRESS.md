@@ -831,3 +831,54 @@ uff check .: All checks passed.
 - **Archivos**: `prompts/37-bloque-b-inventario-2.md` (creado).
 - **Pruebas**: ninguna modifica el sistema; todo de solo lectura en VM (acciones del usuario).
 - **Bloqueos / siguiente paso**: ejecutar inventario-2 en la VM y pegar salida para confirmar ubicación/residuos del bot; luego §2.2 (backup consistente SQLite del bot + integrity + SHA256) y §2.3 (backup nuevo backend con app.cli backup + descarga fuera de VM = P3).
+
+## Paso 37: Transicion aprobada - BLOQUE B - INVENTARIO-2 y -3 (bot antiguo NO existe en la VM)
+- **Estado**: inventarios -2 y -3 ejecutados. Se confirma con busquedas ampliadas en todo el FS que **no existe rastro del bot antiguo en la VM** (no repo/venv/BD/.env/logs/containers/units/cron/timers/procesos). Solo corre el backend nuevo.
+- **Evidencia (inventario-3, salida pegada)**:
+  - A) find '*renfe*bot*'/*telegram*' en FS (sin /usr): vacio.
+  - B) Solo /data/renfe_notifier.db, /data/backups/backup_20260916_223656.db, /tmp/renfe-measure-vm.db (medicion del paso previo, esperada); resto son BDs de sistema/snap/man/docker.
+  - C) Imagen docker unica: hello-world (sin bot).
+  - D) Units: solo renfe-notifier-backend.service (activa). /etc/systemd/system solo unit propia + symlinks standard.
+  - E) /var/log sin traces del bot.
+  - F) bash_history de pablovb01: sin comandos renfe/bot visibles (sin secretos expuestos).
+- **Decisiones adoptadas**:
+  - El bot antiguo NO esta, ni corriendo ni parado: el §2.2 (backup del bot) pasa a NO APLICA; el §5bis (limpieza de residuos) NO APLICA salvo retirar PENDIENTE la imagen `hello-world` docker (residual, no relacionada con el bot; valorar en §5bis, requiere aprobacion). §5 (detencion/verificacion)queda vacuo: nada que detener ni que pueda relanzar el bot en la VM.
+  - Unico riesgo residual de relanzamiento: `deploy.yml` del repo ORIGINAL (§4/§10) - pendiente decision del usuario.
+  - Backup pendiente: solo el del backend nuevo (§2.3 + P3 descarga fuera de la VM).
+- **Archivos / creados**: `prompts/37-bloque-b-inventario-2.md`, `prompts/37-bloque-b-inventario-3.md`, `prompts/37-bloque-b-backup.md` (bloque §2.3).
+- **Pruebas**: solo lectura en VM (acciones del usuario). Sin cambios de estado.
+- **Bloqueos / siguiente paso**: ejecutar §2.3 con `prompts/37-bloque-b-backup.md` (backup fresco `app.cli backup` + verify + SHA256), y P3: descargar el backup y la BD fuera de la VM y confirmar SHA256 local. Decision del usuario sobre `deploy.yml` del repo original (intervencion §10): despues del backup.
+
+## Paso 37: Transicion aprobada - BLOQUE B - §2.3 BACKUP FRESCO (ejecutado y verificado)
+- **Estado**: backup del backend nuevo creado y verificado en la VM. P3 (descarga fuera de la VM) pendiente del usuario.
+- **Evidencia (salida pegada, 2026-09-19)**:
+  - `app.cli version` -> esquema 5.
+  - `app.cli verify` -> OK: /data/renfe_notifier.db - integrity_check: ok.
+  - `app.cli backup` -> `/data/backups/backup_20260919_171740.db`, SHA256 `92b885f4f31ef26cd774ddb8adc575444000801582c83355919758671076edfa`, esquema 5.
+  - `sha256sum` de ambos backups: `backup_20260916_223656.db` = 78f52be9...c8; `backup_20260919_171740.db` = 92b885f4...fa (COINCIDE con el CLI).
+  - Health: 200. `systemctl is-active renfe-notifier-backend` -> active.
+  - BD activa: /data/renfe_notifier.db 98304 bytes (WAL sin archivos -wal/-shm listados).
+- **Decisiones adoptadas**: backups conservados en /data/backups con SHA256 anotado. El SHA256 de referencia para restauracion es el del CLI: **92b885f4f31ef26cd774ddb8adc575444000801582c83355919758671076edfa**.
+- **Pruebas**: las del bloque (version/verify/backup/sha256/health) - todo en VM por el usuario.
+- **Bloqueos / siguiente paso**: P3 - descargar `backup_20260919_171740.db` (y opcionalmente la BD activa) FUERA de la VM y confirmar la ruta local y su SHA256; con eso Bloque B completo. Luego decision del usuario sobre deploy.yml del repo original (§4/§10) y seguir con Bloque C.
+
+## Paso 37: Transicion aprobada - BLOQUE B COMPLETO (P3 descarga fuera de la VM)
+- **Estado**: P3 ejecutado. Backup del backend nuevo descargado fuera de la VM y SHA256 verificado localmente. **Bloque B (inventario §2.1 + backups) COMPLETO.**
+- **Evidencia (2026-09-19)**:
+  - VM alojada en el proyecto GCP `renfe-notifier-bot` (no `renfe-notifier-android`); la cuenta local gcloud `pablovb01@gmail.com` no tiene compute habilitado en el proyecto equivocado. Dusto: `--project renfe-notifier-bot`.
+  - Firma SSH del host `34.26.252.164` registrada (ed25519 SHA256:RoYpXifW9rJPOZWA+4DvNn4UmyOWwxXgN03q2wWxQns).
+  - Descarga OK: `backup_20260919_171740.db` (96 kB) -> `C:\Users\pablo\Downloads\backup_20260919_171740.db`.
+  - `Get-FileHash` local = 92B885F4F31EF26CD774DDB8ADC575444000801582C83355919758671076EDFA (coincide con el SHA256 del CLI en la VM).
+- **Decisiones adoptadas**: el backup queda conservado en /data/backups (VM) y en local (Windows). Referencia SHA256 **92B885F4F31EF26CD774DDB8ADC575444000801582C83355919758671076EDFA** (mayusculas local / minusculas CLI) para restauracion (§8).
+- **Pruebas**: scp (gcloud, proyecto renfe-notifier-bot) + Get-FileHash local + hash CLI ya verificado en §2.3.
+- **Bloqueos / siguiente paso**: §4/§10 (decision del usuario sobre `deploy.yml` del repo original - riesgo de relanzar el bot en cada push al repo antiguo) y Bloque C (deploy commit autorizado en VM, activar scheduler, verificar unico propietario).
+
+## Paso 37: Transicion aprobada - §4/§10 INTERVENCION REPO ORIGINAL (autorizada y ejecutada)
+- **Estado**: el usuario autorizo deshabilitar `deploy.yml` y revocar `VM_SSH_KEY` en el repo original `Pablovb019/renfe-notifier-bot`. Ejecutado en GitHub.
+- **Evidencia**:
+  - Workflow `Deploy to Google Cloud VM` (`.github/workflows/deploy.yml`) -> estado `disabled_manually`.
+  - Secret `VM_SSH_KEY` eliminado del repo original. Secrets restantes: `VM_HOST`, `VM_PROJECT_PATH`, `VM_USER` (sin la clave SSH; no suponen acceso por sí solos). Public key ID 3380204578043523366.
+- **Decisiones adoptadas**: la cuenta local `gcloud` `pablovb01@gmail.com` opera sobre proyectos `renfe-notifier-android`, `renfe-notifier-bot` y `gen-lang-client-0528226058`; la VM vive en `renfe-notifier-bot`.
+- **Archivos modificados / creados**: `docs/real-config-plan.md` (§2 nota "DATO REAL DE INFRAESTRUCTURA" con proyecto GCP renfe-notifier-bot, IP, zona, OS Login/SA, firma host SSH), `docs/transicion.md` (§1 nota proyecto GCP).
+- **Pruebas**: `gh api workflows/devplue.yml disable` + `gh secret delete VM_SSH_KEY` verificados vía API (sin interactuar con la VM).
+- **Bloqueos / siguiente paso**: Bloque C (deploy del commit autorizado en la VM, activar `scheduler_enabled`, verificar unico propietario).

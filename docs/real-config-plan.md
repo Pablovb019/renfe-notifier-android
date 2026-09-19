@@ -37,6 +37,13 @@
 | Crear regla firewall `allow-iap-ssh` (puerto 22 desde `35.235.240.0/20`) | VPC Firewall | Bajo | 0 € | Borrar regla |
 | Instalar **Tailscale** en VM (acceso admin privado opcional) | VM → `curl -fsSL https://tailscale.com/install.sh | sh` | Bajo | 0 € (plan personal gratis) | `tailscale down` + desinstalar |
 
+> **DATO REAL DE INFRAESTRUCTURA (2026-09-19, para el futuro)**:
+> - La VM `instance-renfe-notifier-android` está alojada en el proyecto GCP **`renfe-notifier-bot`** (NO en `renfe-notifier-android`). Usar `--project renfe-notifier-bot` en cualquier comando `gcloud compute` que la toque.
+> - IP externa estática: `34.26.252.164` (puerto 8000 backend). Zona usada por defecto en `gcloud compute scp`: `us-east1-c`.
+> - Acceso por **OS Login** (cuenta de servicio `sa_104384329745603569192`), usuario shell `sa_104384329745603569192`, home en `~/renfe-notifier-android/backend`. La cuenta local `pablovb01@gmail.com` NO tiene compute habilitado sobre `renfe-notifier-android`; por eso los `gcloud` fallan a menos que se indique `--project renfe-notifier-bot`.
+> - La VM NO tiene bot antiguo ni rastro de él (inventario pasos 37-B); solo corre el backend nuevo (`renfe-notifier-backend.service`).
+> - Firma SSH del host `34.26.252.164` (ed25519, registrada al primer scp): `SHA256:RoYpXifW9rJPOZWA+4DvNn4UmyOWwxXgN03q2wWxQns`.
+
 **Secrets GitHub a crear:**
 - `GCP_PROJECT_ID` = ID del proyecto GCP
 - `GCP_WORKLOAD_IDENTITY_PROVIDER` = resource name del proveedor WIF (ej. `projects/123/locations/global/workloadIdentityPools/github-pool/providers/github-provider`)

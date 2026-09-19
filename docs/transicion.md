@@ -13,6 +13,7 @@
 
 ### Qué está implementado y validado
 - Backend nuevo desplegado en la VM (`renfe-notifier-backend`, uvicorn + systemd, `active`, salud `/api/v1/diagnostics/health` OK). IP estática `34.26.252.164`, puerto 8000.
+  - **Proyecto GCP**: la VM vive en el proyecto **`renfe-notifier-bot`** (no `renfe-notifier-android`). Usar `--project renfe-notifier-bot` en los `gcloud compute` (ver docs/real-config-plan.md §2).
 - BBDD nueva en `/data/renfe_notifier.db` (migraciones v1..v5), **vacía de seguimientos**: solo emparejamiento (`1 dispositivo` realme).
 - FCM real funcionando end-to-end (canal `disponibilidad_plazas_v2`, prioridad alta, TTL 300 s) y matriz de entrega en realme **completa**: activo, bloqueado/pantalla apagada, Doze, reinicio, sin conexión→recuperación, forzar detención (no entrega: límite Android), ahorro de batería (publica en silencio). CI/CD verdes (backend-ci, android-ci, all-checks-ok, android-release v0.1.7).
 - Consulta Renfe real controlada (escenario 1, paso 35): 5 POSTs DWR OK, 14 trenes reales, sin reservar nada.
