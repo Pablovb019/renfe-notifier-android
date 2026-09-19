@@ -38,6 +38,19 @@ class Settings(BaseSettings):
     reminder_max_attempts: int = Field(
         default=3, ge=1, description="Tope de recordatorios por evento antes de darlo por entregado"
     )
+    scheduler_enabled: bool = Field(
+        default=False,
+        description="Arranca el planificador y la entrega de avisos como tareas del lifespan",
+    )
+    scheduler_interval_s: float = Field(
+        default=60.0, gt=0, description="Intervalo del ciclo de búsqueda del planificador"
+    )
+    delivery_interval_s: float = Field(
+        default=20.0, gt=0, description="Intervalo entre ciclos de entrega de avisos pendientes"
+    )
+    delivery_batch: int = Field(
+        default=20, ge=1, description="Máximo de avisos debidos procesados por ciclo de entrega"
+    )
     pairing_code_ttl_s: float = Field(
         default=600.0, gt=0, description="Caducidad del código de emparejamiento en segundos"
     )

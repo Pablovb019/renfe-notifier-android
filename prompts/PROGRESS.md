@@ -1271,7 +1271,7 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 - PROGRESS.md (raiz) y prompts/PROGRESS.md (actualizados)
 
 ## Pruebas ejecutadas y resultados (evidencia)
-- Lectura de contexto: docs/audit.md (§3.8 workflow antiguo), scripts/deploy_backend.sh, scripts/renfe-notifier-backend.service, .github/workflows/backend-cd.yml, docs/recovery.md, prompts/PROGRESS.md (items 6/7/8/9 cerrados), docs/real-config-plan.md (§7-8).
+- Lectura de contexto: docs/audit.md (ï¿½3.8 workflow antiguo), scripts/deploy_backend.sh, scripts/renfe-notifier-backend.service, .github/workflows/backend-cd.yml, docs/recovery.md, prompts/PROGRESS.md (items 6/7/8/9 cerrados), docs/real-config-plan.md (ï¿½7-8).
 - grep backend: SchedulerService RUN_FOREVER definido pero sin instanciacion en main.py; send_alert sin llamadores (solo send_test) -> verificado el bloqueo de avisos reales.
 
 ## Bloqueos
@@ -1280,3 +1280,50 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 
 ## Siguiente paso
 Esperar instrucciones: aprobacion por bloques y, en su caso, ejecucion del paso 37 (37-transicion-autorizada.md).
+
+# Paso 37 - Transicion aprobada (37-transicion-autorizada.md) - DETENIDO EN COMPUERTA
+
+## Estado
+Verificadas las 5 precondiciones del paso 37. Se detiene la ejecucion: faltan aprobacion explicita del plan (P1) y commit autorizado con CI (P4); backup fresco pre-corte pendiente (P3). No se ha ejecutado transicion alguna ni se ha tocado la VM ni el bot antiguo.
+
+## Decisiones adoptadas
+- Aplicada la regla del paso 37 "Si falta algo, detente".
+- P1: el usuario aprobo en la sesion anterior solo "Commit docs y parar"; docs/transicion.md #11 exige aprobacion por bloques -> NO concedida.
+- P2: sin bloqueos de coste (0 EUR) ni seguridad nuevos.
+- P3: procedimiento documentado pero backup previo al corte (con descarga fuera de VM) pendiente de hacer.
+- P4: el planificador sigue sin cablear (SchedulerService no instanciado; send_alert sin llamadores); no existe commit de transicion autorizado con CI superada (HEAD=14e0243 docs-only).
+- P5: APK v0.1.7/code8 instalado y configuracion validada (adb 1ecdc196, emparejamiento y FCM OK).
+
+## Pruebas ejecutadas y resultados (evidencia)
+- adb devices -> 1ecdc196 device (realme conectado).
+- dumpsys package com.pablovb019.renfenotifier -> versionName 0.1.7, versionCode 8, lastUpdateTime 2026-09-19 16:46:13.
+- git log origin/main -1 -> 14e0243a docs: transition plan (step 36).
+- gh check-runs 14e0243 -> backend-ci/android-ci skipped, detect-changes success, all-checks-ok success (2x).
+- grep previo: scheduler/send_alert no cableados.
+
+## Bloqueos y siguiente paso
+Bloqueos: aprobacion explicita por bloques (inventario/backups VM; cablear scheduler+avisos reales; desplegar commit autorizado; detener bot; consulta/medicion real). Pendiente definir con el usuario el commit exacto a autorizar y la secuencia de ejecucion.
+
+# Paso 37 - Transicion aprobada: BLOQUE A (cablear avisos reales)
+
+## Estado
+El usuario aprobo los 4 bloques (A: cablear avisos reales; B: inventario + backup VM; C: corte/deploy+stop bot; D: validacion telefonica). Bloque A implementado y verificado localmente: ruff, mypy y 188 tests OK. Pendiente commit autorizado con CI (P4) y bloques B/C/D en la VM.
+
+## Decisiones adoptadas
+- Producir un aviso real al detectar un episodio nuevo: `SchedulerService` acepta `AlertQueue` opcional + `initial_delay_s` + `max_attempts` y encola `ReminderEvent` (id determinista `followup:episode`, idempotente, `episode_id` de la fila persistida) cuando `outcome.new_episode`. Sin cola inyectada el comportamiento previo no cambia.
+- `AlertDeliveryService` (nuevo, `backend/app/reminders/delivery.py`): consume `due_events`, construye el payload con `build_alert_message` (`backend/app/notifications/alerts.py`: tipo alert, canal `disponibilidad_plazas_v2`, prioridad alta, collapse key `followup:{id}`) y envia a todos los dispositivos activos con token FCM. Politica: seguimiento inexistente o no ACTIVE -> cancelar; caducado -> cancelar con motivo `expired`; sin dispositivos -> queda pendiente; token invalido -> limpiar token y `mark_failed`; error retryable (429/5xx) -> queda pendiente; error no retryable (401/403/400 -> `mark_failed rejected:CODE`); `FcmNotConfiguredError` -> queda pendiente.
+- Cableado en `create_app`: scheduler + delivery se construyen y arrancan como tareas de fondo del lifespan SOLO si `RENFE_NOTIFIER_SCHEDULER_ENABLED=true` (por defecto false) para que tests/desarrollo no sondeen Renfe ni encolen avisos reales. Nueva config: `scheduler_enabled`, `scheduler_interval_s`, `delivery_interval_s`, `delivery_batch`; `AlertQueue` recibe `reminder_interval_s`. Adaptador `_search_adapter` traduce `Station` -> cÃ³digos para `TrainSearchEngine`.
+
+## Archivos modificados / creados
+- Modificados: `backend/app/scheduler/service.py`, `backend/app/main.py`, `backend/app/config.py`, `backend/.env.example`, `backend/tests/test_scheduler_service.py`.
+- Creados: `backend/app/reminders/delivery.py`, `backend/app/notifications/alerts.py`, `backend/tests/test_reminders_delivery.py`.
+
+## Pruebas ejecutadas y resultados (evidencia)
+- `ruff check app tests` -> All checks passed.
+- `ruff format --check app tests` -> 70 files already formatted.
+- `mypy app tests` -> Success: no issues found in 69 source files.
+- `pytest` -> 188 passed. Tests nuevos (12): encolado del scheduler con y sin cola (params remind_at, max_attempts, evento ligado a episodio), entrega a dispositivo activo, payload con nombres del catalogo, token invalido -> limpieza + failed, sin dispositivos -> pendiente, seguimiento pausado -> cancelado, evento caducado -> cancelado, retryable -> pendiente, no retryable -> failed, followup borrado -> cancelado, run_forever cortado limpiamente, contrato de build_alert_message.
+- No se ejecuto el planificador ni se envio ningun aviso real; activacion en produccion (scheduler_enabled) corresponde al Bloque C.
+
+## Bloqueos y siguiente paso
+Bloqueos: P4 (commit de transicion autorizado con CI) no existe hasta el push de este Bloque A; P3 (backup fresco en VM) y B/C/D requieren acciones del usuario en la VM (sin acceso directo nuestro). Siguiente: commit+push autorizados del Bloque A, esperar CI verde, y coordinar B (inventario+backup), C (corte) y D (validacion telefonica) con el usuario.

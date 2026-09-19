@@ -769,3 +769,32 @@ uff check .: All checks passed.
 - **Archivos creados**: `docs/transicion.md`.
 - **Pruebas ejecutadas**: revision de docs/audit.md (workflow antiguo SSH directo), scripts/deploy_backend.sh y unit systemd, backend-cd.yml, recovery.md, prompts/PROGRESS.md (items 6-9 cerrados) y confirmacion por grep de que scheduler/send_alert no estan cableados en main.py.
 - **Bloqueos / siguiente paso**: aprobacion expl�cita del usuario para cada bloque de `docs/transicion.md`; luego paso 37 (37-transicion-autorizada.md). Detenido a la espera de instrucciones.
+
+## Paso 37: Transici�n aprobada - VERIFICACION DE PRECONDICIONES
+- **Estado**: Detenido en la compuerta (precondiciones P1 y P4 no cumplidas; P3 backup pre-corte pendiente).
+- **Fecha**: 2026-09-19
+- **Verificacion (evidencia)**:
+  - P1 Aprobaci�n explicita del plan: **NO concedida**. En la sesion anterior el usuario eligio "Commit docs y parar", que excluye la transicion. docs/transicion.md �11 exige aprobacion por bloques.
+  - P2 Bloqueos de seguridad/coste: ausentes. Presupuesto 0 euros; no se contrataron recursos. Firewall 8000 abierto a Internet queda como consideracion (no bloqueante de la transicion en si).
+  - P3 Backup + recuperacion: procedimiento documentado (docs/recovery.md, docs/transicion.md #2). Backup fresco previo al corte y su descarga fuera de la VM: PENDIENTE (accion en VM del usuario).
+  - P4 Commit exacto autorizado con CI: **NO existe**. El planificador no esta cableado (SchedulerService sin instanciar en main.py, send_alert sin llamadores). ultimo commit 14e0243 (docs-only, CI verde). Pendiente: commit con cableado+CI, autorizado, para desplegar.
+  - P5 APK instalado y configuracion validada: OK. Realme conectado (serial 1ecdc196), APK v0.1.7 code8 (lastUpdateTime 2026-09-19 16:46). Emparejamiento y FCM ya validados (paso 35).
+- **Decision**: Segun la regla del paso 37 ("Si falta algo, detente"), se detiene la ejecucion. No se ha ejecutado transicion alguna ni se ha tocado la VM.
+- **Siguiente paso**: obtener aprobacion explicita por bloques del usuario (inventario/backups VM, cablear scheduler+avisos reales, desplegar commit autorizado, detener bot, consulta/medicion real) y entonces ejecutar la transicion con validacion de aviso en el telefono.
+- **Pruebas ejecutadas**: adb devices (serial 1ecdc196), dumpsys package (v0.1.7/code8), git log HEAD, gh check-runs de 14e0243 (backend-ci/android-ci skipped, detect-changes success, all-checks-ok success), grep previo de cableado del planificador.
+
+## Paso 37: Transicion aprobada - BLOQUE A (cablear avisos reales)
+- **Estado**: En curso - Bloque A implementado y verificado localmente (ruff, mypy, 188 tests OK). Pendiente: commit autorizado con CI (P4) y bloques B/C/D.
+- **Fecha**: 2026-09-19
+- **Decisiones** (aprobacion por cuestionario: usuario autorizo A, B, C y D):
+  - Producir un aviso real al detectar un episodio nuevo: `SchedulerService` acepta ahora una `AlertQueue` opcional (+ `initial_delay_s`, `max_attempts`) y encola `ReminderEvent` con id determinista `followup:episode` y `episode_id` de la fila persistida, solo cuando `outcome.new_episode`.
+  - `AlertDeliveryService` (`backend/app/reminders/delivery.py`): consume `due_events`, construye `AlertMessage` con el catalogo (`backend/app/notifications/alerts.py`, canal `disponibilidad_plazas_v2`, prioridad alta, collapse key `followup:{id}`) y envia a todos los dispositivos activos con token FCM. Reglas: seguimiento inactivo/caducado -> cancelar; token invalido -> limpiar token y `mark_failed`; error retryable (429/5xx) -> queda pendiente; error no retryable (401/403/400) -> `mark_failed`; sin sender -> ciclo inerte.
+  - Cableado en `create_app`: ambas tareas solo arrancan si `scheduler_enabled` (nuevo setting, por defecto `false`) para que tests y desarrollo no sondeen Renfe ni encolen; `SchedulerService` usa `interval_s`/retraso/tope de settings y un adaptador Station->codigos hacia `TrainSearchEngine`.
+- **Archivos modificados / creados**: `backend/app/scheduler/service.py`, `backend/app/reminders/delivery.py` (nuevo), `backend/app/notifications/alerts.py` (nuevo), `backend/app/main.py`, `backend/app/config.py`, `backend/.env.example`, `backend/tests/test_scheduler_service.py`, `backend/tests/test_reminders_delivery.py` (nuevo, 12 tests).
+- **Pruebas ejecutadas y resultados**:
+  - `ruff check app tests` -> All checks passed.
+  - `ruff format --check app tests` -> 70 files already formatted.
+  - `mypy app tests` -> no issues found in 69 source files.
+  - `pytest` -> 188 passed (176 previos + 12 nuevos: encolado en scheduler sin/con cola, entrega, builder de payload, token invalido, sin dispositivos, cancelaciones por ciclo de vida y caducidad, retryable/no-retryable y run_forever).
+  - No se ejecuto el planificador ni se envio ningun aviso real; sigue pendiente activarlo en produccion (scheduler_enabled) en el Bloque C.
+- **Bloqueos / siguiente paso**: P4 (commit autorizado con CI verde) pendiente del push de este Bloque A; P3 (backup fresco en VM) y B/C/D pendientes del usuario en la VM. Siguiente: commit+push del Bloque A, esperar CI, y coordinar con el usuario los bloques B/C/D.

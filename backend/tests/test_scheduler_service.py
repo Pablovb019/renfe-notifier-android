@@ -1,11 +1,12 @@
 import asyncio
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
 import pytest
 
 from app.followups.database import FollowUpRepository
 from app.followups.domain import AlertState, AvailabilityState, FollowUp, FollowUpMode
+from app.reminders.queue import AlertQueue
 from app.renfe.client import RenfeClientError, SearchMetrics, SearchResult
 from app.renfe.parser import Availability, ParseStatus, Train, TrainList
 from app.renfe.stations import Station, StationCatalog
@@ -281,6 +282,70 @@ async def test_run_once_creates_new_episode_when_availability_reappears(
     assert after_reappearance is not None
     assert after_reappearance.episode == 2
     assert after_reappearance.alert_state is AlertState.PENDING
+
+
+@pytest.mark.asyncio
+async def test_run_once_enqueues_alert_event_on_new_episode(
+    repo: FollowUpRepository,
+    catalog: StationCatalog,
+    sample_stations: tuple[Station, Station],
+    tmp_path: Path,
+) -> None:
+    origin, destination = sample_stations
+    repo.create(_followup(origin=origin, destination=destination))
+    queue = AlertQueue(tmp_path / "data" / "test.db", interval_s=300.0)
+    queue.initialize()
+
+    available = _search_result(
+        TrainList(status=ParseStatus.OK, plaza_h_requested=False, trains=(_available_train(),))
+    )
+    search = FakeSearch([available])
+    service = SchedulerService(
+        repository=repo,
+        search_fn=search,
+        catalog=catalog,
+        clock=lambda: FAKE_NOW,
+        queue=queue,
+        initial_delay_s=60.0,
+        max_attempts=3,
+    )
+
+    await service.run_once()
+
+    event = queue.get("f1:1")
+    assert event is not None
+    assert event.followup_id == "f1"
+    assert event.episode_id >= 1
+    assert event.observed_at == FAKE_NOW
+    assert event.remind_at == FAKE_NOW + timedelta(seconds=60)
+    assert event.max_attempts == 3
+
+
+@pytest.mark.asyncio
+async def test_run_once_does_not_enqueue_without_queue(
+    repo: FollowUpRepository, catalog: StationCatalog, sample_stations: tuple[Station, Station]
+) -> None:
+    origin, destination = sample_stations
+    repo.create(_followup(origin=origin, destination=destination))
+
+    search = FakeSearch(
+        [
+            _search_result(
+                TrainList(
+                    status=ParseStatus.OK, plaza_h_requested=False, trains=(_available_train(),)
+                )
+            )
+        ]
+    )
+    service = SchedulerService(
+        repository=repo, search_fn=search, catalog=catalog, clock=lambda: FAKE_NOW
+    )
+
+    await service.run_once()
+
+    loaded = repo.get("f1")
+    assert loaded is not None
+    assert loaded.episode == 1
 
 
 @pytest.mark.asyncio

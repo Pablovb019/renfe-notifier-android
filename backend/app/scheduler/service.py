@@ -11,9 +11,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from app.followups.database import FollowUpRepository
+from app.followups.database import Episode, FollowUpRepository
 from app.followups.domain import FollowUp, Lifecycle
 from app.monitoring import monitoring
+from app.reminders.domain import ReminderEvent
+from app.reminders.queue import AlertQueue
 from app.renfe.client import RenfeClientError, SearchResult
 from app.renfe.stations import StationCatalog
 from app.scheduler.plan import GroupKey, build_plan, error_observation, train_list_to_observation
@@ -38,6 +40,8 @@ class SchedulerService:
       ciclo; no se guarda estado volátil en memoria.
     - Aislamiento de sesiones: ``search_fn`` debe crear una sesión HTTP efímera
       por llamada (``RenfeDwrClient.search``).
+    - Cuando se inyecta una ``AlertQueue``, cada nuevo episodio se encola como
+      evento de aviso (id determinista ``followup:episode`` e idempotente).
     """
 
     def __init__(
@@ -50,6 +54,9 @@ class SchedulerService:
         interval_s: float = 30.0,
         concurrency: int = 2,
         sleep: Sleep = asyncio.sleep,
+        queue: AlertQueue | None = None,
+        initial_delay_s: float = 60.0,
+        max_attempts: int = 3,
     ) -> None:
         self._repository = repository
         self._search = search_fn
@@ -58,6 +65,9 @@ class SchedulerService:
         self._interval_s = interval_s
         self._concurrency = concurrency
         self._sleep = sleep
+        self._queue = queue
+        self._initial_delay_s = initial_delay_s
+        self._max_attempts = max_attempts
 
     async def run_once(self) -> None:
         """Un único ciclo del planificador: leer, agrupar, buscar y persistir."""
@@ -109,9 +119,31 @@ class SchedulerService:
             if outcome.followup is not followup:
                 self._repository.save(outcome.followup, now=now)
             if outcome.new_episode:
-                self._repository.add_episode(
+                episode = self._repository.add_episode(
                     followup.followup_id,
                     outcome.followup.episode,
                     now,
                     outcome.followup.seen_available_train_ids,
                 )
+                self._enqueue_alert(followup, outcome.followup, episode, now)
+
+    def _enqueue_alert(
+        self,
+        followup: FollowUp,
+        updated: FollowUp,
+        episode: Episode,
+        now: datetime,
+    ) -> None:
+        if self._queue is None:
+            return
+        event = ReminderEvent.create(
+            event_id=f"{followup.followup_id}:{updated.episode}",
+            followup_id=followup.followup_id,
+            episode_id=episode.episode_id,
+            observed_at=now,
+            expires_at=updated.expires_at,
+            initial_delay_s=self._initial_delay_s,
+            max_attempts=self._max_attempts,
+            now=now,
+        )
+        self._queue.enqueue(event)

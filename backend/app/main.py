@@ -1,8 +1,10 @@
 """Aplicación ASGI del backend, con emparejamiento autenticado."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
@@ -23,10 +25,12 @@ from app.middleware.rate_limit import InMemoryRateLimiter
 from app.notifications.fcm import AutoTokenProvider, FcmNotificationSender
 from app.pairing.database import PairingRepository
 from app.pairing.service import PairingService
+from app.reminders.delivery import AlertDeliveryService
 from app.reminders.queue import AlertQueue
-from app.renfe.client import RenfeDwrClient
+from app.renfe.client import RenfeDwrClient, SearchResult
 from app.renfe.search import TrainSearchEngine
-from app.renfe.stations import StationCatalog
+from app.renfe.stations import Station, StationCatalog
+from app.scheduler.service import SchedulerService, SearchFn
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +68,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         pairing_service.initialize()
         followups_repository = FollowUpRepository(app_settings.database_path)
         followups_repository.initialize()
-        alert_queue = AlertQueue(app_settings.database_path)
+        alert_queue = AlertQueue(
+            app_settings.database_path, interval_s=app_settings.reminder_interval_s
+        )
         alert_queue.initialize()
         catalog = StationCatalog()
         search_engine = TrainSearchEngine(RenfeDwrClient(), catalog)
@@ -87,8 +93,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.search_engine = search_engine
         app.state.fcm_sender = fcm_sender
         app.state.test_sender = fcm_sender
+
+        background_tasks: list[asyncio.Task[None]] = []
+        if app_settings.scheduler_enabled:
+            scheduler = SchedulerService(
+                repository=followups_repository,
+                search_fn=_search_adapter(search_engine),
+                catalog=catalog,
+                interval_s=app_settings.scheduler_interval_s,
+                queue=alert_queue,
+                initial_delay_s=app_settings.reminder_initial_delay_s,
+                max_attempts=app_settings.reminder_max_attempts,
+            )
+            delivery = AlertDeliveryService(
+                queue=alert_queue,
+                followups=followups_repository,
+                pairing=pairing_service,
+                catalog=catalog,
+                sender=fcm_sender,
+                batch=app_settings.delivery_batch,
+                interval_s=app_settings.delivery_interval_s,
+            )
+            background_tasks = [
+                asyncio.create_task(scheduler.run_forever(), name="renfe-scheduler"),
+                asyncio.create_task(delivery.run_forever(), name="renfe-delivery"),
+            ]
+            logger.info("Planificador y entrega de avisos activados.")
         logger.info("Arrancando renfe-notifier-backend")
         yield
+        for task in background_tasks:
+            task.cancel()
+        await asyncio.gather(*background_tasks, return_exceptions=True)
         logger.info("Backend detenido correctamente")
 
     app = FastAPI(
@@ -131,6 +166,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return await call_next(request)
 
     return app
+
+
+def _search_adapter(search_engine: TrainSearchEngine) -> SearchFn:
+    """Traduce la firma del planificador (objetos Station) a la del motor (códigos)."""
+
+    async def search(
+        *,
+        origin: Station,
+        destination: Station,
+        travel_date: date,
+        plaza_h: bool,
+    ) -> SearchResult:
+        return await search_engine.search(
+            origin_code=origin.code,
+            destination_code=destination.code,
+            travel_date=travel_date,
+            plaza_h=plaza_h,
+        )
+
+    return search
 
 
 app = create_app()
