@@ -54,6 +54,8 @@
     <string name="search_create">Crear seguimiento</string>
     <string name="search_created">Seguimiento creado</string>
     <string name="search_created_hint">Seguimiento %1$s creado. Se avisará cuando haya plazas.</string>
+    <string name="search_train_available">Este tren ya tiene plazas</string>
+    <string name="search_train_available_hint">El tren seleccionado tiene plazas disponibles: no hace falta vigilarlo. Vuelve a la pantalla principal.</string>
 
     <!-- Pantalla de seguimientos -->
     <string name="followups_title">Mis seguimientos</string>
@@ -81,6 +83,7 @@
     <string name="followups_expires">Caduca: %1$s</string>
     <string name="followups_lifecycle_detail">Estado: %1$s</string>
     <string name="followups_mode_specific">Tren concreto: %1$s</string>
+<string name="followups_mode_specific_times">Tren de %1$s a %2$s</string>
     <string name="followups_reminder_note">Recordatorios acotados: se avisará un número limitado de veces hasta que confirmes o hasta que desaparezca la disponibilidad.</string>
     <string name="followups_episodes_title">Episodios</string>
     <string name="followups_no_episodes">Aún no hay episodios registrados.</string>

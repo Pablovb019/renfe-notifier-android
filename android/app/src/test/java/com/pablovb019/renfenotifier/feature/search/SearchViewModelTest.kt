@@ -62,13 +62,14 @@ class SearchViewModelTest {
         identity: String,
         arrival: String? = "09:30",
         price: String? = "12.5",
+        availability: String = "no_availability",
     ) = TrainOut(
         identifier = "id-$identity",
         identity = identity,
         departure = "08:00",
         arrival = arrival,
         price = price,
-        availability = "available",
+        availability = availability,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -302,6 +303,115 @@ class SearchViewModelTest {
         assertEquals(true, state.mode == FollowUpMode.SPECIFIC)
         assertTrue(state.followUpError!!.contains("tren"))
         assertNull(state.createdFollowUpId)
+    }
+
+    @Test
+    fun `tren disponible en modo specific no crea seguimiento y avisa`() = runTest(dispatcher) {
+        var createCalled = false
+        api.searchTrainsHandler = {
+            TrainSearchResponse(
+                status = "ok",
+                plazaHRequested = false,
+                trains = listOf(train("t-dis", availability = "available")),
+            )
+        }
+        api.createFollowUpHandler = {
+            createCalled = true
+            throw AssertionError("no debe crear seguimiento si el tren tiene plazas")
+        }
+
+        val vm = viewModel()
+        vm.onOriginSelected(chamartin)
+        vm.onDestinationSelected(atocha)
+        vm.search()
+        advanceUntilIdle()
+        vm.onTrainSelected("t-dis")
+        vm.createFollowUp()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue("no debe llamar a la API de creación", !createCalled)
+        assertTrue(state.availableTrainNotice)
+        assertNull(state.createdFollowUpId)
+
+        vm.onCreatedAccepted()
+        assertTrue("al aceptar debe cerrarse el aviso", !vm.uiState.value.availableTrainNotice)
+    }
+
+    @Test
+    fun `tren disponible en modo first no crea seguimiento y avisa`() = runTest(dispatcher) {
+        var createCalled = false
+        api.searchTrainsHandler = {
+            TrainSearchResponse(
+                status = "ok",
+                plazaHRequested = false,
+                trains = listOf(
+                    train("t-1", availability = "no_availability"),
+                    train("t-2", arrival = "10:30", availability = "available"),
+                ),
+            )
+        }
+        api.createFollowUpHandler = {
+            createCalled = true
+            throw AssertionError("no debe crear seguimiento si hay un tren con plazas")
+        }
+
+        val vm = viewModel()
+        vm.onOriginSelected(chamartin)
+        vm.onDestinationSelected(atocha)
+        vm.search()
+        advanceUntilIdle()
+        vm.onModeSelected(FollowUpMode.FIRST)
+        vm.createFollowUp()
+        advanceUntilIdle()
+
+        assertTrue(!createCalled)
+        assertTrue(vm.uiState.value.availableTrainNotice)
+    }
+
+    @Test
+    fun `modo first sin trenes disponibles si crea seguimiento`() = runTest(dispatcher) {
+        api.searchTrainsHandler = {
+            TrainSearchResponse(
+                status = "ok",
+                plazaHRequested = false,
+                trains = listOf(
+                    train("t-1"),
+                    train("t-2", arrival = "10:30"),
+                ),
+            )
+        }
+        api.createFollowUpHandler = { request ->
+            assertEquals("first", request.mode)
+            FollowUpOut(
+                followupId = "fu-first",
+                originCode = "CHAM",
+                originName = null,
+                destinationCode = "ATOC",
+                destinationName = null,
+                travelDate = fixedNow.toString(),
+                mode = "first",
+                plazaH = false,
+                specificTrainId = null,
+                lifecycle = "pending",
+                availability = "unknown",
+                alertState = "inactive",
+                episode = 0,
+                expiresAt = fixedNow.toString(),
+            )
+        }
+
+        val vm = viewModel()
+        vm.onOriginSelected(chamartin)
+        vm.onDestinationSelected(atocha)
+        vm.search()
+        advanceUntilIdle()
+        vm.onModeSelected(FollowUpMode.FIRST)
+        vm.createFollowUp()
+        advanceUntilIdle()
+
+        assertEquals("fu-first", vm.uiState.value.createdFollowUpId)
+        assertTrue(!vm.uiState.value.availableTrainNotice)
     }
 
     @Test

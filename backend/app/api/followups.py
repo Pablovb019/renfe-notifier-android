@@ -197,9 +197,22 @@ async def list_followups(
     repository: FollowUpsDep,
     lifecycle: Annotated[Lifecycle | None, Query()] = None,
 ) -> FollowUpListOut:
-    """Lista los seguimientos, filtrables por estado del ciclo de vida."""
-    items = [_to_out(followup, catalog) for followup in repository.list(lifecycle)]
-    return FollowUpListOut(items=items, total=len(items))
+    """Lista los seguimientos, filtrables por estado del ciclo de vida.
+
+    Sin filtro se muestran todos excepto los eliminados (papelera). Los
+    eliminados solo son visibles pidiendo explícitamente ``lifecycle=deleted``.
+    """
+    if lifecycle is None:
+        raw = repository.list()
+        items = [
+            followup
+            for followup in raw
+            if followup.lifecycle is not Lifecycle.DELETED
+        ]
+    else:
+        items = list(repository.list(lifecycle))
+    out = [_to_out(followup, catalog) for followup in items]
+    return FollowUpListOut(items=out, total=len(out))
 
 
 @router.get("/{followup_id}", response_model=FollowUpDetailOut)

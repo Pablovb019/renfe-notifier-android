@@ -916,3 +916,35 @@ uff check .: All checks passed.
   - Backend: `pytest` -> **189 passed** (188 previos + 1 nuevo dedup); `ruff check app` -> All checks passed; `mypy app` -> no issues (43 source files).
   - Android: `:app:compileDebugKotlin` -> BUILD SUCCESSFUL (warning preexistente menuAnchor); `:app:testDebugUnitTest --tests feature.search.*` -> BUILD SUCCESSFUL; `:app:lintDebug` -> BUILD SUCCESSFUL. JDK hallado: `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot` (no estaba en PATH; JAVA_HOME no definido).
 - **Bloqueos / siguiente paso**: SIN COMMIT NI PUSH AUN (pendiente autorizacion). Proximo: commit+push (advierte CI), deploy del commit en la VM (git pull + restart), y re-ejecutar Â§6.4 en el realme con la app v0.1.7 (el dedup backend evita el crash sin reinstalar). Opcional: build/sign v0.1.8 con el fix Android.
+
+## Paso 37: Transicion aprobada - CRASH APP RESUELTO EN PRODUCCION (deploy a1398fd en VM)
+- **Estado**: commit `a1398fd` (fix dedup backend + key unica Android) pusheado con CI verde y DESPLEGADO en la VM. El fix llega a la app v0.1.7 instalada sin reinstalar.
+- **Evidencia (2026-09-19, salidas pegadas)**:
+  - `git pull --ff-only`: dfaf14f -> a1398fd (fast-forward, 5 ficheros, +145/-3), HEAD=origin/main=a1398fd.
+  - `systemctl restart` directo fallo por polkit interactivo ("Access denied... requires interactive authentication"); con `sudo systemctl restart` OK.
+  - PID viejo 26879 parado limpio ("Shutting down" / "Backend detenido correctamente"). Nuevo PID **27418** (unico uvicorn).
+  - Log 18:05:30: "Planificador y entrega de avisos activados." / "Arrancando renfe-notifier-backend" / "Application startup complete." / "Uvicorn running on http://0.0.0.0:8000". Health 200 (`{"status":"ok","uptime_s":22.4}`).
+- **Decisiones adoptadas**: el reinicio del servicio en la VM exige `sudo` (vÃ­a /etc/sudoers.d) por configuracion polkit interactiva; queda anotado para proximos deploys.
+- **Pruebas**: git pull/restart/log/health/pgrep en la VM (usuario), verificadas aqui.
+- **Bloqueos / siguiente paso**: Â§6.4 - re-ejecutar el seguimiento de prueba desde la app (realme v0.1.7): buscar, hacer scroll sin crash, crear seguimiento y validar flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones). Luego Bloque D.
+
+## Paso 37: Transicion aprobada - LOTE VALIDACION §6.4 (5 fixes: disponibilidad, dialogo creado, no-seguimiento con plazas, papelera, nombre raro)
+- **Estado**: 5 fixes implementados y probados localmente (backend + Android). Sin commit ni push aun (pendiente autorizacion).
+- **Evidencia (2026-09-19)**: el usuario reporto 4 problemas tras re-ejecutar §6.4 con la app v0.1.7: (1) todos los trenes de Sevilla-San Bernardo->Jerez aparecian "Disponible" aunque en Renfe solo habia plaza H (y plaza H no activada); (2) el dialogo "seguimiento creado" mostraba el popup pero el boton Aceptar no hacia nada (no navegaba a la pagina principal); (3) al eliminar un seguimiento y confirmar, seguia apareciendo en el listado; (4) el detalle mostraba un "nombre raro" (identity del tren).
+- **Causas raiz**:
+  - Disponibilidad: `_parse_dwr_availability` (backend/app/renfe/parser.py:200-210) ignoraba `soloPlazaH`; el bot heredado los trata como disponibles SOLO si se pidio plaza_h. Replicada su logica exacta (`renfechecker.py:252-263`): base_available = no completo and razon in ("","8") and tarifaMinima valida; plaza_h_only = bool(soloPlazaH); disponible si (base and plaza_h_only) con h, o (base and not plaza_h_only) sin h.
+  - Dialogo creado: `TextButton` del AlertDialog "seguimiento creado" tenia el onClick vacio (SearchScreen.kt:475), comentario "se mantiene la ruta..." -> nada. Se conecta a `onCreatedAccepted` + navegacion a Home.
+  - Borrado: el delete es LOGICO (followups.py:283-295 marca lifecycle=deleted) pero el listado general (`?lifecycle=` sin filtro) incluia los deleted; el usuario quiere papelera (solo visibles con filtro "Eliminados").
+  - Nombre raro: FollowUpDetailScreen.modeText() mostraba `specificTrainId` (identity "real:MD|11:08:00|12:13:00"). Se muestra horario "11:08 -> 12:13" extrayendo los dos ultimos campos de la identity.
+- **Decisiones adoptadas (usuario, question tool)**:
+  - Aplicar el principio heredado en TODOS los modos (specific y first/last/all): si hay trenes con plazas, NO se crea seguimiento; aviso + vuelta a Home.
+  - Replicar el comportamiento del bot para Plaza H: `soloPlazaH=true` sin plaza_h => NO disponible (permite seguimiento); con plaza_h solo cuentan los soloPlazaH como disponibles.
+  - Borrado: papelera (el default "Todos" excluye los eliminados; filtro "Eliminados" los muestra).
+  - Nombre raro: mostrar horarios en vez del identity crudo.
+- **Archivos modificados / creados**:
+  - Backend: `app/renfe/parser.py` (`_parse_availability`/`_parse_dwr_availability` con `plaza_h_requested`, replica heredada), `app/api/followups.py` (listado sin filtro excluye DELETED), `tests/test_dwr_parser.py` (2 tests soloPlazaH), `tests/test_followups_api.py` (papelera en test delete).
+  - Android: `feature/search/SearchViewModel.kt` (estado `availableTrainNotice`, guard `hasAvailableTrain`, `onCreatedAccepted` limpia ambos), `feature/search/SearchScreen.kt` (dialogo Aceptar conectado a onCreatedAccepted + dialogo "ya tiene plazas", cableado en AppNavHost... en SearchScreen), `res/values/strings.xml` (2 strings nuevos, 1 variante horario), `feature/followups/FollowUpDetailScreen.kt` (modeText con horarios), `test/.../SearchViewModelTest.kt` (helper con availability parametrizable + 3 tests nuevos).
+- **Pruebas ejecutadas y resultados (local)**:
+  - Backend: `pytest` -> **191 passed** (189 + 2 nuevos); `ruff check app` -> All checks passed; `mypy app` -> no issues (43 source files).
+  - Android: `:app:compileDebugKotlin` -> BUILD SUCCESSFUL (warning preexistente menuAnchor); `:app:testDebugUnitTest` -> BUILD SUCCESSFUL (incluye 3 tests nuevos de "no seguimiento con plazas" y first); `:app:lintDebug` -> BUILD SUCCESSFUL.
+- **Bloqueos / siguiente paso**: commit+push (avisar CI) y deploy en la VM (git pull + `sudo systemctl restart`). Re-ejecutar §6.4 completo en el realme v0.1.7: (a) una ruta con solo plaza H debe mostrar "Sin plazas"; (b) crear seguimiento y verificar Aceptar vuelve a Home; (c) crear desde un tren con plazas NO debe crear seguimiento (aviso + Home); (d) eliminar y verificar que desaparece del listado; (e) detalle especifico muestra horario, no identity. Requiere re-build del APK para ver los fixes Android (v0.1.8) o al menos backend para disponibilidad/papelera.

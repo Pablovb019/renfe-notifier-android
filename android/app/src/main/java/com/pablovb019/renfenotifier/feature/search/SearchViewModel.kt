@@ -2,6 +2,7 @@ package com.pablovb019.renfenotifier.feature.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.pablovb019.renfenotifier.core.model.Availability
 import com.pablovb019.renfenotifier.core.model.FollowUpMode
 import com.pablovb019.renfenotifier.core.network.RenfeApi
 import com.pablovb019.renfenotifier.core.network.model.FollowUpCreateRequest
@@ -40,6 +41,7 @@ data class SearchUiState(
     val selectedTrainIdentity: String? = null,
     val isCreatingFollowUp: Boolean = false,
     val createdFollowUpId: String? = null,
+    val availableTrainNotice: Boolean = false,
     val followUpError: String? = null,
 ) {
     val hasSearched: Boolean get() = searchStatus != null || searchError != null
@@ -185,6 +187,11 @@ class SearchViewModel(
         }
         if (state.isCreatingFollowUp) return
 
+        if (hasAvailableTrain(state)) {
+            _uiState.update { it.copy(availableTrainNotice = true, followUpError = null) }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingFollowUp = true, followUpError = null) }
             try {
@@ -227,6 +234,28 @@ class SearchViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun onCreatedAccepted() {
+        _uiState.update { it.copy(createdFollowUpId = null, availableTrainNotice = false) }
+    }
+
+    /**
+     * Principio heredado del bot: jamás se crea un seguimiento de un tren que
+     * ya tiene plazas. En modo concreto se comprueba el tren seleccionado; en
+     * los modos "primero/último/todos" basta con que haya algún tren con plazas.
+     */
+    private fun hasAvailableTrain(state: SearchUiState): Boolean {
+        val trains = state.trains
+        if (trains.isEmpty()) return false
+        return when (state.mode) {
+            FollowUpMode.SPECIFIC -> trains.any {
+                it.identity == state.selectedTrainIdentity &&
+                    it.availability == Availability.AVAILABLE
+            }
+            FollowUpMode.FIRST, FollowUpMode.LAST, FollowUpMode.ALL ->
+                trains.any { it.availability == Availability.AVAILABLE }
         }
     }
 

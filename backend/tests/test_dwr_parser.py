@@ -47,3 +47,39 @@ def test_parser_flattens_grouped_payload_from_the_real_dwr_shape() -> None:
     assert result.trains[0].availability is Availability.AVAILABLE
     assert result.trains[1].price is None
     assert result.trains[1].availability is Availability.NO_AVAILABILITY
+
+
+def test_parser_ignores_solo_plaza_h_when_plaza_h_not_requested() -> None:
+    payload = (
+        'r.handleCallback("0", "0", {listadoTrenes: ['
+        '{horaSalida: "11:00", horaLlegada: "12:00", tarifaMinima: "21,30", '
+        'tipoTrenUno: "MD", completo: false, razonNoDisponible: "", soloPlazaH: true}'
+        "]});"
+    )
+
+    result = parse_train_list(payload, plaza_h_requested=False)
+
+    assert result.status is ParseStatus.NO_AVAILABILITY
+    assert result.trains[0].availability is Availability.NO_AVAILABILITY
+
+
+def test_parser_counts_solo_plaza_h_when_plaza_h_requested() -> None:
+    payload = (
+        'r.handleCallback("0", "0", {listadoTrenes: ['
+        "{listviajeViewEnlaceBean: ["
+        '{horaSalida: "11:00", horaLlegada: "12:00", tarifaMinima: "21,30", '
+        'tipoTrenUno: "MD", completo: false, razonNoDisponible: "", soloPlazaH: true}, '
+        '{horaSalida: "13:00", horaLlegada: "14:00", tarifaMinima: "15,00", '
+        'tipoTrenUno: "REG", completo: false, razonNoDisponible: "", soloPlazaH: false}'
+        "]}]});"
+    )
+
+    result = parse_train_list(payload, plaza_h_requested=True)
+
+    assert result.status is ParseStatus.OK
+    assert result.trains[0].availability is Availability.AVAILABLE
+    assert result.trains[1].availability is Availability.NO_AVAILABILITY
+
+    result_without_h = parse_train_list(payload, plaza_h_requested=False)
+    assert result_without_h.trains[0].availability is Availability.NO_AVAILABILITY
+    assert result_without_h.trains[1].availability is Availability.AVAILABLE

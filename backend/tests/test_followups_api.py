@@ -253,11 +253,13 @@ def test_delete_is_soft_and_idempotent(tmp_path: Path) -> None:
         deleted_again = client.delete(f"/api/v1/followups/{followup_id}", headers=headers)
         after = client.get(f"/api/v1/followups/{followup_id}", headers=headers)
         listing = client.get("/api/v1/followups", params={"lifecycle": "deleted"}, headers=headers)
+        general = client.get("/api/v1/followups", headers=headers)
 
     assert deleted.status_code == 204
     assert deleted_again.status_code == 204
     assert after.json()["lifecycle"] == "deleted"
     assert listing.json()["total"] == 1
+    assert general.json()["items"] == []
 
 
 def test_actions_require_existing_followup(tmp_path: Path) -> None:

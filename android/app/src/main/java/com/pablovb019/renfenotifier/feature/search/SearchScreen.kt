@@ -104,6 +104,10 @@ fun SearchScreen(
             onModeSelected = viewModel::onModeSelected,
             onTrainSelected = viewModel::onTrainSelected,
             onCreateFollowUp = viewModel::createFollowUp,
+            onCreatedAccepted = {
+                viewModel.onCreatedAccepted()
+                onBack()
+            },
             modifier = Modifier.padding(innerPadding),
         )
     }
@@ -123,6 +127,7 @@ fun SearchContent(
     onModeSelected: (FollowUpMode) -> Unit,
     onTrainSelected: (String) -> Unit,
     onCreateFollowUp: () -> Unit,
+    onCreatedAccepted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEEE d 'de' MMMM 'de' yyyy") }
@@ -245,6 +250,7 @@ fun SearchContent(
                     uiState = uiState,
                     onModeSelected = onModeSelected,
                     onCreateFollowUp = onCreateFollowUp,
+                    onCreatedAccepted = onCreatedAccepted,
                 )
             }
         }
@@ -418,6 +424,7 @@ private fun FollowUpCreator(
     uiState: SearchUiState,
     onModeSelected: (FollowUpMode) -> Unit,
     onCreateFollowUp: () -> Unit,
+    onCreatedAccepted: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -471,7 +478,19 @@ private fun FollowUpCreator(
                 title = { Text(text = stringResource(R.string.search_created)) },
                 text = { Text(text = stringResource(R.string.search_created_hint, id)) },
                 confirmButton = {
-                    TextButton(onClick = { /* se mantiene la ruta y fecha para reutilizarlas */ }) {
+                    TextButton(onClick = onCreatedAccepted) {
+                        Text(text = stringResource(R.string.dialog_accept))
+                    }
+                },
+            )
+        }
+        if (uiState.availableTrainNotice) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(text = stringResource(R.string.search_train_available)) },
+                text = { Text(text = stringResource(R.string.search_train_available_hint)) },
+                confirmButton = {
+                    TextButton(onClick = onCreatedAccepted) {
                         Text(text = stringResource(R.string.dialog_accept))
                     }
                 },

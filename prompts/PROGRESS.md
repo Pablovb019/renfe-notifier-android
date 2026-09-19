@@ -1466,3 +1466,60 @@ DIAGNOSTICADO y FIX implementado y probado en local. La app v0.1.7 instalada en 
 
 ## Bloqueos y siguiente paso
 Sin commit/push aun (falta autorizacion explicita). Proximo: commit + push (avisando que backend-ci corre), deploy en la VM (git pull + restart) y re-ejecutar §6.4 con la app v0.1.7 instalada. Opcional: build/sign v0.1.8 con el fix Android.
+
+# Paso 37 - Transicion aprobada: CRASH RESUELTO EN PRODUCCION (deploy a1398fd en VM)
+
+## Estado
+Commit `a1398fd` (dedup backend + key unica Android) pusheado con CI verde y DESPLEGADO en la VM. La app v0.1.7 ya instalada queda protegida sin reinstalar.
+
+## Evidencia (2026-09-19)
+- `git pull --ff-only`: dfaf14f -> a1398fd fast-forward (5 ficheros, +145/-3), HEAD == origin/main == a1398fd.
+- `systemctl restart` directo: rechazado por polkit interactivo ("Access denied"); con `sudo systemctl restart` OK.
+- PID 23869->... no, viejo 26879 parado limpio; nuevo **27418** unico uvicorn.
+- Log 18:05:30: "Planificador y entrega de avisos activados." + "Application startup complete." + Uvicorn :8000. Health 200 (uptime 22.4s).
+
+## Decisiones adoptadas
+- Reinicio del servicio en la VM requiere `sudo` (politica polkit no interactiva); anotado para futuros deploys.
+
+## Archivos modificados / creados
+- En VM: git pull + restart del servicio (sin cambios de codigo; HEAD a1398fd).
+
+## Bloqueos y siguiente paso
+§6.4: re-ejecutar en el realme (v0.1.7): buscar, hacer scroll SIN crash, crear seguimiento de prueba y validar flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones). Luego Bloque D (medicion recursos VM con scheduler activo vs linea base).
+# Paso 37 - Transicion aprobada: LOTE VALIDACION �6.4 (5 fixes, backend + Android)
+
+## Estado
+5 fixes implementados y probados localmente (backend + Android). Sin commit ni push (pendiente autorizacion).
+
+## Evidencia (2026-09-19, reportado por el usuario en la app v0.1.7)
+1. Vuelo Sevilla-San Bernardo -> Jerez: TODOS "Disponible" aunque Renfe solo daba plaza H (y plaza H no activada).
+2. Dialogo "seguimiento creado": el popup salia pero Aceptar no hacia nada (no volvia a la pagina principal).
+3. Eliminar seguimiento: al confirmar, seguia apareciendo en el listado.
+4. Detalle de un seguimiento especifico mostraba un "nombre raro" (identity del tren).
+
+## Causas raiz
+1. `_parse_dwr_availability` ignoraba `soloPlazaH`; el bot heredado (`renfechecker.py:252-263`) los trata como disponibles SOLO si se pidio plaza_h.
+2. El `TextButton` "Aceptar" del AlertDialog "seguimiento creado" tenia el onClick vacio (SearchScreen.kt:475).
+3. Delete es logico (lifecycle=deleted) pero el listado sin filtro incluia los deleted.
+4. `modeText()` mostraba `specificTrainId` (identity "real:MD|11:08:00|12:13:00").
+
+## Decisiones adoptadas (usuario)
+- Principio heredado en TODOS los modos: si hay trenes con plazas, NO crear seguimiento; aviso + vuelta a Home.
+- Plaza H: replica del bot (soloPlazaH sin plaza_h => NO disponible; con plaza_h=> soloPlazaH cuentan).
+- Borrado: papelera (default "Todos" excluye deleted; "Eliminados" los muestra).
+- Nombre raro: mostrar "11:08 -> 12:13" extraido de la identity.
+
+## Archivos modificados / creados
+- backend/app/renfe/parser.py (plaza_h_requested en disponibilidad), backend/app/api/followups.py (listado sin filtro excluye DELETED)
+- backend/tests/test_dwr_parser.py (2 tests soloPlazaH), backend/tests/test_followups_api.py (papelera)
+- android/.../feature/search/SearchViewModel.kt (availableTrainNotice + hasAvailableTrain), SearchScreen.kt (dialogos conectados), res/values/strings.xml
+- android/.../feature/followups/FollowUpDetailScreen.kt (modeText horarios)
+- android/.../test/.../SearchViewModelTest.kt (helper parametrizable + 3 tests)
+- ../PROGRESS.md, ../prompts/PROGRESS.md (este registro)
+
+## Pruebas (local, verificadas)
+- Backend: pytest **191 passed** (189+2); ruff All checks passed; mypy no issues (43 ficheros).
+- Android: compileDebugKotlin BUILD SUCCESSFUL; testDebugUnitTest BUILD SUCCESSFUL; lintDebug BUILD SUCCESSFUL.
+
+## Bloqueos y siguiente paso
+Sin commit/push aun (autorizacion). Proximo: commit + push (backend-ci/android-ci), deploy en VM (git pull + sudo systemctl restart), re-ejecutar �6.4: ruta solo-plaza-H => "Sin plazas"; Aceptar vuelve a Home; tren con plazas => no crea; eliminar => desaparece; detalle muestra horario. Requiere APK nuevo (v0.1.8) para ver fixes Android.

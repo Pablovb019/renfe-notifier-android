@@ -50,14 +50,14 @@ _CALLBACK = re.compile(
 def parse_train_list(response_text: str, *, plaza_h_requested: bool) -> TrainList:
     """Convierte un callback DWR con ``listadoTrenes`` en un resultado tipado.
 
-    ``plaza_h_requested`` se conserva como contexto de la consulta. Este parser
-    no interpreta Plaza H como una regla de disponibilidad: esa semántica no se
-    ha verificado y corresponde al cliente HTTP posterior.
+    ``plaza_h_requested`` se propaga a la disponibilidad replicando la regla del
+    bot heredado: un tren con ``soloPlazaH`` solo es disponible si se solicitó
+    Plaza H.
     """
     payload = _extract_callback_payload(response_text)
     decoded = json5.loads(payload)
     rows = _find_train_rows(decoded)
-    trains = tuple(_parse_train(row) for row in rows)
+    trains = tuple(_parse_train(row, plaza_h_requested) for row in rows)
 
     if not trains:
         status = ParseStatus.NO_TRAINS
@@ -129,7 +129,7 @@ def _flatten_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return flattened
 
 
-def _parse_train(row: dict[str, Any]) -> Train:
+def _parse_train(row: dict[str, Any], plaza_h_requested: bool) -> Train:
     departure = _parse_time(row.get("horaSalida"))
     arrival = _parse_time(row.get("horaLlegada"))
     service = (
@@ -141,7 +141,7 @@ def _parse_train(row: dict[str, Any]) -> Train:
     )
     departure_key = departure.isoformat() if departure else "unknown"
     arrival_key = arrival.isoformat() if arrival else "unknown"
-    availability = _parse_availability(row)
+    availability = _parse_availability(row, plaza_h_requested)
     return Train(
         identifier=f"{service}|{departure_key}|{arrival_key}",
         departure=departure,
@@ -186,28 +186,41 @@ def _parse_price(value: Any) -> Decimal | None:
     raise DwrParseError("Precio de tren inválido")
 
 
-def _parse_availability(row: dict[str, Any]) -> Availability:
+def _parse_availability(row: dict[str, Any], plaza_h_requested: bool) -> Availability:
     value = row.get("disponible", row.get("DISPONIBLE"))
     if value is True:
         return Availability.AVAILABLE
     if value is False:
         return Availability.NO_AVAILABILITY
     if "completo" in row or "razonNoDisponible" in row or "tarifaMinima" in row:
-        return _parse_dwr_availability(row)
+        return _parse_dwr_availability(row, plaza_h_requested)
     return Availability.UNKNOWN
 
 
-def _parse_dwr_availability(row: dict[str, Any]) -> Availability:
-    """Disponibilidad del esquema real, sin interpretar Plaza H como regla."""
+def _parse_dwr_availability(
+    row: dict[str, Any], plaza_h_requested: bool
+) -> Availability:
+    """Disponibilidad del esquema real replicando la regla heredada de Plaza H.
+
+    El bot original considera un tren disponible si base_available y, cuando se
+    solicitó Plaza H, solo los trenes ``soloPlazaH`` cuentan; sin Plaza H los
+    trenes ``soloPlazaH`` NO se consideran disponibles.
+    """
     reason = str(row.get("razonNoDisponible") or "")
     fare = row.get("tarifaMinima")
-    if bool(row.get("completo")):
+    base_available = (
+        not bool(row.get("completo"))
+        and reason in ("", "8")
+        and fare not in (None, "", "NaN")
+    )
+    plaza_h_only = bool(row.get("soloPlazaH"))
+    if not base_available:
         return Availability.NO_AVAILABILITY
-    if reason not in ("", "8"):
-        return Availability.NO_AVAILABILITY
-    if fare in (None, "", "NaN"):
-        return Availability.NO_AVAILABILITY
-    return Availability.AVAILABLE
+    if plaza_h_requested:
+        return (
+            Availability.AVAILABLE if plaza_h_only else Availability.NO_AVAILABILITY
+        )
+    return Availability.AVAILABLE if not plaza_h_only else Availability.NO_AVAILABILITY
 
 
 def _string_value(value: Any) -> str | None:

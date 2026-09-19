@@ -371,11 +371,30 @@ private fun FollowUpDetailOut.modeText(): String = when (mode) {
     "first" -> stringResource(R.string.search_mode_first)
     "last" -> stringResource(R.string.search_mode_last)
     "all" -> stringResource(R.string.search_mode_all)
-    "specific" -> stringResource(
-        R.string.followups_mode_specific,
-        specificTrainId ?: "-",
-    )
+    "specific" -> {
+        val times = specificTrainTimes()
+        if (times == null) {
+            stringResource(R.string.followups_mode_specific, "-")
+        } else {
+            stringResource(R.string.followups_mode_specific_times, times.first, times.second)
+        }
+    }
     else -> mode
+}
+
+/**
+ * Extrae los horarios de ida/vuelta de la identity del tren específico
+ * (formato `{servicio}|{salida}|{llegada}`) para mostrar "11:08 → 12:13".
+ */
+private fun FollowUpDetailOut.specificTrainTimes(): Pair<String, String>? {
+    val parts = specificTrainId?.split("|").orEmpty()
+    if (parts.size < 3) return null
+    val departure = parts[parts.size - 2].take(5)
+    val arrival = parts[parts.size - 1].take(5)
+    if (departure.length < 5 || arrival.length < 5 || departure == "unknown" || arrival == "unknown") {
+        return null
+    }
+    return departure to arrival
 }
 
 @Composable
