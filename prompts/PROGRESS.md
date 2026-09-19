@@ -1248,9 +1248,9 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 - Ninguno tecnico para el escenario 1 (cerrado).
 - "Alerta real con acciones" NO validable aun: la entrega de avisos reales no esta cableada (ver hallazgo) y el paso 34 prohibe activar el sondeo; corresponde a la transicion (paso 37).
 - El realme quedo bloqueado con PIN durante la sesion y no se desbloquea via adb (keyguard seguro); los pasos que necesitan UI requieren desbloqueo manual del usuario (ya desbloqueado). Pruebas pendientes: entrega activo/desbloqueado, entrega bloqueado/pantalla apagada (no debe ser limitante), Doze, reinicio, Wi-Fi/datos y **sin conexion -> recuperacion al volver** (FCM alta prioridad, TTL 300 s). El envio para estas pruebas usa el nuevo `renfe-notifier-cli test-notification` (en la VM), no el boton de la app.
+- **MATRIZ DE ENTREGA REALME: COMPLETA** (v0.1.7/code8, CLI de la VM, prioridad alta FCM): (1) activo/desbloqueado OK; (2) bloqueado/pantalla apagada **OK, no es limitante** (envio recibido con mAwake=false y keyguard dream, records v2 del canal); (3) Doze profundo force-idle OK (id=1393262305, mState=IDLE); (4) reinicio app cold OK (PID 20473, id=50876914); (5) sin conexion -> al volver OK (id=818237636, dentro del TTL 300 s; en 120 s sin red no se publico nada); (6) forzar detencion NO entrega (limite Android, mensaje 0:1789834680150836); (7) ahorro Realme publica en silencio (id=1353263872) y sin ahorro suena/vibra (A/B). App NO whitelisted Doze.
 
 ## Siguiente paso
-- Commit+push del subcomando `test-notification` (aviso: dispara CI) y `git pull` en la VM (no requiere restart: el CLI corre desde el repo).
-- Ejecutar el plan de entrega en el realme: activo+desbloqueado -> bloqueado/pantalla apagada -> Doze -> reinicio -> sin conexion/recuperacion.
-- Terreno sin conexion: apagar Wi-Fi/datos en el realme, enviar desde la VM, reactivar y comprobar que llega dentro del TTL de 300 s (o marca caducidad si pasó).
-- Actualizar PROGRESS.md y detenerse (no avanzar al paso 36).
+- Commit+push de la actualizacion de PROGRESS con la matriz de entrega completa (docs-only, no dispara CI).
+- Recomendar al usuario anadir la app a las excepciones de optimizacion de bateria de Realme (para que con ahorro activo las alertas suenen) y recordarle que tras "Forzar detencion" no hay notificaciones hasta abrir la app.
+- Paso 35 verificado en dispositivo (realme GT Neo 2). Detenerse: no avanzar al paso 36 sin instruccion.
