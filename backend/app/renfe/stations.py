@@ -11,9 +11,13 @@ from typing import Any
 
 def normalize_station_key(value: str) -> str:
     """Normaliza texto como el algoritmo NFKD auditado del bot original."""
+    return re.sub(r"[^A-Z0-9]", "", _ascii_upper(value))
+
+
+def _ascii_upper(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     without_marks = "".join(char for char in normalized if not unicodedata.combining(char))
-    return re.sub(r"[^A-Z0-9]", "", without_marks.upper())
+    return without_marks.upper()
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +31,37 @@ class Station:
     @property
     def is_group(self) -> bool:
         return self.name.endswith("(TODAS)")
+
+
+# Pesos del ranking de autocompletado (mayor puntuación = más relevante).
+# El texto escrito pesa más que la prioridad, y la prioridad solo desempata.
+_SCORE_SUBSTRING = 10.0
+_SCORE_WORD_BOUNDARY = 25.0
+_SCORE_PREFIX = 50.0
+_SCORE_EXACT = 100.0
+_SCORE_PRIORITY_WEIGHT = 50.0
+
+
+def station_match_score(station: Station, key: str) -> float:
+    """Relevancia para el autocompletado: mayor = antes en las sugerencias.
+
+    Combina la calidad del match (exacto > prefijo del nombre > prefijo de
+    palabra > subcadena) con la prioridad del catálogo de Renfe como desempate
+    (números bajos = estaciones principales). Devuelve 0 si no hay match.
+    """
+    name_key = normalize_station_key(station.name)
+    if not key or key not in name_key:
+        return 0.0
+    score = _SCORE_SUBSTRING
+    if name_key == key:
+        score += _SCORE_EXACT
+    elif name_key.startswith(key):
+        score += _SCORE_PREFIX
+    words = [word for word in re.split(r"[^A-Z0-9]+", _ascii_upper(station.name)) if word]
+    if any(word.startswith(key) for word in words):
+        score += _SCORE_WORD_BOUNDARY
+    score += _SCORE_PRIORITY_WEIGHT / (1.0 + station.priority)
+    return score
 
 
 class StationCatalog:

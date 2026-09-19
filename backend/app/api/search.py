@@ -18,7 +18,7 @@ from app.followups.domain import MADRID, TrainSnapshot
 from app.renfe.client import RenfeClientError
 from app.renfe.parser import Train
 from app.renfe.search import StationNotFoundError
-from app.renfe.stations import normalize_station_key
+from app.renfe.stations import normalize_station_key, station_match_score
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
@@ -70,13 +70,14 @@ async def search_stations(
     stations = [
         station for station in catalog.stations if key in normalize_station_key(station.name)
     ]
-    deduped = sorted(
-        {station.code: station for station in stations}.values(),
-        key=lambda station: station.name.upper(),
+    deduped = {station.code: station for station in stations}.values()
+    ranked = sorted(
+        deduped,
+        key=lambda station: (-station_match_score(station, key), station.name.upper()),
     )
     return [
         StationOut(name=station.name, code=station.code, is_group=station.is_group)
-        for station in deduped[:limit]
+        for station in ranked[:limit]
     ]
 
 
