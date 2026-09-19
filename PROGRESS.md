@@ -873,6 +873,11 @@ uff check .: All checks passed.
 - **Pruebas**: scp (gcloud, proyecto renfe-notifier-bot) + Get-FileHash local + hash CLI ya verificado en §2.3.
 - **Bloqueos / siguiente paso**: §4/§10 (decision del usuario sobre `deploy.yml` del repo original - riesgo de relanzar el bot en cada push al repo antiguo) y Bloque C (deploy commit autorizado en VM, activar scheduler, verificar unico propietario).
 
+## Paso 37: Transicion aprobada - P3 ALMACENAMIENTO EXTERNO (USB BitLocker)
+- **Estado**: P3 completado del todo. Los backups del backend nuevo estan en almacenamiento fuera de la VM.
+- **Evidencia (dato del usuario, 2026-09-19)**: los ficheros de la VM `renfe_notifier.db` (BD activa) y `backup_20260919_171740.db` (backup con SHA256 92B885F4...EDFA) estan guardados en un USB configurado con Bitlocker.
+- **Decisiones adoptadas**: se cumple §2.3/P3 (copia fuera de la VM + encriptada + SHA256 anotado). Ruta local previa: C:\Users\pablo\Downloads\backup_20260919_171740.db (punto intermedio antes de pasar al USB).
+
 ## Paso 37: Transicion aprobada - §4/§10 INTERVENCION REPO ORIGINAL (autorizada y ejecutada)
 - **Estado**: el usuario autorizo deshabilitar `deploy.yml` y revocar `VM_SSH_KEY` en el repo original `Pablovb019/renfe-notifier-bot`. Ejecutado en GitHub.
 - **Evidencia**:

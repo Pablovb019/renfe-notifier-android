@@ -1391,3 +1391,27 @@ Inventario principal ejecutado en la VM (salida pegada completa en la sesion). C
 
 ## Bloqueos y siguiente paso
 Siguiente: ejecutar inventario-2 en la VM y pegar salida; luego §2.2 y §2.3 (P3) con descarga fuera de VM.
+
+# Paso 37 - Transicion aprobada: BLOQUE B COMPLETO + §4/§10 INTERVENCION REPO ORIGINAL
+
+## Estado
+Bloque B cerrado con evidencia: inventarios (§2.1 + -2 + -3 confirmaron que NO existe bot antiguo en la VM), §2.2/§5bis NO APLICAN, §2.3 backup fresco creado/verificado, y P3 cumplido (copias fuera de la VM: USB encriptado Bitlocker). Ademas se ejecuto la intervencion autorizada sobre el repo ORIGINAL (§4/§10) y se documento la infraestructura GCP real.
+
+## Evidencia (acumulada)
+- Inventario: `renfe-notifier-backend.service` active (PID 23869); sin bot/units/cron/timers/containers; solo BDs del backend nuevo + DBe de sistema; imagen docker unica `hello-world`.
+- §2.3: `app.cli backup` -> `/data/backups/backup_20260919_171740.db`, SHA256 CLI = sha256sum = **92B885F4F31EF26CD774DDB8ADC575444000801582C83355919758671076EDFA**, esquema 5, verify ok, health 200.
+- P3: backup y BD activa descargados a equipo local y guardados en **USB con Bitlocker**. Referencia SHA256 anotado.
+- Infraestructura: VM alojada en el proyecto GCP **`renfe-notifier-bot`** (no `renfe-notifier-android`); IP 34.26.252.164; zona us-east1-c; OS Login SA `sa_104384329745603569192`; firma SSH host registrada. Documentado en docs/real-config-plan.md §2 y docs/transicion.md §1.
+- Repo original: workflow `Deploy to Google Cloud VM` (deploy.yml) -> `disabled_manually`; secret `VM_SSH_KEY` ELIMINADO. Restantes: VM_HOST, VM_PROJECT_PATH, VM_USER (sin clave privada).
+
+## Decisiones adoptadas
+- Bloque B completo: solo queda el deploy/arranque (Bloque C) y la validacion telefonica/orbito (Bloque D).
+- Intervencion repo original ejecutada con autorizacion explicita (2 de 4 opciones elegidas: deshabilitar deploy.yml y revocar VM_SSH_KEY; no se tocaron rama/protecciones ni otros secrets).
+- Docs actualizados: b2f5e85 (docs infraestructura GCP + intervencion repo original).
+
+## Archivos modificados / creados
+- docs/real-config-plan.md (§2 "DATO REAL DE INFRAESTRUCTURA"), docs/transicion.md (§1 proyecto GCP), ../PROGRESS.md.
+- Commits: c716194 (plan §5/§5bis), 051fa78 (inventarios), b2f5e85 (infra + intervencion original). Todos con CI verde (docs-only).
+
+## Bloqueos y siguiente paso
+Siguiente: **Bloque C** - deploy del commit autorizado en la VM (`git pull --ff-only origin main` -> b133a9c+docs), activar `RENFE_NOTIFIER_SCHEDULER_ENABLED=true` en `.env` de produccion, `systemctl restart renfe-notifier-backend`, verificar health 200 y **unico propietario** (un solo proceso, tasks renfe-scheduler/renfe-delivery), emparejamiento/token FCM vigente, y crear seguimiento de prueba desde la app.
