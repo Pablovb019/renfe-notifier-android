@@ -51,7 +51,11 @@ def test_subcomando_existe() -> None:
     assert args.command == "test-notification"
 
 
-def test_envia_al_primer_dispositivo_con_token(cli_db, capsys, monkeypatch) -> None:
+def test_envia_al_primer_dispositivo_con_token(
+    cli_db: tuple[Path, pytest.MonkeyPatch],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     db, _ = cli_db
     _claim_device(db, "tok-1")
     fake = FakeSender()
@@ -63,14 +67,21 @@ def test_envia_al_primer_dispositivo_con_token(cli_db, capsys, monkeypatch) -> N
     assert fake.calls == ["tok-1"]
 
 
-def test_sin_dispositivo_activo(cli_db, capsys) -> None:
+def test_sin_dispositivo_activo(
+    cli_db: tuple[Path, pytest.MonkeyPatch],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     db, _ = cli_db
     _service(db)
     assert cli.main(["test-notification"]) == 1
     assert "No hay un dispositivo activo" in capsys.readouterr().err
 
 
-def test_sin_token_fcm(cli_db, capsys, monkeypatch) -> None:
+def test_sin_token_fcm(
+    cli_db: tuple[Path, pytest.MonkeyPatch],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     db, _ = cli_db
     _claim_device(db, None)
     fake = FakeSender()
@@ -80,7 +91,11 @@ def test_sin_token_fcm(cli_db, capsys, monkeypatch) -> None:
     assert fake.calls == []
 
 
-def test_sin_configuracion_fcm(cli_db, capsys, monkeypatch) -> None:
+def test_sin_configuracion_fcm(
+    cli_db: tuple[Path, pytest.MonkeyPatch],
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     db, m = cli_db
     _claim_device(db, "tok-1")
     m.delenv("RENFE_NOTIFIER_FCM_PROJECT_ID")
