@@ -1254,3 +1254,29 @@ Commit+push autorizado del ajuste (script systemd + unit), esperar CI verde, y r
 - Commit+push de la actualizacion de PROGRESS con la matriz de entrega completa (docs-only, no dispara CI).
 - Recomendar al usuario anadir la app a las excepciones de optimizacion de bateria de Realme (para que con ahorro activo las alertas suenen) y recordarle que tras "Forzar detencion" no hay notificaciones hasta abrir la app.
 - Paso 35 verificado en dispositivo (realme GT Neo 2). Detenerse: no avanzar al paso 36 sin instruccion.
+
+# Paso 36 - Plan de transicion (36-plan-transicion.md) COMPLETADO
+
+## Estado
+**Documento de plan redactado; NO ejecuta transicion ni detiene el bot. Pendiente de aprobacion explicita del usuario.**
+
+## Decisiones adoptadas
+- Revisados resultados y bloqueos previos: backend nuevo en produccion (systemd, /data/renfe_notifier.db, 34.26.252.164:8000), FCM real y matriz de entrega realme completa (paso 35), CI/CD y release v0.1.7 OK.
+- **Bloqueo clave**: el planificador no esta cableado (SchedulerService no instanciado en main.py; send_alert sin llamadores; create_followup no encola). La transicion de avisos reales requiere paso 37.
+- Redactado `docs/transicion.md` con: (1) revision estado/bloqueos; (2) backup recuperable bot+SQLite con inventario VM; (3) base nueva SIN importar seguimientos; (4) automatizaciones que podrian sobrescribir (deploy.yml original por push+SSH, compose/cron VM, VM_SSH_KEY); (5) detencion controlada del bot con rearme documentado; (6) arranque del backend (cableado pendiente + un solo propietario); (7) consultas/avisos reales y medicion de recursos; (8) condiciones de fallo + restauracion inmediata del bot; (9) proteccion de backups y clave de firma (keystore 2+ ubicaciones, secrets); (10) automatizaciones que requieren intervencion del usuario; (11) aprobacion explicita por bloques.
+- No se toco el repositorio original ni la VM; no se deshabilito nada.
+
+## Archivos creados/modificados
+- docs/transicion.md (creado)
+- PROGRESS.md (raiz) y prompts/PROGRESS.md (actualizados)
+
+## Pruebas ejecutadas y resultados (evidencia)
+- Lectura de contexto: docs/audit.md (§3.8 workflow antiguo), scripts/deploy_backend.sh, scripts/renfe-notifier-backend.service, .github/workflows/backend-cd.yml, docs/recovery.md, prompts/PROGRESS.md (items 6/7/8/9 cerrados), docs/real-config-plan.md (§7-8).
+- grep backend: SchedulerService RUN_FOREVER definido pero sin instanciacion en main.py; send_alert sin llamadores (solo send_test) -> verificado el bloqueo de avisos reales.
+
+## Bloqueos
+- Aprobacion explicita del usuario para ejecutar cada bloque de docs/transicion.md (inventario/backups VM, intervencion en repo original, detencion del bot, arranque+scheduler, consultas/mediciones).
+- Cableado del planificador y entrega real de avisos es tarea del paso 37.
+
+## Siguiente paso
+Esperar instrucciones: aprobacion por bloques y, en su caso, ejecucion del paso 37 (37-transicion-autorizada.md).

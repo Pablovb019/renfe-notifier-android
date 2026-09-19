@@ -757,3 +757,15 @@ uff check .: All checks passed.
   6. **Forzar detencion**: NO llega nada (mensaje 0:1789834680150836) mientras la app este `am force-stop` (pidof vacio y 0 registros). Limite de Android (FCM no despierta apps forzadas hasta que el usuario las abre). Registrado para documentar.
   7. **Ahorro de bateria Realme**: la notificacion SI se publica (id=1353263872) pero **sin sonido** (mSettingBatterySaverEnabled=true). Al desactivar el ahorro, el mismo envio vuelve a sonar/vibrar -> A/B confirmado: el ahorro silencia las alertas. La app NO esta en la whitelist de Doze (`dumpsys deviceidle whitelist` sin renfenotifier).
 - **Recomendacion para el usuario**: anadir la app a las excepciones de optimizacion de bateria de Realme (ajustes de bateria) para que con ahorro activo las alertas suenen; aveisar que tras "Forzar detencion" no habra notificaciones hasta abrir la app.
+
+## Paso 36: Plan de transici�n
+- **Estado**: Completado (documento de plan; NO autoriza transici�n).
+- **Fecha**: 2026-09-19
+- **Decisiones**:
+  - Se reviso el estado global: backend nuevo desplegado (systemd, /data/renfe_notifier.db, IP 34.26.252.164), FCM real validado y matriz de entrega completa en realme.
+  - Bloqueo clave documentado: el backend nuevo NO ejecuta aun el planificador (`SchedulerService.run_forever`) ni entrega avisos reales (`send_alert` sin llamadores); corresponde al paso 37.
+  - Plan de sustituci�n/rollback redactado en `docs/transicion.md` con 11 secciones: backup del bot y SQLite (inventario VM), base nueva sin importar, automatizaciones que podr�an sobrescribir (deploy.yml original, compose/cron VM, VM_SSH_KEY), detencion controlada, arranque (cableado pendiente), consultas/avisos reales y mediciones, condiciones de fallo y restauracion inmediata, proteccion de backups y clave de firma, sondeo unico sin duplicados, e intervenciones del usuario.
+  - No se modifico el repositorio original ni se deshabilito nada; no se ejecuto transicion alguna.
+- **Archivos creados**: `docs/transicion.md`.
+- **Pruebas ejecutadas**: revision de docs/audit.md (workflow antiguo SSH directo), scripts/deploy_backend.sh y unit systemd, backend-cd.yml, recovery.md, prompts/PROGRESS.md (items 6-9 cerrados) y confirmacion por grep de que scheduler/send_alert no estan cableados en main.py.
+- **Bloqueos / siguiente paso**: aprobacion expl�cita del usuario para cada bloque de `docs/transicion.md`; luego paso 37 (37-transicion-autorizada.md). Detenido a la espera de instrucciones.
