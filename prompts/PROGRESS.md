@@ -1438,3 +1438,31 @@ Backend en `dfaf14f` (== origin/main) en la VM. Scheduler y entrega ACTIVADOS (`
 
 ## Bloqueos y siguiente paso
 §6.4: crear seguimiento de prueba desde la app (realme) y validar el flujo completo: deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones. Luego Bloque D (medicion de recursos en VM con medidas del planificador activo vs linea base).
+
+# Paso 37 - Transicion aprobada: §6.4 BLOQUEADO - CRASH APP EN SCROLL DE RESULTADOS (fix aplicado, local)
+
+## Estado
+DIAGNOSTICADO y FIX implementado y probado en local. La app v0.1.7 instalada en el realme crasheaba al hacer scroll en los resultados de una busqueda (seguimiento de prueba §6.4), reproducido 2 veces. Pendiente: commit/push autorizado, deploy del fix en la VM y re-ejecutar §6.4.
+
+## Evidencia (2026-09-19, adb, serial 1ecdc196)
+- Crash x2 al scrollear resultados tras buscar (origen/destino/fecha definidos). PIDs 28325 y 7250.
+- `java.lang.IllegalArgumentException: Key "real:MD|11:08:00|12:13:00" was already used.` con rastro Compose (LayoutModifierNodeCoordinator.measure): clave duplicada en LazyColumn.
+- Causa raiz: `identity = real:{identifier}`, `identifier = service|salida|llegada` (parser.py:146; domain.py:65-70). Dos servicios `MD` con horarios 11:08-12:13 idénticos -> misma identity. SearchScreen.kt:231 usaba `items(... key = { it.identity })`.
+
+## Decisiones adoptadas
+- Fix doble capa:
+  1. Backend: dedup por `identifier` conservando el orden en `POST /api/v1/search/trains` (`_unique_trains_by_identifier`, search.py:115). La app v0.1.7 no requiere reinstalarse: recibe resultados unicos.
+  2. Android (defensa): `itemsIndexed` con key `"${identity}#$index"` en SearchScreen.kt:231 para soportar backends antiguos.
+- JDK local descubierto: `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot` (JAVA_HOME no definido antes en la sesion).
+
+## Archivos modificados / creados
+- backend/app/api/search.py, backend/tests/test_search_api.py (test dedup + DUP_TRAIN_LIST)
+- android/app/src/main/java/com/pablovb019/renfenotifier/feature/search/SearchScreen.kt (itemsIndexed + import)
+- ../PROGRESS.md (registro raiz)
+
+## Pruebas (local, verificadas)
+- Backend: pytest 189 passed (188 + 1 nuevo); ruff All checks passed; mypy no issues en 43 ficheros.
+- Android: compileDebugKotlin BUILD SUCCESSFUL; testDebugUnitTest (feature.search.*) BUILD SUCCESSFUL; lintDebug BUILD SUCCESSFUL.
+
+## Bloqueos y siguiente paso
+Sin commit/push aun (falta autorizacion explicita). Proximo: commit + push (avisando que backend-ci corre), deploy en la VM (git pull + restart) y re-ejecutar §6.4 con la app v0.1.7 instalada. Opcional: build/sign v0.1.8 con el fix Android.

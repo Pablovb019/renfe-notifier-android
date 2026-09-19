@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -228,7 +229,7 @@ fun SearchContent(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-            items(uiState.trains, key = { it.identity }) { train ->
+            itemsIndexed(uiState.trains, key = { index, train -> "${train.identity}#$index" }) { index, train ->
                 TrainCard(
                     train = train,
                     selected = uiState.mode == FollowUpMode.SPECIFIC &&

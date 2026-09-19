@@ -22,6 +22,15 @@ TRAIN_LIST = (
 )
 
 
+DUP_TRAIN_LIST = (
+    'r.handleCallback("0", "0", {listadoTrenes: ['
+    '{numeroTren: "MD", horaSalida: "11:08", horaLlegada: "12:13", precio: "12,00", disponible: true},'
+    '{numeroTren: "MD", horaSalida: "11:08", horaLlegada: "12:13", precio: "12,00", disponible: true},'
+    '{numeroTren: "AVE-001", horaSalida: "08:00", horaLlegada: "09:30", precio: "42,50", disponible: true}'
+    "]})"
+)
+
+
 def _future_date(days: int = 5) -> str:
     return (datetime.now(MADRID).date() + timedelta(days=days)).isoformat()
 
@@ -108,6 +117,41 @@ def test_search_trains_returns_typed_trains(tmp_path: Path) -> None:
     assert first["arrival"] == "09:30:00"
     assert first["price"] == "42.50"
     assert first["availability"] == "available"
+
+
+def test_search_trains_dedups_identical_services(tmp_path: Path) -> None:
+    with make_app(tmp_path / "data" / "test.db") as client:
+        token = claim_device(client)["device_token"]
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("generateId.dwr"):
+                return httpx.Response(200, text='r.handleCallback("0", "0", "synthetictoken123");')
+            if request.url.path.endswith("getTrainsList.dwr"):
+                return httpx.Response(200, text=DUP_TRAIN_LIST)
+            return httpx.Response(200, text="ok")
+
+        client_app = cast(FastAPI, client.app)
+        client_app.state.search_engine = TrainSearchEngine(
+            RenfeDwrClient(transport=httpx.MockTransport(handler), jitter=lambda: 0.0),
+            StationCatalog(),
+        )
+        response = client.post(
+            "/api/v1/search/trains",
+            json={
+                "origin_code": ORIGIN_CODE,
+                "destination_code": DESTINATION_CODE,
+                "travel_date": _future_date(),
+                "plaza_h": False,
+            },
+            headers=auth_headers(token),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    identifiers = [train["identifier"] for train in body["trains"]]
+    assert len(identifiers) == len(set(identifiers)), identifiers
+    assert identifiers[0] == "MD|11:08:00|12:13:00"
+    assert len(body["trains"]) == 2
 
 
 def test_search_trains_rejects_unknown_station(tmp_path: Path) -> None:

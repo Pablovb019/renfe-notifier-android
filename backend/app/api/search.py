@@ -5,6 +5,7 @@ local (anti-SSRF): ningún campo admite URLs arbitrarias del cliente.
 """
 
 import logging
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
@@ -112,7 +113,7 @@ async def search_trains(
             status_code=503, detail="Renfe no responde o rechazó la consulta"
         ) from None
 
-    trains = [
+    trains = _unique_trains_by_identifier(
         _train_to_out(
             train,
             origin_code=payload.origin_code,
@@ -120,12 +121,28 @@ async def search_trains(
             travel_date=payload.travel_date,
         )
         for train in result.trains.trains
-    ]
+    )
     return TrainSearchResponse(
         status=result.trains.status.value,
         plaza_h_requested=result.trains.plaza_h_requested,
         trains=trains,
     )
+
+
+def _unique_trains_by_identifier(trains: Iterable[TrainOut]) -> list[TrainOut]:
+    """Devuelve trenes únicos por ``identifier`` preservando el orden.
+
+    Renfe puede repetir el mismo servicio (mismo identificador y horarios) en
+    una sola respuesta; el dedup evita claves duplicadas del lado del cliente.
+    """
+    seen: set[str] = set()
+    unique: list[TrainOut] = []
+    for train in trains:
+        if train.identifier in seen:
+            continue
+        seen.add(train.identifier)
+        unique.append(train)
+    return unique
 
 
 def _train_to_out(

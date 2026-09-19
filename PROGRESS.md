@@ -900,3 +900,19 @@ uff check .: All checks passed.
 - **Decisiones adoptadas**: el sensor/entrega de avisos reales queda ARRANCADO en produccion (un unico propietario). Sin errores arranque. Resta validar el flujo completo real.
 - **Pruebas**: las de deploy/restart/log/health/devices en la VM (usuario); verificadas aqui.
 - **Bloqueos / siguiente paso**: §6.4 - crear un seguimiento de prueba desde la app (realme) y confirmar el flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion v2). Luego Bloque D (medicion recursos en VM y validacion telefonia).
+
+## Paso 37: Transicion aprobada - BLOQUE C §6.4 BLOQUEADO - CRASH APP (scroll resultados busqueda)
+- **Estado**: DIAGNOSTICADO y FIX implementado y probado localmente. Bloque C §6.4 sigue pendiente de re-ejecutar (la app instalada v0.1.7 crasheaba al crear un seguimiento).
+- **Evidencia (2026-09-19, adb realme GT Neo 2, serial 1ecdc196)**:
+  - Crash reproducido 2 veces en la app `com.pablovb019.renfenotifier` al hacer scroll hacia abajo en los resultados de una busqueda (tras introducir origen, destino, fecha y buscar). PIDs 28325 y 7250.
+  - Excepcion en logcat: `java.lang.IllegalArgumentException: Key "real:MD|11:08:00|12:13:00" was already used.` + "If you are using LazyColumn/Row please make sure you provide a unique key for each item." Rastro Compose (LayoutModifierNodeCoordinator.measure).
+- **Causa raiz**: la `identity` de un tren (backend) se construye como `real:{identifier}` con `identifier = service|salida|llegada` (parser.py:146, domain.py:65-70). Renfe puede devolver **dos servicios con los mismos horarios** (p. ej. dos `MD` 11:08->12:13), produciendo identities identicas. La LazyColumn de SearchScreen usaba `key = { it.identity }` (SearchScreen.kt:231), clave duplicada -> crash.
+- **Decisiones adoptadas**: fix en dos capas. (1) Backend: dedup de trenes por `identifier` preservando orden en `POST /api/v1/search/trains` (`_unique_trains_by_identifier` en `backend/app/api/search.py:115`); asi la app v0.1.7 ya instalada recibe resultados unicos sin reinstalar. (2) Android: `itemsIndexed` con key unica `"${identity}#$index"` (SearchScreen.kt:231) como defensa ante backends antiguos.
+- **Archivos modificados / creados**:
+  - `backend/app/api/search.py` (dedup `_unique_trains_by_identifier`, tipo `Iterable`)
+  - `backend/tests/test_search_api.py` (test dedup + fixture DUP_TRAIN_LIST)
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/feature/search/SearchScreen.kt` (`itemsIndexed` + import)
+- **Pruebas ejecutadas y resultados (local)**:
+  - Backend: `pytest` -> **189 passed** (188 previos + 1 nuevo dedup); `ruff check app` -> All checks passed; `mypy app` -> no issues (43 source files).
+  - Android: `:app:compileDebugKotlin` -> BUILD SUCCESSFUL (warning preexistente menuAnchor); `:app:testDebugUnitTest --tests feature.search.*` -> BUILD SUCCESSFUL; `:app:lintDebug` -> BUILD SUCCESSFUL. JDK hallado: `C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot` (no estaba en PATH; JAVA_HOME no definido).
+- **Bloqueos / siguiente paso**: SIN COMMIT NI PUSH AUN (pendiente autorizacion). Proximo: commit+push (advierte CI), deploy del commit en la VM (git pull + restart), y re-ejecutar §6.4 en el realme con la app v0.1.7 (el dedup backend evita el crash sin reinstalar). Opcional: build/sign v0.1.8 con el fix Android.
