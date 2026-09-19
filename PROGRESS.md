@@ -815,3 +815,19 @@ uff check .: All checks passed.
 - **Archivos modificados / creados**: `docs/transicion.md` (§2.1 nota, §5, nuevo §5bis, §11), `prompts/37-bloque-b-inventario.md` (nuevo, bloque de comandos de solo lectura para pegar en la VM).
 - **Pruebas ejecutadas**: ninguna en VM (acciones del usuario). La revision del plan no toca codigo; sin riesgo de CI.
 - **Bloqueos / siguiente paso**: ejecutar el inventario en la VM (bloque de comandos preparado) y pegar la salida aqui para verificar. Luego §2.2 backups del bot antiguo + §2.3 backup nuevo + descarga fuera de la VM (P3).
+
+## Paso 37: Transicion aprobada - BLOQUE B - INVENTARIO §2.1 (ejecutado en VM)
+- **Estado**: inventario principal ejecutado por el usuario (salida pegada). Hallazgos: bot antiguo NO corriendo (confirma dato), solo corre el backend nuevo.
+- **Evidencia (resumen con la salida completa registrada en esta sesion)**:
+  - systemd: `renfe-notifier-backend.service` `active (running)` (PID 23869, uvicorn, arrancado 2026-09-19 14:52 UTC; 2h 20min uptime). Sin otras units de app renfe (el resto son devices de disco que casan por el nombre de la instancia).
+  - docker: permission denied (sin acceso al daemon; no se pudo listar). cron: sin crontab para SA. timers renfe: ninguno.
+  - Repo bot antiguo: `~/renfe-notifier-bot` NO existe; homes presentes: `pablovb01_gmail_com`, `ubuntu`, `sa_104384329745603569192`. En /data solo `renfe_notifier.db` y `backup_20260916_223656.db`.
+  - Backups backend nuevo: ONLY `backup_20260916_223656.db` (pre-corte, sin backup fresco => se hará en §2.3).
+  - Procesos: único uvicorn del backend (23869). Sin bot.
+  - .env/compose antiguos: find original no devolvió rutas (alcance maxdepth 2 y permisos; pendiente inventario-2).
+- **Decisiones adoptadas**:
+  - El bot residencial probablemente está bajo otro home (`pablovb01_gmail_com` o `ubuntu`) o con permisos que SA no lee -> nuevo bloque de comandos `prompts/37-bloque-b-inventario-2.md` con `sudo` (solo lectura) para localizar repo, SQLite, `.env` (solo ruta), compose, cron de otros usuarios, timers y procesos python ajenos.
+  - Sin backend backup fresco -> P3 pendiente hasta §2.3.
+- **Archivos**: `prompts/37-bloque-b-inventario-2.md` (creado).
+- **Pruebas**: ninguna modifica el sistema; todo de solo lectura en VM (acciones del usuario).
+- **Bloqueos / siguiente paso**: ejecutar inventario-2 en la VM y pegar salida para confirmar ubicación/residuos del bot; luego §2.2 (backup consistente SQLite del bot + integrity + SHA256) y §2.3 (backup nuevo backend con app.cli backup + descarga fuera de VM = P3).

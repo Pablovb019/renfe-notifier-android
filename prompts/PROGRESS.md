@@ -1364,3 +1364,30 @@ Iniciado Bloque B. Comandos de inventario (§2.1) listos en `prompts/37-bloque-b
 
 ## Bloqueos y siguiente paso
 Bloqueos: acceso a la VM solo del usuario. Siguiente: ejecutar el inventario (bloque de comandos) y pegar la salida en el chat para verificacion; con eso, proceder a §2.2 (backup consistente del bot antiguo con `.backup` + integrity_check + SHA256) y §2.3 (backup nuevo con `app.cli backup`) + descarga fuera de la VM (P3).
+
+# Paso 37 - Transicion aprobada: BLOQUE B - INVENTARIO §2.1 (ejecutado en VM)
+
+## Estado
+Inventario principal ejecutado en la VM (salida pegada completa en la sesion). Confirma que el bot antiguo NO corre; solo esta activo el backend nuevo.
+
+## Evidencia (de la salida pegada)
+- `renfe-notifier-backend.service`: active (running), PID 23869 uvicorn, desde 2026-09-19 14:52 UTC. `/etc/systemd/system/..., enabled`.
+- Docker: permission denied (sin acceso al daemon). Cron: "no crontab for sa...". Timers renfe: ninguno.
+- Repo `~/renfe-notifier-bot`: NO existe. Homes: `pablovb01_gmail_com`, `ubuntu`, `sa_104...`.
+- Bases: solo `/data/renfe_notifier.db` y `/data/backups/backup_20260916_223656.db`. `/data/backups/` sin backup fresco.
+- Procesos renfe: unicamente uvicorn 23869. Sin bot.
+- `find` de .env/compose (maxdepth 2, sin sudo): sin resultados; puede haber rutas con permisos restringidos -> inventario-2.
+
+## Decisiones adoptadas
+- Probable bot antiguo en otro home o con permisos que SA no lee; se prepara `prompts/37-bloque-b-inventario-2.md` (solo lectura con sudo) para localizar repo, SQLite, .env (solo ruta), compose, crontabs de otros usuarios, timers ampliados y procesos python ajenos.
+- Backup fresco del backend: pendiente (§2.3) -> P3.
+- Sin procesos/bot activos: el §5 pasa a verificacion (nada que detener), pendiente confirmar que ningun cron/timer/compose externo pueda relanzarlo.
+
+## Archivos modificados / creados
+- Creado: prompts/37-bloque-b-inventario-2.md.
+
+## Pruebas ejecutadas y resultados (evidencia)
+- Todas de solo lectura en la VM, ejecutadas por el usuario; sin cambios de estado del sistema.
+
+## Bloqueos y siguiente paso
+Siguiente: ejecutar inventario-2 en la VM y pegar salida; luego §2.2 y §2.3 (P3) con descarga fuera de VM.
