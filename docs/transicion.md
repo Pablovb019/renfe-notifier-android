@@ -42,6 +42,12 @@ find /data /home -maxdepth 2 -iname '*.db' -o -iname '*.sqlite*' 2>/dev/null
 ```
 Registrar: ubicación del repo antiguo, unidad/cron/timer que lo arranca, ruta de su SQLite y del `.env` antiguo.
 
+> **Dato del usuario (2026-09-19)**: el bot antiguo **ya no está corriendo** en la VM,
+> aunque se ejecutó durante un tiempo y es probable que existan **artefactos residuales**
+> (repo, venv, compose, cron/timer, SQLite). Consecuencia para el plan: el §5 pasa de
+> "detener el bot" a "verificar que nada lo relance", y se añade un paso nuevo de
+> **limpieza por archivado** (§5bis) tras los backups.
+
 ### 2.2 Backups del bot antiguo (los ejecuta el usuario)
 1. Copia **consistente** de su SQLite (parando el servicio o con `sqlite3 ruta.db ".backup backup_bot_YYYYMMDD_HHMMSS.db"`).
 2. Verificar `PRAGMA integrity_check` del backup = `ok` y anotar SHA256.
@@ -73,12 +79,33 @@ Identificadas por la auditoría y los pasos de CI/CD:
 ---
 
 ## 5. Detención controlada del bot antiguo (EJECUTAR SOLO CON APROBACIÓN)
+
+> **Ajuste 2026-09-19**: el bot antiguo **ya no está corriendo** en la VM. La "detención
+> controlada" se interpreta como **verificación de que nada lo relance** (units, cron,
+> timers, docker/compose, y el `deploy.yml` del repo original, ver §4). Si el inventario
+> (§2.1) revelara todavía un proceso activo, aplicar la orden siguiente de detención real.
+
 Orden propuesto (en la VM, usuario):
 1. Verificada la integridad de los backups (§2.2).
 2. Detener el servicio/timer/cron identificado (§2.1 y §4). Anotar el comando exacto de **rearme** para restauración rápida (p. ej. `systemctl start <unidad>` o el comando del cron/compose).
 3. Confirmar que el proceso del bot ha terminado (`pgrep -f renfe-bot` vacío; contenedor `docker compose ps` sin bot).
 4. **No** se elimina ni toca el repositorio del bot antiguo en la VM: se conserva intacto para rollback.
 5. Registrar en el aviso de transición la unidad/comando detenido, su estado y el comando de rearme.
+
+## 5bis. Limpieza de artefactos residuales del bot antiguo (NUEVO, SOLO CON APROBACIÓN)
+
+> Derivado del dato del usuario (2026-09-19): el bot ya no corre, pero se ejecutó en la VM
+> durante un tiempo. Tras backups verificados y descargados fuera de la VM (P3 cumplido),
+> se **archiva** (no se destruye) lo residual para dejar la VM únicamente con el backend nuevo.
+
+1. Con los backups del §2.2 verificados y **fuera de la VM**, identificar residuos del inventario:
+   - repo `~/renfe-notifier-bot` (o ruta que indique el inventario) y su `.env` antiguo,
+   - unidades/cron/timers/compose que ya no apliquen (a desactivar/comentar, registrando rearme),
+   - SQLite y volcados/backups intermedios.
+2. Empaquetar/archivar lo residual (p. ej. `tar` del repo y BD) en `/data/archive/` con SHA256 anotado; **el `.env` antiguo nunca se archiva dentro del paquete** (puede contener tokens de Telegram; se guarda por separado fuera de la VM).
+3. Desactivar/comentar lo que pudiera relanzar el bot (cron/timer/unit/compose) SOLO con permiso explícito; registrar el comando de rearme de cada uno.
+4. No se modifica el repositorio Git original `Pablovb019/renfe-notifier-bot` ni sus workflows/secrets (reglas 01/16); esas intervenciones son del §10.
+5. Resultado esperado: `ps aux | grep -i renfe` sin procesos del bot, cron/timer sin entradas renfe salvo las del backend nuevo, y ningún proceso capaz de relanzar el bot.
 
 ---
 
@@ -137,7 +164,7 @@ Definir criterios de fallo (vigilables durante los primeros días):
 Este documento **no autoriza** la transición. Se requiere aprobación explícita del usuario para:
 1. Ejecutar el inventario y backups en la VM (§2).
 2. Intervenir en el repositorio original o en sus workflows/secrets (§4, §10).
-3. Detener el bot antiguo (§5).
+3. Detener el bot antiguo (§5) y limpiar/archivar residuos de cuando se ejecutó (§5bis).
 4. Cablear y arrancar el planificador del backend nuevo (§6) — objeto del paso 37.
 5. Consultas/avisos reales y mediciones (§7).
 

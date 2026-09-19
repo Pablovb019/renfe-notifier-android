@@ -805,3 +805,13 @@ uff check .: All checks passed.
   - `gh api commits/b133a9c/check-runs` -> 6 checks todos completos: `all-checks-ok` success (x2), `backend-ci` success, `android-ci` skipped, `detect-changes` success (x2). Estado del commit: 0 protocol de statuses legacy (solo check-runs; correcto).
   - `git status` local -> limpio tras el push.
 - **Siguiente paso**: esperar instrucciones del usuario para bloques B (inventario + backup VM), C (deploy del commit + stop del bot antiguo + activar scheduler) y D (validacion telefonica). P3 (backup pre-corte) sigue pendiente en la VM.
+
+## Paso 37: Transicion aprobada - BLOQUE B (impacto de plan por dato del usuario)
+- **Estado**: Bloque B en curso - preparados comandos de inventario (§2.1). El usuario aporto un dato que modifica el plan: **el bot antiguo ya no esta corriendo** en la VM, aunque se ejecuto durante un tiempo y deja residuos que limpiar.
+- **Decisiones adoptadas**:
+  - docs/transicion.md: §5 pasa de "detener el bot" a "verificar que nada lo relance" (se conserva la orden de detencion real si el inventario encontrara un proceso activo).
+  - Nuevo §5bis "Limpieza de artefactos residuales": tras backups verificados y fuera de la VM (P3), se **archivan** (no destruyen) los residuos del bot (repo, .env antiguo, cron/timer/compose, SQLite) en /data/archive con SHA256; el .env antiguo nunca se archiva en el paquete (tokens de Telegram). Solo con permiso explicito. No se toca el repo Git original (reglas 01/16).
+  - §11 actualizado: la aprobacion 3 ahora incluye detener/limpiar residuos.
+- **Archivos modificados / creados**: `docs/transicion.md` (§2.1 nota, §5, nuevo §5bis, §11), `prompts/37-bloque-b-inventario.md` (nuevo, bloque de comandos de solo lectura para pegar en la VM).
+- **Pruebas ejecutadas**: ninguna en VM (acciones del usuario). La revision del plan no toca codigo; sin riesgo de CI.
+- **Bloqueos / siguiente paso**: ejecutar el inventario en la VM (bloque de comandos preparado) y pegar la salida aqui para verificar. Luego §2.2 backups del bot antiguo + §2.3 backup nuevo + descarga fuera de la VM (P3).

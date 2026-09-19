@@ -1343,3 +1343,24 @@ Commit `b133a9c` del Bloque A (cablear avisos reales) pusheado a origin/main con
 
 ## Bloqueos y siguiente paso
 Bloques B (inventario + backup VM, incluye P3 backup pre-corte y descarga fuera de VM), C (deploy del commit en VM + stop del bot antiguo + arrancar scheduler) y D (validacion telefonica) pendientes de acciones/escritura del usuario en la VM. Siguiente: instrucciones del usuario para B.
+
+# Paso 37 - Transicion aprobada: BLOQUE B - PREPARACION (impacto de plan)
+
+## Estado
+Iniciado Bloque B. Comandos de inventario (§2.1) listos en `prompts/37-bloque-b-inventario.md` para pegar en la VM. El usuario aporto un dato que modifica el plan: **el bot antiguo ya no esta corriendo**, aunque se ejecuto durante un tiempo y probablemente deja artefactos residuales que requieren limpieza.
+
+## Decisiones adoptadas
+- docs/transicion.md §5: "detener el bot" pasa a "verificar que nada lo relance"; se mantiene la orden de detencion real si el inventario encontrara proceso activo.
+- Nuevo §5bis "Limpieza de artefactos residuales del bot antiguo": tras backups verificados y descargados fuera de la VM, archivar (no destruir) residuos en /data/archive con SHA256 (repo, SQLite) y desactivar/comentar cron/timer/compose que pudieran relanzar el bot, todo con permiso explicito. El .env antiguo nunca dentro del paquete (posibles tokens de Telegram), se guarda aparte fuera de la VM. No se toca el repo Git original (reglas 01/16).
+- §11: la aprobacion 3 ahora cubre "detener el bot (§5) y limpiar/archivar residuos (§5bis)".
+- prompts/37-bloque-b-inventario.md: el registro de la salida ahora pide detectar residuos y el estado de procesos.
+
+## Archivos modificados / creados
+- Modificados: docs/transicion.md (§2.1, §5, §5bis, §11), prompts/PROGRESS.md (este registro), ../PROGRESS.md (raiz, mismo registro).
+- Creados: prompts/37-bloque-b-inventario.md (bloque de comandos de solo lectura).
+
+## Pruebas ejecutadas y resultados (evidencia)
+- Ninguna en VM (acciones del usuario). El cambio es solo de documentacion (docs/*.md y prompts/*.md); no activa lint de codigo. Sin riesgo de CI real (detect-changes marcara que no hay backend/ ni android/).
+
+## Bloqueos y siguiente paso
+Bloqueos: acceso a la VM solo del usuario. Siguiente: ejecutar el inventario (bloque de comandos) y pegar la salida en el chat para verificacion; con eso, proceder a §2.2 (backup consistente del bot antiguo con `.backup` + integrity_check + SHA256) y §2.3 (backup nuevo con `app.cli backup`) + descarga fuera de la VM (P3).
