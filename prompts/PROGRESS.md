@@ -1327,3 +1327,19 @@ El usuario aprobo los 4 bloques (A: cablear avisos reales; B: inventario + backu
 
 ## Bloqueos y siguiente paso
 Bloqueos: P4 (commit de transicion autorizado con CI) no existe hasta el push de este Bloque A; P3 (backup fresco en VM) y B/C/D requieren acciones del usuario en la VM (sin acceso directo nuestro). Siguiente: commit+push autorizados del Bloque A, esperar CI verde, y coordinar B (inventario+backup), C (corte) y D (validacion telefonica) con el usuario.
+
+# Paso 37 - Transicion aprobada: BLOQUE A CI VERDE (b133a9c)
+
+## Estado
+Commit `b133a9c` del Bloque A (cablear avisos reales) pusheado a origin/main con CI verde (autorizado por el usuario). Quedan pendientes bloques B, C y D (acciones en la VM del usuario) y el backup pre-corte P3.
+
+## Pruebas ejecutadas y resultados (evidencia)
+- `gh api commits/b133a9c/check-runs` -> 6 check-runs completos: `all-checks-ok` success x2, `backend-ci` success, `android-ci` skipped, `detect-changes` success x2.
+- `git status` local -> limpio.
+- Recuerda: localmente ya validado ruff, mypy (69 files) y 188 pytest en Python 3.14; CI usa Python 3.11.
+
+## Decisiones adoptadas
+- Push autorizado de forma explicita por el usuario. No se toco la VM ni el bot antiguo; el planificador sigue desactivado (scheduler_enabled=false) en todos los entornos.
+
+## Bloqueos y siguiente paso
+Bloques B (inventario + backup VM, incluye P3 backup pre-corte y descarga fuera de VM), C (deploy del commit en VM + stop del bot antiguo + arrancar scheduler) y D (validacion telefonica) pendientes de acciones/escritura del usuario en la VM. Siguiente: instrucciones del usuario para B.

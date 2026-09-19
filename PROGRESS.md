@@ -797,4 +797,11 @@ uff check .: All checks passed.
   - `mypy app tests` -> no issues found in 69 source files.
   - `pytest` -> 188 passed (176 previos + 12 nuevos: encolado en scheduler sin/con cola, entrega, builder de payload, token invalido, sin dispositivos, cancelaciones por ciclo de vida y caducidad, retryable/no-retryable y run_forever).
   - No se ejecuto el planificador ni se envio ningun aviso real; sigue pendiente activarlo en produccion (scheduler_enabled) en el Bloque C.
-- **Bloqueos / siguiente paso**: P4 (commit autorizado con CI verde) pendiente del push de este Bloque A; P3 (backup fresco en VM) y B/C/D pendientes del usuario en la VM. Siguiente: commit+push del Bloque A, esperar CI, y coordinar con el usuario los bloques B/C/D.
+- **Bloqueos / siguiente paso**: P3 (backup fresco en VM) y bloques B/C/D pendientes del usuario en la VM. El planificador sigue DESACTIVADO en produccion (scheduler_enabled=false) hasta el bloque C. Siguiente: coordinar con el usuario los bloques B (inventario+backup), C (corte/deploy+stop bot) y D (validacion telefonica).
+
+## Paso 37: Transicion aprobada - BLOQUE A CI VERDE (b133a9c)
+- **Estado**: Bloque A completado y verificado por CI (autorizacion explicita del usuario). Commit `b133a9c` pusheado a origin/main.
+- **Pruebas/CI ejecutadas y resultados (evidencia)**:
+  - `gh api commits/b133a9c/check-runs` -> 6 checks todos completos: `all-checks-ok` success (x2), `backend-ci` success, `android-ci` skipped, `detect-changes` success (x2). Estado del commit: 0 protocol de statuses legacy (solo check-runs; correcto).
+  - `git status` local -> limpio tras el push.
+- **Siguiente paso**: esperar instrucciones del usuario para bloques B (inventario + backup VM), C (deploy del commit + stop del bot antiguo + activar scheduler) y D (validacion telefonica). P3 (backup pre-corte) sigue pendiente en la VM.
