@@ -1643,3 +1643,6 @@ Fix sin commit aun en rama local. Siguiente: (a) commit + push (avisa CI: backen
 
 ## Fix validado en VM (2026-09-20)
 Repetida prueba 10+10 y 100+100 con el fix (client.py corregido en /tmp/appfix, despliegue de produccion intacto): app 10/10 y 100/100 OK (antes 0/100). Evidencia bench-fixed-full-2026-09-20.json en docs/renfe-dwr-diagnosis/. Commit + push (backend-ci y android-ci se activaran; android-release/backend-cd no).
+
+## Desplegado en produccion (2026-09-20)
+Commit 899f740667a2ed3bc2fe3053f2e784b2cf27bc62 (fix DWR) desplegado via backend-cd tras dry_run OK. Verificado: service active, HEAD=899f740 en VM, journal muestra ciclos scheduler completos sin RenfeResponseError desde 11:51 UTC (generateId 200 OK). Followup activo de pruebas sigue monitoreandose. CI green.

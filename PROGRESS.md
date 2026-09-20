@@ -1026,3 +1026,7 @@ uff check .: All checks passed.
 ## 2026-09-20 - Fix DWR validado en VM (10+10 y 100+100 OK) - commit + push
 - **Estado**: repetida la prueba comparativa con el fix en la VM (misma IP GCP, --app-path /tmp/appfix con client.py corregido): smoke 10+10 -> app 10/10 OK; batch 100+100 -> bot 100/100 y app 100/100 OK. Evidencia: docs/renfe-dwr-diagnosis/bench-fixed-full-2026-09-20.json (191 kB).
 - **Pruebas**: local pytest 190 OK, ruff + mypy OK. VM: 100/100 con fix (antes 0/100). CI pendiente tras push.
+
+## 2026-09-20 - Despliegue del fix DWR en produccion (backend-cd) + validacion en el servicio
+- **Estado**: desplegado commit 899f740667a2ed3bc2fe3053f2e784b2cf27bc62 via workflow backend-cd (dry_run OK primero; luego DEPLOY real). VM: service active, HEAD=899f740, regex token corregida ([^'"]+).
+- **Pruebas en produccion**: journal del servicio desde el reinicio (11:51 UTC) muestra ciclos del scheduler completos sin errores: buscarTren.do 302 -> buscarTrenEnlaces.do 200 -> generateId 200 (x2) -> actualizaObjetosSesion 200 -> getTrainsList 200, ~1 ciclo/min. Antes del fix el flujo abortaba con RenfeResponseError en generateId. Followup activo 51100->51300 25/09 actualizandose cada ciclo (availability=unavailable, sin trenes reales). CI verde y despliegue verificado.
