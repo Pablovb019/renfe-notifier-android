@@ -131,6 +131,29 @@ async def test_client_honours_retry_after_for_rate_limiting() -> None:
 
 
 @pytest.mark.asyncio
+async def test_client_accepts_dwr_token_with_special_chars() -> None:
+    """Regresión del bloqueo Bloque D: Renfe devuelve tokens con '*' y '$'."""
+    real_response = (
+        "throw 'allowScriptTagRemoting is false.'; (function(){ at=window.dwr._[0]; "
+        '//#DWR-INSERT //#DWR-REPLY r.handleCallback("2","0","GJChGyXVNZIQ*4NsSQ1NTHDx*3q"); })(); '
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("generateId.dwr"):
+            return httpx.Response(200, text=real_response)
+        if request.url.path.endswith("getTrainsList.dwr"):
+            return httpx.Response(200, text=TRAIN_LIST)
+        return httpx.Response(200, text="ok")
+
+    client = RenfeDwrClient(transport=httpx.MockTransport(handler), jitter=lambda: 0.0)
+    result = await client.search(
+        origin=ORIGIN, destination=DESTINATION, travel_date=date(2026, 9, 12), plaza_h=False
+    )
+
+    assert result.trains.status is ParseStatus.OK
+
+
+@pytest.mark.asyncio
 async def test_client_stops_on_403_and_closes_the_transport() -> None:
     class ClosingTransport(httpx.AsyncBaseTransport):
         closed = False

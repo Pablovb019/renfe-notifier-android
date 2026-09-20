@@ -1606,3 +1606,40 @@ COMPLETADO. Medición de 1 h (720 muestras c/5 s) del proceso real en producció
 
 ## Bloqueos y siguiente paso
 Bloque D completado con doble resultado: (a) recursos OK (holgura en e2-micro); (b) bloqueo funcional crítico: el flujo DWR contra Renfe desde la e2-micro está roto (token generateId). Requiere decidir: investigar y arreglar cliente DWR (cambio de formato Renfe / sesiones) o documentar como limitación conocida. Detenido a la espera de instrucciones.
+
+# Bloque D cerrado (2026-09-20): evidencia en repo, commit d4cffaf + CI verde
+
+## Estado
+Evidencia cruda copiada de la VM a `docs/bloque-d-evidence/` (3 archivos: live.json 68 kB, live.log 28 kB, measure-results.json 3 kB). Válida contra los resúmenes ya registrados. Push a `main`: `8d2bb94..d4cffaf`, CI backend + android en verde (`backend-ci` y `android-ci` solo; sin TAG ni workflow_dispatch, no se tocó `android-release` ni `backend-cd`).
+
+## Decisiones adoptadas
+La nota "3 grupos descartados" era incorrecta; la evidencia real muestra 5 grupos en build_plan pero solo 2 search_calls (48020/15000 fuera de catálogo, no se ejecutan; idéntico a Item 9 y local). Corregido en measurements.json y ambos PROGRESS.
+
+## Archivos modificados / creados
+`docs/measurements.json` (run `vm-e2-micro-real-bloque-d` con tabla per-escenario completa + timestamp 2026-09-19T21:26:10Z), `docs/bloque-d-evidence/*`, `PROGRESS.md`, `prompts/PROGRESS.md`.
+
+## Pruebas / evidencia
+SHA256/verificación de valores del sampler recalculada en local (rss med 106.7/p95 116.4/max 116.5; cpu 0.2/1.4/12.0) coinciden con el RESUMEN. CI verde para d4cffaf.
+
+## Bloqueos y siguiente paso
+Pendiente resolver el bloqueo #1 (flujo DWR `generateId` roto desde GCP, ~100 % de ciclos del scheduler). El seguimiento de prueba (51100→51300) se deja activo (decisión del usuario: no importante). Próximo: diagnosticar el cliente DWR con el usuario.
+
+# Bloqueo DWR resuelto (2026-09-20): causa raiz = regex token estrecha
+
+## Estado
+Benchmark comparativo 100+100 desde la VM e2-micro (IP GCP), ruta 51100->51300 (25/09/2026): bot original Python (requests) 100/100 OK; app (httpx, regex estricta) 0/100. Renfe devuelve tokens generateId con ** e \$\$ (p. ej. GJChGyXVNZIQ*4NsSQ1NTHDx*3q); _TOKEN_CALLBACK limitada a [A-Za-z0-9]+ nunca matcheaba.
+
+## Decisiones
+No es bloqueo por IP ni fallo de httpx/cabeceras (requests con data=str tampoco manda Content-Type; verificados sincroncos). Fix: _TOKEN_CALLBACK a [^'"]+ (charset real, igual que el bot original). _TOKEN_CHARS ya preveia * y \$.
+
+## Archivos modificados / creados
+backend/app/renfe/client.py (regex), backend/tests/test_renfe_client.py (test_client_accepts_dwr_token_with_special_chars), docs/renfe-dwr-diagnosis/bench-full-2026-09-20.json (evidencia cruda), PROGRESS.md, prompts/PROGRESS.md.
+
+## Pruebas / evidencia
+Benchmark en VM (100/100 vs 0/100) con reportes guardados. Local: pytest 190 OK, ruff check+format OK, mypy OK.
+
+## Bloqueos y siguiente paso
+Fix sin commit aun en rama local. Siguiente: (a) commit + push (avisa CI: backend-ci/android-ci se activaran; android-release/backend-cd no), y (b) validar fix en VM (benchmark reducido o redeploy autorizado).
+
+## Fix validado en VM (2026-09-20)
+Repetida prueba 10+10 y 100+100 con el fix (client.py corregido en /tmp/appfix, despliegue de produccion intacto): app 10/10 y 100/100 OK (antes 0/100). Evidencia bench-fixed-full-2026-09-20.json en docs/renfe-dwr-diagnosis/. Commit + push (backend-ci y android-ci se activaran; android-release/backend-cd no).

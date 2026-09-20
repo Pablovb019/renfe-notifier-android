@@ -35,7 +35,7 @@ _TOKEN_CHARS = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ*$
 _COOKIE_SAFE = "".join(char for char in string.punctuation if char != "%") + " "
 _TOKEN_CALLBACK = re.compile(
     r"(?:dwr\.engine\.remote\.|r\.)handleCallback\s*\(\s*['\"]\d+['\"]\s*,\s*"
-    r"['\"]\d+['\"]\s*,\s*['\"]([A-Za-z0-9]+)['\"]"
+    r"['\"]\d+['\"]\s*,\s*['\"]([^'\"]+)['\"]"
 )
 
 

@@ -1008,3 +1008,21 @@ uff check .: All checks passed.
   - Bloque 2 (sampler vivo): 720 muestras/5 s, 1 h (t=5.0→3600.6 s). RSS min 73 MB, mediana 106.7, p95 116.4, max 116.5 MB (crecimiento acotado, sin fuga; `followups_readonly_counts` de lanzamiento con active=0 porque el alta del seguimiento de prueba fue posterior). CPU mediana 0.2 %, p95 1.4 %, máx 12 %. Disco 0 KB.
   - Journal: 27 fallos scheduler en la hora (1 grupo activo), todos "generateId token DWR missing" salvo 2 (1 presupuesto agotado, 1 HTTP 503). Confirmado fallo sistemático, no aleatorio.
 - **Bloqueos / siguiente paso**: Bloque D completado con doble resultado: (a) recursos OK (holgura en e2-micro); (b) bloqueo funcional crítico: el flujo DWR contra Renfe desde la e2-micro está roto (token generateId). Requiere decidir: investigar y arreglar cliente DWR (cambio de formato Renfe / sesiones) o documentar como limitación conocida. Detenido a la espera de instrucciones.
+
+## 2026-09-20 - Bloque D cerrado: evidencia en repo, commit d4cffaf + CI verde
+- **Estado**: evidencia cruda copiada de la VM a `docs/bloque-d-evidence/` (3 archivos: live.json 68 kB, live.log 28 kB, measure-results.json 3 kB). Válida contra los resúmenes ya registrados. Push a `main`: `8d2bb94..d4cffaf`, CI backend + android en verde. `backend-ci` y `android-ci` solo (sin TAG ni workflow_dispatch: no se tocó `android-release` ni `backend-cd`).
+- **Decisiones adoptadas**: la nota "3 grupos descartados" era incorrecta; la evidencia real muestra 5 grupos en build_plan pero solo 2 search_calls (48020/15000 fuera de catálogo, no se ejecutan; idéntico a Item 9 y local). Corregido en measurements.json y ambos PROGRESS.
+- **Archivos modificados / creados**: `docs/measurements.json` (run `vm-e2-micro-real-bloque-d` con tabla per-escenario completa + timestamp 2026-09-19T21:26:10Z), `docs/bloque-d-evidence/*`, `PROGRESS.md`, `prompts/PROGRESS.md`.
+- **Pruebas / evidencia**: SHA256/verificación de valores del sampler recalculara en local (rss med 106.7/p95 116.4/max 116.5; cpu 0.2/1.4/12.0) coinciden con el RESUMEN. CI verde para d4cffaf.
+- **Bloqueos / siguiente paso**: pendiente resolver el bloqueo #1 (flujo DWR `generateId` roto desde GCP, ~100 % de ciclos del scheduler). El seguimiento de prueba (51100→51300) se deja activo (decisión del usuario: no importante). Proximo: diagnosticar el cliente DWR con el usuario.
+
+## 2026-09-20 - Bloqueo DWR resuelto: causa raiz (regex token) + fix + evidencia
+- **Estado**: benchmark comparativo 100+100 desde la VM e2-micro (IP GCP), ruta 51100->51300 del followup de prueba (25/09/2026): bot original Python (requests) 100/100 OK; app (httpx, regex estricta) 0/100. Diagnostico: Renfe devuelve tokens generateId con charsets * y \$ (p. ej. GJChGyXVNZIQ*4NsSQ1NTHDx*3q); la regex _TOKEN_CALLBACK limitaba a [A-Za-z0-9]+ -> nunca matcheaba -> "segunda respuesta generateId no contiene token DWR".
+- **Decisiones**: no es bloqueo por IP ni fallo de httpx/cabeceras. Fix: _TOKEN_CALLBACK ampliada a [^'"]+ (charset real, igual que el bot original). _TOKEN_CHARS ya preveia * y \$ (herencia del bot). Test de regresion con snippet real capturado de la VM.
+- **Archivos**: backend/app/renfe/client.py (regex), backend/tests/test_renfe_client.py (test_client_accepts_dwr_token_with_special_chars), docs/renfe-dwr-diagnosis/bench-full-2026-09-20.json (evidencia cruda 173 kB), PROGRESS.md, prompts/PROGRESS.md.
+- **Pruebas / evidencia**: benchmark en VM (bot 100/100, app 0/100) con reports guardados; local: pytest 190 OK, ruff check+format OK, mypy OK. Pogresivo(s): validar en VM con el fix y desplegar si el usuario lo autoriza.
+- **Bloqueos / siguiente paso**: el fix esta en rama local sin commit (pendiente). Siguiente: (a) commit + push (avisa CI) y (b) validar el fix en la VM via benchmark reducido o redeploy autorizado.
+
+## 2026-09-20 - Fix DWR validado en VM (10+10 y 100+100 OK) - commit + push
+- **Estado**: repetida la prueba comparativa con el fix en la VM (misma IP GCP, --app-path /tmp/appfix con client.py corregido): smoke 10+10 -> app 10/10 OK; batch 100+100 -> bot 100/100 y app 100/100 OK. Evidencia: docs/renfe-dwr-diagnosis/bench-fixed-full-2026-09-20.json (191 kB).
+- **Pruebas**: local pytest 190 OK, ruff + mypy OK. VM: 100/100 con fix (antes 0/100). CI pendiente tras push.
