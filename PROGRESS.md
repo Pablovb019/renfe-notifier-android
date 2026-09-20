@@ -928,9 +928,9 @@ uff check .: All checks passed.
 - **Pruebas**: git pull/restart/log/health/pgrep en la VM (usuario), verificadas aqui.
 - **Bloqueos / siguiente paso**: §6.4 - re-ejecutar el seguimiento de prueba desde la app (realme v0.1.7): buscar, hacer scroll sin crash, crear seguimiento y validar flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones). Luego Bloque D.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 (5 fixes: disponibilidad, dialogo creado, no-seguimiento con plazas, papelera, nombre raro)
+## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 (5 fixes: disponibilidad, dialogo creado, no-seguimiento con plazas, papelera, nombre raro)
 - **Estado**: 5 fixes implementados y probados localmente (backend + Android). Sin commit ni push aun (pendiente autorizacion).
-- **Evidencia (2026-09-19)**: el usuario reporto 4 problemas tras re-ejecutar �6.4 con la app v0.1.7: (1) todos los trenes de Sevilla-San Bernardo->Jerez aparecian "Disponible" aunque en Renfe solo habia plaza H (y plaza H no activada); (2) el dialogo "seguimiento creado" mostraba el popup pero el boton Aceptar no hacia nada (no navegaba a la pagina principal); (3) al eliminar un seguimiento y confirmar, seguia apareciendo en el listado; (4) el detalle mostraba un "nombre raro" (identity del tren).
+- **Evidencia (2026-09-19)**: el usuario reporto 4 problemas tras re-ejecutar �6.4 con la app v0.1.7: (1) todos los trenes de Sevilla-San Bernardo->Jerez aparecian "Disponible" aunque en Renfe solo habia plaza H (y plaza H no activada); (2) el dialogo "seguimiento creado" mostraba el popup pero el boton Aceptar no hacia nada (no navegaba a la pagina principal); (3) al eliminar un seguimiento y confirmar, seguia apareciendo en el listado; (4) el detalle mostraba un "nombre raro" (identity del tren).
 - **Causas raiz**:
   - Disponibilidad: `_parse_dwr_availability` (backend/app/renfe/parser.py:200-210) ignoraba `soloPlazaH`; el bot heredado los trata como disponibles SOLO si se pidio plaza_h. Replicada su logica exacta (`renfechecker.py:252-263`): base_available = no completo and razon in ("","8") and tarifaMinima valida; plaza_h_only = bool(soloPlazaH); disponible si (base and plaza_h_only) con h, o (base and not plaza_h_only) sin h.
   - Dialogo creado: `TextButton` del AlertDialog "seguimiento creado" tenia el onClick vacio (SearchScreen.kt:475), comentario "se mantiene la ruta..." -> nada. Se conecta a `onCreatedAccepted` + navegacion a Home.
@@ -947,16 +947,16 @@ uff check .: All checks passed.
 - **Pruebas ejecutadas y resultados (local)**:
   - Backend: `pytest` -> **191 passed** (189 + 2 nuevos); `ruff check app` -> All checks passed; `mypy app` -> no issues (43 source files).
   - Android: `:app:compileDebugKotlin` -> BUILD SUCCESSFUL (warning preexistente menuAnchor); `:app:testDebugUnitTest` -> BUILD SUCCESSFUL (incluye 3 tests nuevos de "no seguimiento con plazas" y first); `:app:lintDebug` -> BUILD SUCCESSFUL.
-- **Bloqueos / siguiente paso**: commit+push (avisar CI) y deploy en la VM (git pull + `sudo systemctl restart`). Re-ejecutar �6.4 completo en el realme v0.1.7: (a) una ruta con solo plaza H debe mostrar "Sin plazas"; (b) crear seguimiento y verificar Aceptar vuelve a Home; (c) crear desde un tren con plazas NO debe crear seguimiento (aviso + Home); (d) eliminar y verificar que desaparece del listado; (e) detalle especifico muestra horario, no identity. Requiere re-build del APK para ver los fixes Android (v0.1.8) o al menos backend para disponibilidad/papelera.
+- **Bloqueos / siguiente paso**: commit+push (avisar CI) y deploy en la VM (git pull + `sudo systemctl restart`). Re-ejecutar �6.4 completo en el realme v0.1.7: (a) una ruta con solo plaza H debe mostrar "Sin plazas"; (b) crear seguimiento y verificar Aceptar vuelve a Home; (c) crear desde un tren con plazas NO debe crear seguimiento (aviso + Home); (d) eliminar y verificar que desaparece del listado; (e) detalle especifico muestra horario, no identity. Requiere re-build del APK para ver los fixes Android (v0.1.8) o al menos backend para disponibilidad/papelera.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
+## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
 - **Estado**: commit `68f779d` en main con los 5 fixes. CI verde: backend-ci success, android-ci success (job all-checks-ok incluido en backend-ci). Deploy en la VM PENDIENTE (requiere git pull + sudo systemctl restart en la VM por el usuario).
 - **Evidencia**: `098007a` (lote fixes) + `68f779d` (style ruff format) pusheados; `gh run list` para 68f779d -> backend-ci completed/success, android-ci completed/success.
 - **Nota**: el primer push fallo en CI solo por `ruff format --check` (2 ficheros sin formatear); corregido con `ruff format` (solo estilo, sin cambios logicos; 191 passed de nuevo) en commit aparte 68f779d (sin amend ni force-push).
 - **Pruebas locales previas**: backend 191 passed + ruff check + mypy (43 ficheros); android compileDebugKotlin/testDebugUnitTest/lintDebug BUILD SUCCESSFUL.
-- **Bloqueos / siguiente paso**: DEPLOY en VM: `git pull --ff-only origin main` y `sudo systemctl restart renfe-notifier-backend` (el restart exige sudo por polkit); verificar health 200 y log. Los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos sin reinstalar la app. Los fixes Android (dialogos, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme. Luego re-ejecutar �6.4.
+- **Bloqueos / siguiente paso**: DEPLOY en VM: `git pull --ff-only origin main` y `sudo systemctl restart renfe-notifier-backend` (el restart exige sudo por polkit); verificar health 200 y log. Los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos sin reinstalar la app. Los fixes Android (dialogos, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme. Luego re-ejecutar �6.4.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 DESPLEGADO EN VM (68f779d)
+## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 DESPLEGADO EN VM (68f779d)
 - **Estado**: commit `68f779d` (5 fixes) desplegado en la VM con exito. Planificador activo, unico proceso, health 200.
 - **Evidencia (2026-09-19, solo algunos datos (del usuario respecto a la VM))**: el usuario ejecuto `git pull --ff-only origin main` (a1398fd..68f779d, fast-forward, 11 ficheros +348/-25) y `sudo systemctl restart renfe-notifier-backend`.
   - Health: `curl http://localhost:8000/health` -> `{"status":"ok","uptime_s":59.3}` (la ruta es `/health`, no `/api/v1/health`).
@@ -964,10 +964,10 @@ uff check .: All checks passed.
   - `pgrep -af uvicorn`: unico proceso 27685 (`.venv/bin/python3 ... uvicorn app.main:app`).
 - **Decisiones adoptadas**: los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos en produccion sin reinstalar la app. Los fixes Android (dialogo Aceptar->Home, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme.
 - **Pruebas**: git pull/restart/health/log/pgrep en la VM (usuario), verificadas aqui.
-- **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar �6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
+- **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar �6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
 
-## Paso 37: Bloque C �6.4 VALIDADOS EN REALME (v0.1.8/code9) + lote v0.1.9
-- **Estado**: los 5 fixes del lote �6.4 validados en el realme con la app v0.1.8 (code9). Nuevos hallazgos de UX/estabilidad de la revalidacion.
+## Paso 37: Bloque C �6.4 VALIDADOS EN REALME (v0.1.8/code9) + lote v0.1.9
+- **Estado**: los 5 fixes del lote �6.4 validados en el realme con la app v0.1.8 (code9). Nuevos hallazgos de UX/estabilidad de la revalidacion.
 - **Evidencia / reporte del usuario (2026-09-19, realme, app v0.1.8/code9)**:
   - (1) soloPlazaH: ruta Sevilla-San Bernardo->Jerez aparece "Sin Plazas" (fix confirmado, verificado vs app de Renfe).
   - (2) Aceptar del dialogo -> vuelve a Home (OK). PERO el popup "Seguimiento ECjNBa_FIGOt63q creado" muestra el id interno -> se elimina el id del string.
@@ -979,3 +979,32 @@ uff check .: All checks passed.
 - **Decisiones adoptadas**: popups sin ids internos; estaciones con Dropdown no-focal; diagnostico del 503 por logs (sin consultas de prueba contra Renfe).
 - **Pruebas**: tests Android (testDebugUnitTest OK), compileDebugKotlin OK, lintDebug OK; backend 191 passed + ruff + mypy (43 files) OK.
 - **Bloqueos / siguiente paso**: commit+push (CI) y deploy; build/sign v0.1.9 para validar borrado fluido y popups sin id; observacion del log del 503.
+
+## 2026-09-19 - Lote v0.1.9/v0.1.10: popups sin id, autocompletado en flujo, release con polling
+- **Estado**: v0.1.9 (code10) instalada y validada; v0.1.10 (code11) instalada y comportamiento de autocompletado confirmado por el usuario. Ranking backend por relevancia implementado, probado y desplegado.
+- **Decisiones / cambios**:
+  - Popups de "seguimiento creado" y "eliminar seguimiento" sin el id interno (strings.xml).
+  - Autocompletado: `ExposedDropdownMenuBox` robaba el foco (impedia borrar con pulsacion larga) -> `DropdownMenu` + `PopupProperties(focusable=false)` y luego **sugerencias en flujo** (sin popup): siempre debajo del campo, `heightIn(max=192.dp)` (~4 visibles) con scroll interno (estilo Google Maps), sin "pepear" por tecla (`SearchViewModel` limpia `*Suggestions=emptyList()` al cambiar consulta).
+  - `android-release.yml`: paso "Verificar checks CI superados" cambiado de curl unico a **polling** (120 intentos x 10 s, fallo rapido ante failure/cancelled, exige success/skipped por job) + timeout del job a 40 min. Permite enviar tag y commit en **un único push** sin riesgo de que CI esté en_progress al validar.
+  - Ranking de sugerencias: nuevo `station_match_score()` en `stations.py` (exacto > prefijo del nombre > palabra > subcadena, prioridad de Renfe como desempate; pesos 100/50/25/10 + weight 50/(1+priority)). `search.py` usa `-score` + nombre.
+- **Versiones**: v0.1.9/code10 commit `6401e54`/`86851e2`; fix autocompletado+workflow+bump v0.1.10/code11 commit `ab46b0f` (push unico main+tag, CI verde, polling esperó ~4 min); ranking commit `8d2bb94`.
+- **Pruebas / evidencia**:
+  - v0.1.9: SHA256 cfb38200..., firma CN=Pablo Vilar (digest c241a29e...3950), instalada realme, popups sin id OK, borrado fluido OK.
+  - v0.1.10: SHA256 37a59734..., firma identica, instalada realme (code11), autocompletado en flujo debajo del campo + scroller **validado por el usuario** ("este comportamiento es el que quiero").
+  - Release v0.1.10 creada por run `35468489784` (polling de 20:48:03 a 20:52:12 antes de compilar).
+  - Backend ranking: 197 passed (6 scorer tests nuevos), ruff check/format OK, mypy OK (43 files); CI verde para `8d2bb94`.
+  - Deploy VM: git pull a `8d2bb94`, `sudo systemctl restart`, PID 28741 unico, health 200, "Planificador y entrega de avisos activados." Las sugerencias del realme (v0.1.10) ya usan el nuevo orden **sin reinstalar**: server-side.
+- **Bloqueos / siguiente paso**: **VALIDADO** el orden de sugerencias por relevancia en el realme (reporte del usuario, 2026-09-19: "probado"). Las sugerencias (server-side) salen ya ordenadas sin reinstalar la app. Pendiente Bloque D (medicion recursos VM). Detenido a la espera de instrucciones.
+
+## Bloque D - Medición de recursos en VM con planificador activo (2026-09-19)
+- **Estado**: COMPLETADO. Medición de 1 h (720 muestras c/5 s) del proceso real en producción (PID 28741) + re-ejecución de `measure_resources.py` (FakeSearch, BD temporal) en la VM. Hallazgo crítico: el planificador falla ~100 % de los ciclos contra Renfe.
+- **Decisiones adoptadas**: 
+  - Recursos: RAM del servicio vivo ~107 MB mediana / 116 MB p95 (plateau acotado; supera objetivo aspiracional <100 MB pero holgura total en e2-micro 1 GB). CPU idle 0.2 % mediana, picos 12 % máx. Disco 0 KB. Dentro de holgura para coste 0 €.
+  - Funcional: 27 errores en 1 h (1 seguimiento activo Sevilla→Jerez). 26x "La segunda respuesta generateId no contiene token DWR" + 1 budget + 1 HTTP 503. El regex `_TOKEN_CALLBACK` no hace match en 2ª respuesta generateId → flujo DWR roto desde IP GCP. **El notificador NO detecta disponibilidad en producción ahora mismo.**
+- **Archivos modificados / creados**:
+  - `scripts/measure_resources.py` (ya existía), `docs/measurements.json` (nueva run `vm-e2-micro-real-bloque-d`), `docs/bloque-d-evidence/` (evidencia cruda copiada de la VM: `bloque-d-live.json` 68 kB, `bloque-d-live.log` 28 kB, `bloque-d-measure-results.json` 3 kB), `PROGRESS.md` (este registro).
+- **Pruebas / evidencia**:
+  - Bloque 3 (FakeSearch): RAM base 47 MB → máx 48.6 MB, CPU 11.9–15.1 %, consistente con run previo (Item 9). Selenium innecesario. Nota: en el escenario "5 seguimientos, 5 grupos", `build_plan` genera 5 grupos pero `search_calls=2` porque los códigos 48020/15000 no están en el catálogo y no se ejecutan (mismo comportamiento que en Item 9 y local).
+  - Bloque 2 (sampler vivo): 720 muestras/5 s, 1 h (t=5.0→3600.6 s). RSS min 73 MB, mediana 106.7, p95 116.4, max 116.5 MB (crecimiento acotado, sin fuga; `followups_readonly_counts` de lanzamiento con active=0 porque el alta del seguimiento de prueba fue posterior). CPU mediana 0.2 %, p95 1.4 %, máx 12 %. Disco 0 KB.
+  - Journal: 27 fallos scheduler en la hora (1 grupo activo), todos "generateId token DWR missing" salvo 2 (1 presupuesto agotado, 1 HTTP 503). Confirmado fallo sistemático, no aleatorio.
+- **Bloqueos / siguiente paso**: Bloque D completado con doble resultado: (a) recursos OK (holgura en e2-micro); (b) bloqueo funcional crítico: el flujo DWR contra Renfe desde la e2-micro está roto (token generateId). Requiere decidir: investigar y arreglar cliente DWR (cambio de formato Renfe / sesiones) o documentar como limitación conocida. Detenido a la espera de instrucciones.

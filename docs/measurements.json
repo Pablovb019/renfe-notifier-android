@@ -201,7 +201,7 @@
         "total_s": 0.42372,
         "http_status": 200,
         "bytes_received": 11083,
-        "note": "Medido desde e2-micro (us-east1-c). No reserva ni busca: solo GET de página/estaciones"
+        "note": "Medido desde e2-micro (us-east1-c). No reserva ni busca: solo GET de p\u00e1gina/estaciones"
       },
       "health_restart": {
         "service": "renfe-notifier-backend.service",
@@ -225,6 +225,152 @@
           "uri_health": "/health (router sin prefijo; /api/v1/health devuelve 404)"
         },
         "note": "Run real en la VM e2-micro con BD temporal migrada (mk init); usa FakeSearch, sin tr\u00e1fico real a Renfe salvo el GET puntual de latencia"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T21:26:10.874094+00:00",
+      "environment": "vm-e2-micro-real-bloque-d",
+      "python_version": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+      "database": "/data/renfe_notifier.db (producci\u00f3n; el sampler solo lee, no modifica)",
+      "results": [
+        {
+          "name": "1 seguimiento, 1 grupo",
+          "followups": 1,
+          "groups": 1,
+          "concurrency": 2,
+          "duration_s": 0.045,
+          "cpu_percent_avg": 11.9,
+          "memory_mb_start": 47.0,
+          "memory_mb_end": 48.5,
+          "memory_delta_mb": 1.5,
+          "disk_delta_kb": 0.0,
+          "gc_collected_delta": 0,
+          "http_requests": 5,
+          "bytes_received": 12450,
+          "logical_queries": 1,
+          "search_calls": 1
+        },
+        {
+          "name": "5 seguimientos, 5 grupos (sin agrupaci\u00f3n)",
+          "followups": 5,
+          "groups": 5,
+          "concurrency": 2,
+          "duration_s": 0.039,
+          "cpu_percent_avg": 12.5,
+          "memory_mb_start": 48.5,
+          "memory_mb_end": 48.6,
+          "memory_delta_mb": 0.1,
+          "disk_delta_kb": 0.0,
+          "gc_collected_delta": 0,
+          "http_requests": 10,
+          "bytes_received": 24900,
+          "logical_queries": 2,
+          "search_calls": 2
+        },
+        {
+          "name": "5 seguimientos, 1 grupo (agrupaci\u00f3n total)",
+          "followups": 5,
+          "groups": 1,
+          "concurrency": 2,
+          "duration_s": 0.044,
+          "cpu_percent_avg": 15.1,
+          "memory_mb_start": 48.6,
+          "memory_mb_end": 48.6,
+          "memory_delta_mb": 0.0,
+          "disk_delta_kb": 0.0,
+          "gc_collected_delta": 0,
+          "http_requests": 5,
+          "bytes_received": 12450,
+          "logical_queries": 1,
+          "search_calls": 1
+        },
+        {
+          "name": "5 seguimientos, 1 grupo, concurrencia 1",
+          "followups": 5,
+          "groups": 1,
+          "concurrency": 1,
+          "duration_s": 0.046,
+          "cpu_percent_avg": 14.7,
+          "memory_mb_start": 48.6,
+          "memory_mb_end": 48.6,
+          "memory_delta_mb": 0.0,
+          "disk_delta_kb": 0.0,
+          "gc_collected_delta": 0,
+          "http_requests": 5,
+          "bytes_received": 12450,
+          "logical_queries": 1,
+          "search_calls": 1
+        },
+        {
+          "name": "5 seguimientos, 1 grupo, concurrencia 2",
+          "followups": 5,
+          "groups": 1,
+          "concurrency": 2,
+          "duration_s": 0.047,
+          "cpu_percent_avg": 14.6,
+          "memory_mb_start": 48.6,
+          "memory_mb_end": 48.6,
+          "memory_delta_mb": 0.0,
+          "disk_delta_kb": 0.0,
+          "gc_collected_delta": 0,
+          "http_requests": 5,
+          "bytes_received": 12450,
+          "logical_queries": 1,
+          "search_calls": 1
+        }
+      ],
+      "analysis": {
+        "ram_base_mb": 47.0,
+        "ram_delta_max_mb": 1.5,
+        "cpu_percent_min_max": [11.9, 15.1],
+        "selenium_needed": false,
+        "selenium_rationale": "HTTP DWR basta para recursos; Selenium supera el presupuesto de RAM (riesgo OOM en 1 GB)",
+        "note": "measure_resources.py (FakeSearch, BD temporal /tmp/bloque-d-measure.db). En el escenario '5 grupos' build_plan genera 5 grupos pero search_calls=2: las rutas con c\u00f3digos 48020 y 15000 no est\u00e1n en el cat\u00e1logo y no se ejecutan (quirk del script, no del backend); id\u00e9ntico al run previo (vm-e2-micro-real) y al local."
+      },
+      "live_sampler": {
+        "source": "/tmp/bloque-d-live.json (VM)",
+        "pid": 28741,
+        "window_s": 3600,
+        "interval_s": 5,
+        "num_samples": 720,
+        "followups_readonly_counts_at_launch": { "active": 0, "paused": 0, "expired": 0, "deleted": 3 },
+        "followup_created_mid_window": true,
+        "episodes": 1,
+        "db_kb_start": 96,
+        "db_kb_end": 96,
+        "db_delta_kb": 0,
+        "cpu_pct_min": 0.0,
+        "cpu_pct_median": 0.2,
+        "cpu_pct_p95": 1.4,
+        "cpu_pct_max": 12.0,
+        "rss_mb_min": 73.0,
+        "rss_mb_median": 106.7,
+        "rss_mb_p95": 116.4,
+        "rss_mb_max": 116.5,
+        "rss_trend": "crece de 73 a 116 MB y se estabiliza en plateau (sin fuga); el recuento active=0 del RESUMEN es porque se captur\u00f3 al lanzar, antes del alta del seguimiento de prueba"
+      },
+      "functional_finding": {
+        "active_followup": "Sevilla-San Bernardo (51100) \u2192 Jerez de la Frontera (51300), 2026-09-25, plaza_h=False",
+        "scheduler_errors_in_hour": 27,
+        "error_breakdown": {
+          "generateId_token_DWR_missing": 26,
+          "budget_exceeded": 1,
+          "http_503": 1
+        },
+        "failure_rate": "~100 % de los ciclos del planificador en la hora medida (1 grupo activo)",
+        "source": "journalctl -u renfe-notifier-backend --since '-1 hour' a las ~22:35; las 27 l\u00edneas pertenecen al mismo GroupKey",
+        "root_cause": "La regex _TOKEN_CALLBACK (backend/app/renfe/client.py:36) no hace match en la 2\u00aa respuesta generateId; token DWR no extra\u00eddo y flujo abortado. El notificador no detecta disponibilidad en producci\u00f3n.",
+        "note": "Confirmado el fallo sistem\u00e1tico (no aleatorio) del 503/DWR desde la IP de GCP; bloquea el flujo completo de avisos"
+      },
+      "health_final": {
+        "status": "ok",
+        "uptime_s": 4601.3
+      },
+      "analysis": {
+        "conclusion_recursos": "RAM ~107 MB mediana / 116 MB p95 (supera el objetivo aspiracional <100 MB del plan, pero con holgura total en e2-micro de 1 GB); CPU idle 0.2 % mediana y pico 12 %; disco 0 KB/h; coste 0 \u20ac",
+        "selenium_needed": false,
+        "selenium_rationale": "HTTP DWR basta para recursos; Selenium supera el presupuesto de RAM (riesgo OOM en 1 GB)",
+        "blocker": "Bloqueo funcional: el flujo DWR generateId est\u00e1 roto desde GCP; el scheduler no completa b\u00fasquedas"
       }
     }
   ]

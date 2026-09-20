@@ -1523,7 +1523,7 @@ Commit `a1398fd` (dedup backend + key unica Android) pusheado con CI verde y DES
 
 ## Bloqueos y siguiente paso
 Sin commit/push aun (autorizacion). Proximo: commit + push (backend-ci/android-ci), deploy en VM (git pull + sudo systemctl restart), re-ejecutar �6.4: ruta solo-plaza-H => "Sin plazas"; Aceptar vuelve a Home; tren con plazas => no crea; eliminar => desaparece; detalle muestra horario. Requiere APK nuevo (v0.1.8) para ver fixes Android.
-# Paso 37 - Transicion aprobada: LOTE �6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
+# Paso 37 - Transicion aprobada: LOTE �6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
 
 ## Estado
 Commit `68f779d` en main con los 5 fixes. CI verde (backend-ci success, android-ci success; all-checks-ok incluido en backend-ci). Deploy en VM pendiente.
@@ -1534,8 +1534,8 @@ Commit `68f779d` en main con los 5 fixes. CI verde (backend-ci success, android-
 - Sin amend ni force-push; commit de estilo separado.
 
 ## Bloqueos y siguiente paso
-Deploy en VM: `git pull --ff-only origin main` + `sudo systemctl restart renfe-notifier-backend` (sudo requerido). Backend fixes (disponibilidad soloPlazaH, papelera) activos sin reinstalar app. Fixes Android (dialogos, no-seguimiento con plazas, horarios) requieren APK v0.1.8. Luego re-ejecutar �6.4.
-# Paso 37 - Transicion aprobada: LOTE �6.4 DESPLEGADO EN VM (68f779d)
+Deploy en VM: `git pull --ff-only origin main` + `sudo systemctl restart renfe-notifier-backend` (sudo requerido). Backend fixes (disponibilidad soloPlazaH, papelera) activos sin reinstalar app. Fixes Android (dialogos, no-seguimiento con plazas, horarios) requieren APK v0.1.8. Luego re-ejecutar �6.4.
+# Paso 37 - Transicion aprobada: LOTE �6.4 DESPLEGADO EN VM (68f779d)
 
 ## Estado
 Commit `68f779d` desplegado. Planificador activo, unico proceso, health 200.
@@ -1547,11 +1547,11 @@ Commit `68f779d` desplegado. Planificador activo, unico proceso, health 200.
 - Log: PID viejo 27418 parado limpio; nuevo **27685** unico uvicorn (Planificador activado + startup complete + Uvicorn :8000).
 
 ## Bloqueos y siguiente paso
-Build/sign APK v0.1.8 con fixes Android; instalar en realme; re-ejecutar �6.4 completo. Luego Bloque D.
-# Paso 37 (continuacion): BLOQUE C �6.4 VALIDADOS (v0.1.8) + lote v0.1.9
+Build/sign APK v0.1.8 con fixes Android; instalar en realme; re-ejecutar �6.4 completo. Luego Bloque D.
+# Paso 37 (continuacion): BLOQUE C �6.4 VALIDADOS (v0.1.8) + lote v0.1.9
 
 ## Estado
-5 fixes �6.4 confirmados en realme con v0.1.8/code9. Lote v0.1.9 en curso: popups sin id, autocompletado no-focal, log 503.
+5 fixes �6.4 confirmados en realme con v0.1.8/code9. Lote v0.1.9 en curso: popups sin id, autocompletado no-focal, log 503.
 
 ## Evidencia
 - Realme v0.1.8/code9: 1-5 OK (ver raiz PROGRESS para el detalle del usuario).
@@ -1559,3 +1559,50 @@ Build/sign APK v0.1.8 con fixes Android; instalar en realme; re-ejecutar �6.4 co
 
 ## Siguiente paso
 Commit+push + CI; fecha para el 503 por log (tipo exacto); build v0.1.9 + validacion borrado fluido.
+# Paso 37 - Transicion aprobada: v0.1.9/v0.1.10 POPUPS SIN ID + AUTOCOMPLETADO EN FLUJO + RELEASE CON POLLING + RANKING
+
+## Estado
+- v0.1.9/code10 y v0.1.10/code11 instaladas y validadas; autocompletado en flujo (estilo Google Maps) confirmado por el usuario ("este comportamiento es el que quiero").
+- Ranking backend por relevancia implementado, 197 passed, CI verde, DESPLEGADO en la VM. Las sugerencias del realme ya usan el nuevo orden sin reinstalar (server-side).
+- 503: log diagnostico desplegado en la VM (commit 6401e54 incluido en el pull a 8d2bb94).
+
+## Evidencia (2026-09-19)
+- Popups "seguimiento creado" y "eliminar seguimiento" sin id interno (strings.xml).
+- Autocompletado: `ExposedDropdownMenuBox` robaba foco (borrado caracter a caracter) -> sugerencias EN FLUJO debajo del campo con `Surface`+`verticalScroll`+`heightIn(max=192.dp)` (~4 visibles), sin popup; `SearchViewModel` vacia `*Suggestions` al cambiar consulta (sin "pepeo" ni robo de foco al borrar).
+- `android-release.yml`: paso "Verificar checks CI superados" ahora hace POLLING (120 intentos x 10 s, fallo rapido ante failure/cancelled, exige success/skipped) + timeout 40 min. Permite push unico main+tag.
+- Ranking: `station_match_score()` en stations.py (exacto 100 > prefijo 50 > palabra 25 > subcadena 10; prioridad Renfe como desempate weight 50/(1+priority)); search.py `(-score, nombre)`. ATOCHA -> PTA ATOCHA (prio 2) antes que CERCANIAS (prio 22); atocha/villa/mo verificados.
+- v0.1.10 commit `ab46b0f` + tag v0.1.10, push unico, run release `35468489784` (polling 20:48:03->20:52:12, luego compilo). APK SHA256 37a59734..., firma CN=Pablo Vilar (c241a29e..., identica v0.1.9, firstInstall intacta). Instalada realme code11.
+- Ranking commit `8d2bb94` (backend only; android-ci skipped por path filter); backend-ci success. Deploy VM: pull a 8d2bb94, restart, PID 28741, health 200, "Planificador y entrega de avisos activados."
+
+## Archivos modificados / creados
+- android/.../feature/search/SearchScreen.kt (StationField en flujo), SearchViewModel.kt (limpieza sugerencias), res/values/strings.xml (popups sin id)
+- android/app/build.gradle.kts (v0.1.10/code11)
+- .github/workflows/android-release.yml (polling CI + timeout 40)
+- backend/app/renfe/stations.py (normalize_station_key/_ascii_upper, scorer), backend/app/api/search.py (rank + log error Renfe), backend/tests/test_stations.py (6 tests scorer)
+- ../PROGRESS.md, ../prompts/PROGRESS.md (este registro)
+
+## Pruebas (local, verificadas)
+- Backend: pytest **197 passed** (6 scorers); ruff check/format OK; mypy OK (43 ficheros).
+- Android: compileDebugKotlin/testDebugUnitTest/lintDebug BUILD SUCCESSFUL.
+
+## Bloqueos y siguiente paso
+**VALIDADO** el orden de sugerencias por relevancia en el realme (reporte del usuario, 2026-09-19: "Probado"). Pendiente Bloque D (medicion recursos VM con scheduler activo). Detenido a la espera de instrucciones.
+# Bloque D - Medición de recursos en VM con planificador activo (2026-09-19)
+
+## Estado
+COMPLETADO. Medición de 1 h (720 muestras c/5 s) del proceso real en producción (PID 28741) + re-ejecución de `measure_resources.py` (FakeSearch, BD temporal) en la VM. Hallazgo crítico: el planificador falla ~100 % de los ciclos contra Renfe.
+
+## Decisiones adoptadas
+- Recursos: RAM del servicio vivo ~107 MB mediana / 116 MB p95 (plateau acotado; supera objetivo aspiracional <100 MB pero holgura total en e2-micro 1 GB). CPU idle 0.2 % mediana, picos 12 % máx. Disco 0 KB. Dentro de holgura para coste 0 €.
+- Funcional: 27 errores en 1 h (1 seguimiento activo Sevilla→Jerez). 26x "La segunda respuesta generateId no contiene token DWR" + 1 budget + 1 HTTP 503. El regex `_TOKEN_CALLBACK` no hace match en 2ª respuesta generateId → flujo DWR roto desde IP GCP. **El notificador NO detecta disponibilidad en producción ahora mismo.**
+
+## Archivos modificados / creados
+- `scripts/measure_resources.py` (ya existía), `docs/measurements.json` (nueva run `vm-e2-micro-real-bloque-d`), `docs/bloque-d-evidence/` (evidencia cruda copiada de la VM: `bloque-d-live.json` 68 kB, `bloque-d-live.log` 28 kB, `bloque-d-measure-results.json` 3 kB), `PROGRESS.md` (este registro).
+
+## Pruebas / evidencia
+- Bloque 3 (FakeSearch): RAM base 47 MB → máx 48.6 MB, CPU 11.9–15.1 %, consistente con run previo (Item 9). Selenium innecesario. Nota: en el escenario "5 seguimientos, 5 grupos", `build_plan` genera 5 grupos pero `search_calls=2` porque los códigos 48020/15000 no están en el catálogo y no se ejecutan (mismo comportamiento que en Item 9 y local).
+- Bloque 2 (sampler vivo): 720 muestras/5 s, 1 h (t=5.0→3600.6 s). RSS min 73 MB, mediana 106.7, p95 116.4, max 116.5 MB (crecimiento acotado, sin fuga; `followups_readonly_counts` de lanzamiento con active=0 porque el alta del seguimiento de prueba fue posterior). CPU mediana 0.2 %, p95 1.4 %, máx 12 %. Disco 0 KB.
+- Journal: 27 fallos scheduler en la hora (1 grupo activo), todos "generateId token DWR missing" salvo 2 (1 presupuesto agotado, 1 HTTP 503). Confirmado fallo sistemático, no aleatorio.
+
+## Bloqueos y siguiente paso
+Bloque D completado con doble resultado: (a) recursos OK (holgura en e2-micro); (b) bloqueo funcional crítico: el flujo DWR contra Renfe desde la e2-micro está roto (token generateId). Requiere decidir: investigar y arreglar cliente DWR (cambio de formato Renfe / sesiones) o documentar como limitación conocida. Detenido a la espera de instrucciones.
