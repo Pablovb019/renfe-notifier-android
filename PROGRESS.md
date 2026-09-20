@@ -404,31 +404,31 @@
 - **Bloqueos**: Ninguno para el paso 17. El bloqueo preventivo de despliegue en VM del paso 06 permanece.
 - **Siguiente paso**: Paso 18 (según `prompts/`).
 
-## Paso 18: API funcional (estaciones, b�squedas, seguimientos, FCM, diagn�stico)
+## Paso 18: API funcional (estaciones, bsquedas, seguimientos, FCM, diagnstico)
 - **Estado**: Completado (registro completo en prompts/PROGRESS.md)
 - **Decisiones**:
-  - **Anti-SSRF**: las b�squedas solo aceptan c�digos de estaci�n validados contra el cat�logo local (StationCatalog.by_code); ning�n campo admite URLs del cliente (cumple docs/security.md).
-  - pp/renfe/search.py (TrainSearchEngine) como l�gica pura para evitar import circular con deps.py.
-  - pp/api/search.py: GET /api/v1/search/stations?q= y POST /api/v1/search/trains (fecha en [hoy, hoy+62] Europe/Madrid, origen?destino, TrainOut con identity del dominio 
-eal:...; estaci�n desconocida ? 400, RenfeClientError ? 503).
-  - pp/api/followups.py: CRUD + pause/resume/renew/acknowledge/delete bajo /api/v1/followups. ollowup_id generado en servidor; mode specific exige specific_train_id; 404 si no existe y 409 si el estado no lo permite; delete l�gico idempotente; pause/delete/acknowledge cancelan recordatorios (queue.cancel_for_followup). Confirmar no borra el seguimiento (REQ-07.4).
-  - pp/api/fcm.py: PUT /api/v1/fcm/token registra/renueva el token FCM del dispositivo.
-  - pp/api/diagnostics.py: GET /api/v1/diagnostics/health (p�blico), GET /api/v1/diagnostics (contadores) y POST /api/v1/diagnostics/test-notification (emisor inyectado; 503 sin emisor, 409 sin token FCM).
-  - pp/notifications/base.py: protocolo NotificationSender.send_test (FCM real en paso 19).
-  - Migraci�n v5 (devices.fcm_token), PairingRepository.update_fcm_token/count_devices, PairingService.register_fcm_token, FollowUpRepository.count(lifecycle)/count_episodes.
-  - Lifespan de main.py expone repositorio/cola/cat�logo/engine en pp.state; 
+  - **Anti-SSRF**: las bsquedas solo aceptan cdigos de estacin validados contra el catlogo local (StationCatalog.by_code); ningn campo admite URLs del cliente (cumple docs/security.md).
+  - app/renfe/search.py (TrainSearchEngine) como lgica pura para evitar import circular con deps.py.
+  - app/api/search.py: GET /api/v1/search/stations?q= y POST /api/v1/search/trains (fecha en [hoy, hoy+62] Europe/Madrid, origen?destino, TrainOut con identity del dominio 
+eal:...; estacin desconocida ? 400, RenfeClientError ? 503).
+  - app/api/followups.py: CRUD + pause/resume/renew/acknowledge/delete bajo /api/v1/followups. followup_id generado en servidor; mode specific exige specific_train_id; 404 si no existe y 409 si el estado no lo permite; delete lgico idempotente; pause/delete/acknowledge cancelan recordatorios (queue.cancel_for_followup). Confirmar no borra el seguimiento (REQ-07.4).
+  - app/api/fcm.py: PUT /api/v1/fcm/token registra/renueva el token FCM del dispositivo.
+  - app/api/diagnostics.py: GET /api/v1/diagnostics/health (pblico), GET /api/v1/diagnostics (contadores) y POST /api/v1/diagnostics/test-notification (emisor inyectado; 503 sin emisor, 409 sin token FCM).
+  - app/notifications/base.py: protocolo NotificationSender.send_test (FCM real en paso 19).
+  - Migracin v5 (devices.fcm_token), PairingRepository.update_fcm_token/count_devices, PairingService.register_fcm_token, FollowUpRepository.count(lifecycle)/count_episodes.
+  - Lifespan de main.py expone repositorio/cola/catlogo/engine en app.state; 
 edact() enmascara tokens FCM largos (ahora con :).
 - **Archivos modificados / creados**:
-  - Creados: ackend/app/renfe/search.py, ackend/app/api/search.py, ollowups.py, cm.py, diagnostics.py, ackend/app/notifications/, ackend/tests/helpers.py, ackend/tests/test_search_api.py, 	est_followups_api.py, 	est_fcm_api.py, 	est_diagnostics_api.py.
-  - Modificados: pp/api/deps.py, pp/main.py, pp/__init__.py (APP_VERSION), pp/db/migrations.py (v5), pp/pairing/{domain,database,service}.py, pp/followups/database.py, pp/middleware/logging.py, 	ests/__init__.py, aserciones de esquema [1,2,3,4,5].
+  - Creados: ackend/app/renfe/search.py, ackend/app/api/search.py, followups.py, cm.py, diagnostics.py, ackend/app/notifications/, ackend/tests/helpers.py, ackend/tests/test_search_api.py, test_followups_api.py, test_fcm_api.py, test_diagnostics_api.py.
+  - Modificados: app/api/deps.py, app/main.py, app/__init__.py (APP_VERSION), app/db/migrations.py (v5), app/pairing/{domain,database,service}.py, app/followups/database.py, app/middleware/logging.py, 	ests/__init__.py, aserciones de esquema [1,2,3,4,5].
 - **Pruebas ejecutadas y resultados**:
   - 
 uff check .: All checks passed.
   - python -m mypy app tests: no issues found in 59 source files.
-  - python -m pytest: 134 superados (107 anteriores + 27 nuevos). Cubren: estaciones/b�squedas con MockTransport (auth, validaciones de fecha/estaciones, TrainOut tipado); CRUD y acciones de seguimientos (id servidor, validaciones de mode, estados/409, acknowledge sin borrar, delete idempotente); FCM (auth, registro/renovaci�n, 422); diagn�stico (health p�blico, contadores, test-notification 401/503/409/200 con FakeSender) y fcm_token/count en repositorio.
-  - No se realizaron pruebas reales contra Renfe, env�os FCM ni validaciones en dispositivo/VM.
+  - python -m pytest: 134 superados (107 anteriores + 27 nuevos). Cubren: estaciones/bsquedas con MockTransport (auth, validaciones de fecha/estaciones, TrainOut tipado); CRUD y acciones de seguimientos (id servidor, validaciones de mode, estados/409, acknowledge sin borrar, delete idempotente); FCM (auth, registro/renovacin, 422); diagnstico (health pblico, contadores, test-notification 401/503/409/200 con FakeSender) y fcm_token/count en repositorio.
+  - No se realizaron pruebas reales contra Renfe, envos FCM ni validaciones en dispositivo/VM.
 - **Bloqueos**: Ninguno para el paso 18. El bloqueo preventivo de despliegue en VM del paso 06 permanece.
-- **Siguiente paso**: Paso 19 (seg�n prompts/).
+- **Siguiente paso**: Paso 19 (segn prompts/).
 
 ## Paso 19: Transporte FCM
 - **Estado**: Completado (registro completo en `prompts/PROGRESS.md`)
@@ -758,23 +758,23 @@ uff check .: All checks passed.
   7. **Ahorro de bateria Realme**: la notificacion SI se publica (id=1353263872) pero **sin sonido** (mSettingBatterySaverEnabled=true). Al desactivar el ahorro, el mismo envio vuelve a sonar/vibrar -> A/B confirmado: el ahorro silencia las alertas. La app NO esta en la whitelist de Doze (`dumpsys deviceidle whitelist` sin renfenotifier).
 - **Recomendacion para el usuario**: anadir la app a las excepciones de optimizacion de bateria de Realme (ajustes de bateria) para que con ahorro activo las alertas suenen; aveisar que tras "Forzar detencion" no habra notificaciones hasta abrir la app.
 
-## Paso 36: Plan de transici�n
-- **Estado**: Completado (documento de plan; NO autoriza transici�n).
+## Paso 36: Plan de transicin
+- **Estado**: Completado (documento de plan; NO autoriza transicin).
 - **Fecha**: 2026-09-19
 - **Decisiones**:
   - Se reviso el estado global: backend nuevo desplegado (systemd, /data/renfe_notifier.db, IP 34.26.252.164), FCM real validado y matriz de entrega completa en realme.
   - Bloqueo clave documentado: el backend nuevo NO ejecuta aun el planificador (`SchedulerService.run_forever`) ni entrega avisos reales (`send_alert` sin llamadores); corresponde al paso 37.
-  - Plan de sustituci�n/rollback redactado en `docs/transicion.md` con 11 secciones: backup del bot y SQLite (inventario VM), base nueva sin importar, automatizaciones que podr�an sobrescribir (deploy.yml original, compose/cron VM, VM_SSH_KEY), detencion controlada, arranque (cableado pendiente), consultas/avisos reales y mediciones, condiciones de fallo y restauracion inmediata, proteccion de backups y clave de firma, sondeo unico sin duplicados, e intervenciones del usuario.
+  - Plan de sustitucin/rollback redactado en `docs/transicion.md` con 11 secciones: backup del bot y SQLite (inventario VM), base nueva sin importar, automatizaciones que podran sobrescribir (deploy.yml original, compose/cron VM, VM_SSH_KEY), detencion controlada, arranque (cableado pendiente), consultas/avisos reales y mediciones, condiciones de fallo y restauracion inmediata, proteccion de backups y clave de firma, sondeo unico sin duplicados, e intervenciones del usuario.
   - No se modifico el repositorio original ni se deshabilito nada; no se ejecuto transicion alguna.
 - **Archivos creados**: `docs/transicion.md`.
 - **Pruebas ejecutadas**: revision de docs/audit.md (workflow antiguo SSH directo), scripts/deploy_backend.sh y unit systemd, backend-cd.yml, recovery.md, prompts/PROGRESS.md (items 6-9 cerrados) y confirmacion por grep de que scheduler/send_alert no estan cableados en main.py.
-- **Bloqueos / siguiente paso**: aprobacion expl�cita del usuario para cada bloque de `docs/transicion.md`; luego paso 37 (37-transicion-autorizada.md). Detenido a la espera de instrucciones.
+- **Bloqueos / siguiente paso**: aprobacion explcita del usuario para cada bloque de `docs/transicion.md`; luego paso 37 (37-transicion-autorizada.md). Detenido a la espera de instrucciones.
 
-## Paso 37: Transici�n aprobada - VERIFICACION DE PRECONDICIONES
+## Paso 37: Transicin aprobada - VERIFICACION DE PRECONDICIONES
 - **Estado**: Detenido en la compuerta (precondiciones P1 y P4 no cumplidas; P3 backup pre-corte pendiente).
 - **Fecha**: 2026-09-19
 - **Verificacion (evidencia)**:
-  - P1 Aprobaci�n explicita del plan: **NO concedida**. En la sesion anterior el usuario eligio "Commit docs y parar", que excluye la transicion. docs/transicion.md �11 exige aprobacion por bloques.
+  - P1 Aprobacin explicita del plan: **NO concedida**. En la sesion anterior el usuario eligio "Commit docs y parar", que excluye la transicion. docs/transicion.md 11 exige aprobacion por bloques.
   - P2 Bloqueos de seguridad/coste: ausentes. Presupuesto 0 euros; no se contrataron recursos. Firewall 8000 abierto a Internet queda como consideracion (no bloqueante de la transicion en si).
   - P3 Backup + recuperacion: procedimiento documentado (docs/recovery.md, docs/transicion.md #2). Backup fresco previo al corte y su descarga fuera de la VM: PENDIENTE (accion en VM del usuario).
   - P4 Commit exacto autorizado con CI: **NO existe**. El planificador no esta cableado (SchedulerService sin instanciar en main.py, send_alert sin llamadores). ultimo commit 14e0243 (docs-only, CI verde). Pendiente: commit con cableado+CI, autorizado, para desplegar.
@@ -928,9 +928,9 @@ uff check .: All checks passed.
 - **Pruebas**: git pull/restart/log/health/pgrep en la VM (usuario), verificadas aqui.
 - **Bloqueos / siguiente paso**: §6.4 - re-ejecutar el seguimiento de prueba desde la app (realme v0.1.7): buscar, hacer scroll sin crash, crear seguimiento y validar flujo completo (deteccion -> episodio -> alert_events -> FCM -> notificacion canal v2 con acciones). Luego Bloque D.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 (5 fixes: disponibilidad, dialogo creado, no-seguimiento con plazas, papelera, nombre raro)
+## Paso 37: Transicion aprobada - LOTE VALIDACION 6.4 (5 fixes: disponibilidad, dialogo creado, no-seguimiento con plazas, papelera, nombre raro)
 - **Estado**: 5 fixes implementados y probados localmente (backend + Android). Sin commit ni push aun (pendiente autorizacion).
-- **Evidencia (2026-09-19)**: el usuario reporto 4 problemas tras re-ejecutar �6.4 con la app v0.1.7: (1) todos los trenes de Sevilla-San Bernardo->Jerez aparecian "Disponible" aunque en Renfe solo habia plaza H (y plaza H no activada); (2) el dialogo "seguimiento creado" mostraba el popup pero el boton Aceptar no hacia nada (no navegaba a la pagina principal); (3) al eliminar un seguimiento y confirmar, seguia apareciendo en el listado; (4) el detalle mostraba un "nombre raro" (identity del tren).
+- **Evidencia (2026-09-19)**: el usuario reporto 4 problemas tras re-ejecutar 6.4 con la app v0.1.7: (1) todos los trenes de Sevilla-San Bernardo->Jerez aparecian "Disponible" aunque en Renfe solo habia plaza H (y plaza H no activada); (2) el dialogo "seguimiento creado" mostraba el popup pero el boton Aceptar no hacia nada (no navegaba a la pagina principal); (3) al eliminar un seguimiento y confirmar, seguia apareciendo en el listado; (4) el detalle mostraba un "nombre raro" (identity del tren).
 - **Causas raiz**:
   - Disponibilidad: `_parse_dwr_availability` (backend/app/renfe/parser.py:200-210) ignoraba `soloPlazaH`; el bot heredado los trata como disponibles SOLO si se pidio plaza_h. Replicada su logica exacta (`renfechecker.py:252-263`): base_available = no completo and razon in ("","8") and tarifaMinima valida; plaza_h_only = bool(soloPlazaH); disponible si (base and plaza_h_only) con h, o (base and not plaza_h_only) sin h.
   - Dialogo creado: `TextButton` del AlertDialog "seguimiento creado" tenia el onClick vacio (SearchScreen.kt:475), comentario "se mantiene la ruta..." -> nada. Se conecta a `onCreatedAccepted` + navegacion a Home.
@@ -947,16 +947,16 @@ uff check .: All checks passed.
 - **Pruebas ejecutadas y resultados (local)**:
   - Backend: `pytest` -> **191 passed** (189 + 2 nuevos); `ruff check app` -> All checks passed; `mypy app` -> no issues (43 source files).
   - Android: `:app:compileDebugKotlin` -> BUILD SUCCESSFUL (warning preexistente menuAnchor); `:app:testDebugUnitTest` -> BUILD SUCCESSFUL (incluye 3 tests nuevos de "no seguimiento con plazas" y first); `:app:lintDebug` -> BUILD SUCCESSFUL.
-- **Bloqueos / siguiente paso**: commit+push (avisar CI) y deploy en la VM (git pull + `sudo systemctl restart`). Re-ejecutar �6.4 completo en el realme v0.1.7: (a) una ruta con solo plaza H debe mostrar "Sin plazas"; (b) crear seguimiento y verificar Aceptar vuelve a Home; (c) crear desde un tren con plazas NO debe crear seguimiento (aviso + Home); (d) eliminar y verificar que desaparece del listado; (e) detalle especifico muestra horario, no identity. Requiere re-build del APK para ver los fixes Android (v0.1.8) o al menos backend para disponibilidad/papelera.
+- **Bloqueos / siguiente paso**: commit+push (avisar CI) y deploy en la VM (git pull + `sudo systemctl restart`). Re-ejecutar 6.4 completo en el realme v0.1.7: (a) una ruta con solo plaza H debe mostrar "Sin plazas"; (b) crear seguimiento y verificar Aceptar vuelve a Home; (c) crear desde un tren con plazas NO debe crear seguimiento (aviso + Home); (d) eliminar y verificar que desaparece del listado; (e) detalle especifico muestra horario, no identity. Requiere re-build del APK para ver los fixes Android (v0.1.8) o al menos backend para disponibilidad/papelera.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
+## Paso 37: Transicion aprobada - LOTE VALIDACION 6.4 PUSHEADO (CI verde) - PENDIENTE DEPLOY
 - **Estado**: commit `68f779d` en main con los 5 fixes. CI verde: backend-ci success, android-ci success (job all-checks-ok incluido en backend-ci). Deploy en la VM PENDIENTE (requiere git pull + sudo systemctl restart en la VM por el usuario).
 - **Evidencia**: `098007a` (lote fixes) + `68f779d` (style ruff format) pusheados; `gh run list` para 68f779d -> backend-ci completed/success, android-ci completed/success.
 - **Nota**: el primer push fallo en CI solo por `ruff format --check` (2 ficheros sin formatear); corregido con `ruff format` (solo estilo, sin cambios logicos; 191 passed de nuevo) en commit aparte 68f779d (sin amend ni force-push).
 - **Pruebas locales previas**: backend 191 passed + ruff check + mypy (43 ficheros); android compileDebugKotlin/testDebugUnitTest/lintDebug BUILD SUCCESSFUL.
-- **Bloqueos / siguiente paso**: DEPLOY en VM: `git pull --ff-only origin main` y `sudo systemctl restart renfe-notifier-backend` (el restart exige sudo por polkit); verificar health 200 y log. Los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos sin reinstalar la app. Los fixes Android (dialogos, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme. Luego re-ejecutar �6.4.
+- **Bloqueos / siguiente paso**: DEPLOY en VM: `git pull --ff-only origin main` y `sudo systemctl restart renfe-notifier-backend` (el restart exige sudo por polkit); verificar health 200 y log. Los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos sin reinstalar la app. Los fixes Android (dialogos, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme. Luego re-ejecutar 6.4.
 
-## Paso 37: Transicion aprobada - LOTE VALIDACION �6.4 DESPLEGADO EN VM (68f779d)
+## Paso 37: Transicion aprobada - LOTE VALIDACION 6.4 DESPLEGADO EN VM (68f779d)
 - **Estado**: commit `68f779d` (5 fixes) desplegado en la VM con exito. Planificador activo, unico proceso, health 200.
 - **Evidencia (2026-09-19, solo algunos datos (del usuario respecto a la VM))**: el usuario ejecuto `git pull --ff-only origin main` (a1398fd..68f779d, fast-forward, 11 ficheros +348/-25) y `sudo systemctl restart renfe-notifier-backend`.
   - Health: `curl http://localhost:8000/health` -> `{"status":"ok","uptime_s":59.3}` (la ruta es `/health`, no `/api/v1/health`).
@@ -964,10 +964,10 @@ uff check .: All checks passed.
   - `pgrep -af uvicorn`: unico proceso 27685 (`.venv/bin/python3 ... uvicorn app.main:app`).
 - **Decisiones adoptadas**: los fixes backend (disponibilidad soloPlazaH y papelera) quedan activos en produccion sin reinstalar la app. Los fixes Android (dialogo Aceptar->Home, no-seguimiento con plazas, horarios en detalle) requieren APK nuevo (v0.1.8) para el realme.
 - **Pruebas**: git pull/restart/health/log/pgrep en la VM (usuario), verificadas aqui.
-- **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar �6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
+- **Bloqueos / siguiente paso**: build/sign APK v0.1.8 con fixes Android, instalar en realme, y re-ejecutar 6.4 completo: (a) ruta con solo plaza H -> "Sin plazas" tras el fix backend; (b) Aceptar vuelve a Home; (c) tren con plazas -> no crea seguimiento; (d) eliminar -> desaparece de TODOS y solo queda en "Eliminados"; (e) detalle especifico muestra horario 11:08 -> 12:13. Luego Bloque D.
 
-## Paso 37: Bloque C �6.4 VALIDADOS EN REALME (v0.1.8/code9) + lote v0.1.9
-- **Estado**: los 5 fixes del lote �6.4 validados en el realme con la app v0.1.8 (code9). Nuevos hallazgos de UX/estabilidad de la revalidacion.
+## Paso 37: Bloque C 6.4 VALIDADOS EN REALME (v0.1.8/code9) + lote v0.1.9
+- **Estado**: los 5 fixes del lote 6.4 validados en el realme con la app v0.1.8 (code9). Nuevos hallazgos de UX/estabilidad de la revalidacion.
 - **Evidencia / reporte del usuario (2026-09-19, realme, app v0.1.8/code9)**:
   - (1) soloPlazaH: ruta Sevilla-San Bernardo->Jerez aparece "Sin Plazas" (fix confirmado, verificado vs app de Renfe).
   - (2) Aceptar del dialogo -> vuelve a Home (OK). PERO el popup "Seguimiento ECjNBa_FIGOt63q creado" muestra el id interno -> se elimina el id del string.
