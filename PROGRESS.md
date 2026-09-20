@@ -1030,3 +1030,10 @@ uff check .: All checks passed.
 ## 2026-09-20 - Despliegue del fix DWR en produccion (backend-cd) + validacion en el servicio
 - **Estado**: desplegado commit 899f740667a2ed3bc2fe3053f2e784b2cf27bc62 via workflow backend-cd (dry_run OK primero; luego DEPLOY real). VM: service active, HEAD=899f740, regex token corregida ([^'"]+).
 - **Pruebas en produccion**: journal del servicio desde el reinicio (11:51 UTC) muestra ciclos del scheduler completos sin errores: buscarTren.do 302 -> buscarTrenEnlaces.do 200 -> generateId 200 (x2) -> actualizaObjetosSesion 200 -> getTrainsList 200, ~1 ciclo/min. Antes del fix el flujo abortaba con RenfeResponseError en generateId. Followup activo 51100->51300 25/09 actualizandose cada ciclo (availability=unavailable, sin trenes reales). CI verde y despliegue verificado.
+
+## 2026-09-20 - Limpieza de residuos aprobada y aplicada (repo local + VM)
+- **Estado**: aplicada la limpieza autorizada por el usuario (preparacion de la siguiente fase):
+  - VM (prod): eliminada imagen docker residual `hello-world:latest` (docker rmi, verificada con docker images vacio). Repo de la VM: eliminados residuos APK de releases antiguos `v0.1.0`–`v0.1.5` (ficheros 0 B untracked, pertenecian a la cuenta de servicio -> usada sudo rm). `git status` limpio en la VM.
+  - Repo local: `git status` limpio, sin artefactos APK residuos. Los temporales de benchmark en `%TEMP%\opencode\*` (rel010, reqbench, vmprobe, renfe-apk) borrados; los ficheros de evidencia (bench-full y bench-fixed-full JSON) estan archivados en `docs/renfe-dwr-diagnosis/` y commiteados (commit caee47f).
+- **Archivos**: PROGRESS.md (este registro). Ningun cambio de codigo.
+- **Siguiente paso**: todo preparado y limpio para la siguiente fase. A la espera del prompt del paso 38.
