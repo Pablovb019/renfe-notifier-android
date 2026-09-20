@@ -4,12 +4,12 @@
 
 ## 1. Releases disponibles
 
-Todas las releases `v0.1.0`ââ‚¬Â¦`v0.1.10` son **privadas** (`docs/security.md`) y llevan dos assets:
+Todas las releases `v0.1.0`…`v0.1.10` son **privadas** (`docs/security.md`) y llevan dos assets:
 
-- `app-release.apk` ââ‚¬â€ APK firmado.
-- `app-release.apk.sha256` ââ‚¬â€ checksum SHA-256 de ese APK.
+- `app-release.apk` — APK firmado.
+- `app-release.apk.sha256` — checksum SHA-256 de ese APK.
 
-ÃƒÅ¡ltima release verificada (2026-09-20):
+Última release verificada (2026-09-20):
 
 | Campo | Valor |
 |-------|-------|
@@ -30,7 +30,7 @@ Todas las releases `v0.1.0`ââ‚¬Â¦`v0.1.10` son **privadas** (`docs/securi
    # comparar con el valor del .sha256
    ```
 3. Copia el APK al realme (USB o descarga directa desde el teléfono).
-4. En el realme: **Ajustes ââ€ â€™ Seguridad/Privacidad ââ€ â€™ más ajustes ââ€ â€™ Permisos de instalación de apps desconocidas** ââ€ â€™ habilitar para el gestor de archivos o navegador usado.
+4. En el realme: **Ajustes → Seguridad/Privacidad → más ajustes → Permisos de instalación de apps desconocidas** → habilitar para el gestor de archivos o navegador usado.
 5. Abre el APK con el gestor de archivos (`es.apk...`/`com.android.documentsui`) y confirma la instalación.
 6. Comprueba la firma tras instalar (opcional): `apksigner verify --print-certs app-release.apk` (ver `docs/keystore.md`).
 
