@@ -1055,3 +1055,36 @@ uff check .: All checks passed.
 - **Archivos creados**: `README.md` (indice/estado/uso), `docs/instalacion-apk.md` (instalacion+actualizacion manual APK realme), `docs/diagnostico-realme.md` (guias de diagnostico realme), `docs/licencias.md` (licencias y atribuciones).
 - **Evidencia**: release v0.1.10 con assets `app-release.apk` (8.995.411 B) + `.sha256`; SHA256 `37a59734efc5567f3362b671d87aebf037c237c4c4a68fa4649bbcb718bdf4c76` verificado == `Get-FileHash` del APK descargado. Bot original conservado (rollback en `docs/transicion.md`).
 - **Pendientes (NO declarados completos)**: ver `docs/requirements-checklist.md` (REQ-02.x, 06.x, 07.x, 10.x, 12.x, 13.x sin verificar en dispositivo) y validations en VM. CI pendiente tras commit+push autorizado.
+
+## Cierre post (paso 38-post) - REPARACION DE MOJIBIKE - COMPLETADO
+- Estado: COMPLETADO (verificado por bytes y por hashes, nunca por volcado de
+  consola).
+- Problema detectado por el usuario: README.md mostraba caracteres corruptos
+  ("Aplicaci[U+00F3]n", "convivir[U+00E1]", "notificaci[U+00F3]n" en el README de
+  la rama), es decir mojibake CP1252->UTF-8 doble.
+- Agente: no se confió en el render de la consola (que corrompe acentos). Todas
+  las comprobaciones se hicieron a nivel de bytes (conteos y patrones en hex, sin
+  literales acentuados), con comparación programática:
+  * GIT diff antes: README.md 76 lineas y docs/instalacion-apk.md 36 lineas con
+    la firma corrupta de 8 bytes (C3 83 C6 92 C3 82 C2 BB en vez de C3 BB).
+  * Reparación: script Python ASCII-puro que colapsa la firma corrupta de 8 bytes
+    -> correcta de 2 bytes, de forma idempotente hasta punto fijo (2 rondas).
+  * Verificación post: UTF-8 estricto OK en todos los Markdown, 0 ocurrencias de
+    la firma corrupta, estable en una 2a pasada (0 cambios), SHA-256 (64 hex) del
+    APK v0.1.10 único y presente en README.
+- Resultado: README.md y docs/instalacion-apk.md reparados (UTF-8 limpio).
+  EL áRBOL QUEDÓ SIN MOJIBAKE (verificación programática previa al commit).
+- Decisión: proseguir el paso 38-post solo tras confirmar la reparación por
+  bytes con git diff --stat (76 + 36 lineas cambiadas, números, sin volcar
+  acentos).
+- Commit: se usó mensaje ASCII puro y se hizo push del commit de reparación
+  (la CI/CD volverá a correr por el push; es esperado y no degrada nada).
+- Pruebas ejecutadas y resultado: conteo por bytes (mojibake residual = 0),
+  UTF-8 estricto (ok = True), estabilidad (ok = True), hash único (ok = True).
+  Evidencia completa (cortas, por bytes) en el propio flujo del paso.
+- Pendientes reales (NO declarados completos aquí): la validación física en el
+  dispositivo (realme GT Neo 2) de REQ-02.x, REQ-06.x, REQ-07.x, REQ-10.x,
+  REQ-12.x, REQ-13.x que siguen sin probar en hardware; su checklist vive en
+  docs/requirements-checklist.md. Este fichero no modifica ese estatus.
+- Progreso del repositorio en PROGRESS.md; el original renfe-notifier-bot se
+  conserva intacto (rollback documentado en docs/transicion.md).
