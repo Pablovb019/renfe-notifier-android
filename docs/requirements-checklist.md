@@ -14,7 +14,7 @@ Este documento desglosa los requisitos comprobables del proyecto a partir de `pr
 
 ## 2. Objetivo y Contexto Confirmado
 - [ ] **REQ-02.1**: App Android nativa para uso personal (1 único usuario) instalable por APK sin publicar en Google Play (Diseñado en `docs/architecture.md`).
-- [ ] **REQ-02.2**: Compatibilidad verificada con dispositivo objetivo: realme GT Neo 2 (Realme UI 4, Android 13).
+- [x] **REQ-02.2**: Compatibilidad verificada con dispositivo objetivo: realme GT Neo 2 (Realme UI 4, Android 13).
 - [ ] **REQ-02.3**: Backend ejecutable en VM Google Cloud Compute Engine e2-micro (2 vCPU compartidas, 1 GB RAM) con contenedor limitado a 256 MB.
 - [ ] **REQ-02.4**: Soporte concurrente para entre 1 y 5 seguimientos activos.
 - [ ] **REQ-02.5**: Objetivo de sondeo periódico de comprobación en backend de aproximadamente cada 30 segundos.
@@ -116,7 +116,7 @@ Este documento desglosa los requisitos comprobables del proyecto a partir de `pr
 - [ ] **REQ-12.4**: Pruebas de concurrencia y planificador (evitar doble consulta, descarte tras timeout).
 - [ ] **REQ-12.5**: Pruebas unitarias en Android de ViewModels, repositorios y mapeo de datos.
 - [ ] **REQ-12.6**: Compilación exitosa verificada del APK en CI.
-- [ ] **REQ-12.7**: Guía paso a paso de validación en el teléfono realme GT Neo 2 (Doze, ahorro de batería, permisos de notificación).
+- [x] **REQ-12.7**: Guía paso a paso de validación en el teléfono realme GT Neo 2 (Doze, ahorro de batería, permisos de notificación).
 - [ ] **REQ-12.8**: Mediciones reales de uso de RAM y CPU en la VM e2-micro para certificar que el backend cabe holgadamente en 1 GB de RAM.
 
 ## 13. Despliegue y Retirada del Bot
