@@ -1088,3 +1088,16 @@ uff check .: All checks passed.
   docs/requirements-checklist.md. Este fichero no modifica ese estatus.
 - Progreso del repositorio en PROGRESS.md; el original renfe-notifier-bot se
   conserva intacto (rollback documentado en docs/transicion.md).
+
+## Rediseno UI - Fase 0: Auditoria inicial (2026-09-21) - COMPLETADO
+- **Estado**: auditado. Branch `redesign/ui-m3`, HEAD `f5943c33bdd63207761e7266bed58e293e208687`. Sin archivos funcionales modificados.
+- **Entorno**: JDK 17.0.20.1 (Microsoft) detectado; Gradle wrapper 8.9; AGP 8.5.2; Kotlin 2.0.21; Compose BOM 2024.12.01; navigation 2.8.5; datastore 1.1.1; compileSdk 34/minSdk 26/targetSdk 34; versionName 0.1.10/code 11.
+- **Baseline ejecutado (salida real, exit 0 todos)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL (15 s, 38 tasks up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL; reporte XML: **10 suites, 85 tests, 0 failures, 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL; **0 errores, 53 warnings** (42 GradleDependency, 4 UnusedResources, 3 AndroidGradlePluginVersion, 1 MissingApplicationIcon, 1 PluralsCandidate, 1 HardwareIds).
+- **Dispositivo (ADB serial 1ecdc196, realme GT Neo 2 RMX3370)**: 1080x2400 px @ 480 dpi -> **360x800 dp**; font_scale 1.0; modo noche activo; status bar 110 px (~36.7 dp), nav bar por gestos (visible=false), IME oculto. Segundo serial ADB presente por Wi-Fi (192.168.1.200:5555); lecturas solo sobre el USB.
+- **Auditoria theme/persistencia**: paleta fija M3 en `Theme.kt` (respardo; primary 0xFF0057A6) + dynamicColor en SDK>=31; `MainActivity` observa `PreferencesRepository.theme` (DataStore `app_preferences`, clave "theme" = system/light/dark). Tipografia M3 por defecto (`Type.kt`). Detalle en DESIGN.md.
+- **Riesgos 360 dp documentados en DESIGN.md (file:linea)**: colores hardcodeados (0xFF1B7F3A/0xFFB87333/0xFFB00020 en Search/FollowUps/Detail/Diagnostics), Row de 5 FilterChip en FollowUpsScreen.kt:95-108, fecha larga sin maxLines en SearchScreen.kt:175, scroll anidado (sugerencias `verticalScroll` dentro de LazyColumn, SearchScreen.kt:325-351), boton "Recargar" con `onRefresh={}` vacio en HomeScreen.kt:57, tipografia por defecto.
+- **Archivos**: DESIGN.md (creado), PROGRESS.md (esta entrada). `prompts/` respetada (sin tocar; modificaciones de mojibake previas quedan sin commitear y fuera del commit de esta fase).
+- **Bloqueos**: ninguno en la fase 0. Detenido a la espera de instrucciones para la fase 1.
