@@ -1101,3 +1101,17 @@ uff check .: All checks passed.
 - **Riesgos 360 dp documentados en DESIGN.md (file:linea)**: colores hardcodeados (0xFF1B7F3A/0xFFB87333/0xFFB00020 en Search/FollowUps/Detail/Diagnostics), Row de 5 FilterChip en FollowUpsScreen.kt:95-108, fecha larga sin maxLines en SearchScreen.kt:175, scroll anidado (sugerencias `verticalScroll` dentro de LazyColumn, SearchScreen.kt:325-351), boton "Recargar" con `onRefresh={}` vacio en HomeScreen.kt:57, tipografia por defecto.
 - **Archivos**: DESIGN.md (creado), PROGRESS.md (esta entrada). `prompts/` respetada (sin tocar; modificaciones de mojibake previas quedan sin commitear y fuera del commit de esta fase).
 - **Bloqueos**: ninguno en la fase 0. Detenido a la espera de instrucciones para la fase 1.
+
+## Rediseno UI - Fase 1: Sistema visual (color/type/shape/spacing) (2026-09-21) - COMPLETADO
+- **Estado**: implementado el sistema de tokens visuales. No cableado aun en `Theme.kt` (fase 2). Sin cambios funcionales en pantallas.
+- **Archivos creados/modificados** (sobre branch `redesign/ui-m3`, commit previo `7e222a9`):
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Color.kt` (nuevo): 36 roles M3 en claro/oscuro (48 constantes `val`). Paleta de la especificacion: primary `#830065`/`#D98BC7`, secondary `#5D5E63`/`#C5C5CB`, tertiary `#885018`/`#FFB877`, background `#EFF3F6`/`#1A1519`, surface `#FFF8FA`/`#1E191D`, surface containers, error, outline, scrim.
+  - `.../ui/theme/Type.kt` (modificado): `RenfeTypography` (FontFamily.SansSerif) con headline 28/36, 24/32, 24/28; title 20/28, 16/24 SemiBold, 14/20 Medium; body 16/24, 14/20, 12/16; label 14/20 Medium, 12/16 Medium, 12/16 (**labelSmall = 12 sp**).
+  - `.../ui/theme/Shape.kt` (nuevo): `RenfeShapes` = 4/8/12/20/28 dp.
+  - `.../ui/theme/Spacing.kt` (nuevo): `object RenfeSpacing` = 4/8/12/16/20/24/32 dp; `screenMargin`=16.dp, `screenMarginWide`=20.dp.
+  - Puente temporal `val Typography = Typography()` en Type.kt para no romper `Theme.kt:72`.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 29s.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 22s; reporte XML: **10 suites, 85 tests, 0 failures, 0 errors**.
+- **Aceptacion**: 4 archivos en su sitio; `labelSmall >= 12 sp` (12 sp). Cumplida.
+- **Pendiente**: cablear paleta/tipografia/formas del tema en `Theme.kt` (fase 2); migracion de colores hardcodeados (fase 5). Detenido a la espera de instrucciones.

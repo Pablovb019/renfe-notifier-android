@@ -138,3 +138,35 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
 - Ninguno para la fase 0. Dispositivo presente y medido; baseline verde.
 - PENDIENTE (no superado por no ejecutarse: no procede en fase 0): nada de UI implementado
   aun (las fases 1+ lo haran paso a paso).
+
+## FASE 1 - SISTEMA VISUAL: color / tipo / forma / espaciado (2026-09-21)
+
+- **Objetivo cumplido**: se crea el sistema de tokens visuales; NO se cablea aun en
+  `Theme.kt` (eso es la fase 2).
+- **Archivos creados**:
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Color.kt`: 36 roles M3
+    (48 constantes `val` publicas Light/Dark) con la paleta de la especificacion: primario
+    magenta `#830065` (cLaro) / `#D98BC7` (oscuro), terciario `#885018`/`#FFB877`, fondo
+    `#EFF3F6`/`#1A1519`, superficies contenedoras propias, error/outline, scrim negro.
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Type.kt`: `RenfeTypography`
+    sobre `FontFamily.SansSerif`; escala `tamano/lineHeight`: headlineLarge 28/36, headlineMedium
+    24/32, headlineSmall 24/28, titleLarge 20/28, titleMedium 16/24 SemiBold, titleSmall 14/20
+    Medium, bodyLarge 16/24, bodyMedium 14/20, bodySmall 12/16, labelLarge 14/20 Medium,
+    labelMedium 12/16 Medium, labelSmall 12/16. **labelSmall = 12 sp (>= 12 sp, cumple la
+    aceptacion).** Se conserva `val Typography = Typography()` como puente para `Theme.kt:72`
+    (el cableado de `RenfeTypography` llega en la fase 2).
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Shape.kt`: `RenfeShapes`
+    (material3.Shapes) con extraSmall/small/medium/large/extraLarge = 4/8/12/20/28 dp.
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Spacing.kt`: `object
+    RenfeSpacing` con xs/sm/md/lg/xl/xxl/xxxl = 4/8/12/16/20/24/32 dp, `screenMargin = 16.dp`
+    y `screenMarginWide = 20.dp`.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> **BUILD SUCCESSFUL in 29s** (6 tasks ejecutados, 32 up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> **BUILD SUCCESSFUL in 22s**;
+    reporte XML: **10 suites, 85 tests, 0 failures, 0 errors** (sin regresiones).
+- **Estado de los riesgos de la fase 0**: los tokens existen pero los colores hardcodeados
+  de las pantallas siguen sin migrar (fase 5). El tema sigue usando la paleta fija
+  `LightColors`/`DarkColors` de `Theme.kt` y el color dinamico; la escala tipografica activa
+  sigue siendo `Typography()` (por defecto) hasta el cableado de la fase 2.
+- **Comprobado**: los 4 archivos existen (aceptacion) y `labelSmall` >= 12 sp (aceptacion).
+  Sin cambio funcional: la UI no varía visualmente hasta la fase 2.
