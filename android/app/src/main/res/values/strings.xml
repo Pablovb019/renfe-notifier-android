@@ -148,9 +148,11 @@
     <string name="diag_test_failed">No enviada: %1$s</string>
     <string name="diag_settings_title">Preferencias</string>
     <string name="diag_theme_label">Tema</string>
-    <string name="diag_theme_system">Sistema</string>
+    <string name="diag_theme_system">Según el sistema</string>
+    <string name="diag_theme_system_desc">La app usa el tema del dispositivo.</string>
     <string name="diag_theme_light">Claro</string>
     <string name="diag_theme_dark">Oscuro</string>
+    <string name="diag_theme_loading">Cargando el tema…</string>
     <string name="diag_alerts_label">Recibir avisos</string>
     <string name="diag_force_stop_note">Si la app se forzó a detenerse, Android puede no entregar los avisos hasta que la vuelvas a abrir.</string>
 

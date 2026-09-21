@@ -217,3 +217,52 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   recomposicion; el modo se aplica en vivo con `collectAsStateWithLifecycle`).
 - **Pendiente**: selector de modo de tema visible en la UI (fase 3) y migracion de
   colores hardcodeados de las pantallas (fase 5). Detenido a la espera de instrucciones.
+
+## FASE 3 - SELECTOR DE TEMA + CONTRASTE AA + PREVIEWS (2026-09-21)
+
+- **Objetivo cumplido**: selector de modo de tema en Diagnósticos usando el mismo
+  `ThemeViewModel` (una sola instancia), test de contraste AA sobre la paleta real y
+  previews del tema para el perfil del dispositivo.
+- **Archivos creados**:
+  - `ui/components/ThemeModeSelector.kt`: lista vertical M3 con `selectableGroup`; filas
+    `selectable` con `Role.RadioButton` y `RadioButton(onClick = null)`; `heightIn(min = 56.dp)`;
+    `testTag` por opción; muestra `isLoading` (indicador + "Cargando el tema…") y `saveError`.
+  - `src/test/.../ui/theme/ColorContrastTest.kt`: luminancia relativa sRGB lineal (WCAG 1.4.3)
+    y `contrastRatio`; 9 pares de texto >= 4.5:1 y 4 pares no textuales >= 3:1, en claro y oscuro
+    (4 tests), sobre los tokens reales de `Color.kt`.
+  - `src/debug/.../ui/theme/RenfeThemePreviews.kt`: 4 `@Preview` (claro/oscuro y fontScale=2f)
+    con `widthDp = 360, heightDp = 800, device = "spec:width=1080px,height=2400px,dpi=480"`,
+    `showSystemUi = true` en las dos primeras; contenido con Button, Card, OutlinedTextField,
+    RadioButton y Switch.
+  - `src/androidTest/.../ui/theme/ThemeModeSelectorTest.kt`: 5 tests instrumentales Compose con
+    `createAndroidComposeRule<ComponentActivity>()` (opciones, clic light/dark, loading, error).
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: sustituidos los `FilterChip` de tema por
+    `ThemeCard` + `ThemeModeSelector` (lineas 139-148 y nuevo `ThemeCard`); `DiagnosticsContent`
+    recibe `themeMode/themeLoading/themeSaveError/onSelectTheme`; se conservan switch de avisos,
+    refreshEnvironment, sendTest y computeStages. `DiagnosticsViewModel` intacto.
+  - `navigation/AppNavHost.kt`: nuevo parametro `themeViewModel: ThemeViewModel` (lineas 44-47)
+    reenviado a `DiagnosticsScreen` (linea 117).
+  - `MainActivity.kt`: pasa `themeViewModel` al `AppNavHost` (lineas 62-65). El `ThemeViewModel`
+    se crea una sola vez, con ámbito de Activity, y se comparte por parametro (aceptacion
+    "un solo ThemeViewModel").
+  - `main/res/values/strings.xml`: `diag_theme_system` pasa a valer "Según el sistema" (linea 151),
+    nuevas `diag_theme_system_desc` y `diag_theme_loading`.
+  - Infra (necesaria para compilar el test instrumental): `gradle/libs.versions.toml` anade
+    `ui-test-junit4` y `ui-test-manifest` (versiones gestionadas por el Compose BOM, sin numeros
+    nuevos); `app/build.gradle.kts` anade `androidTestImplementation(platform(BOM))`,
+    `androidTestImplementation(ui-test-junit4)`, `androidTestImplementation(test-ext)` y
+    `debugImplementation(ui-test-manifest)` (build.gradle.kts lineas 119-125).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:testDebugUnitTest --tests "*ColorContrastTest"` -> BUILD SUCCESSFUL; tests=4 failures=0.
+  - `:app:assembleDebug` -> BUILD SUCCESSFUL in 53s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest` -> BUILD SUCCESSFUL in 1m12s;
+    suite completa **13 suites / 100 tests / 0 failures / 0 errors** (fase 2: 12/96);
+    lint **0 errors / 53 warnings**; se genero `app-debug-androidTest.apk`.
+- **Aceptacion**: un solo `ThemeViewModel` (creado en MainActivity y pasado explicitamente);
+  contrastes AA pasan (13 pares/4 tests en ambos modos); previews 360x800 con spec 1080x2400/480.
+- **Nota honesta**: los tests de `ThemeModeSelectorTest` estan compilados (APK instrumental OK) pero
+  NO ejecutados en emulador/dispositivo en esta fase (no hay `connectedDebugAndroidTest` en el plan);
+  se marcara "validado" cuando se lancen sobre el Realme en la fase de validacion.
+- **Pendiente**: componentes base reutilizables (fase 4) y migracion de colores (fase 5).
+  Detenido a la espera de instrucciones.

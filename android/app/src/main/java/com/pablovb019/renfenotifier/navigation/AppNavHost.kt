@@ -13,6 +13,7 @@ import com.pablovb019.renfenotifier.feature.followups.FollowUpsScreen
 import com.pablovb019.renfenotifier.feature.home.HomeScreen
 import com.pablovb019.renfenotifier.feature.pairing.PairingScreen
 import com.pablovb019.renfenotifier.feature.search.SearchScreen
+import com.pablovb019.renfenotifier.ui.theme.ThemeViewModel
 import kotlinx.coroutines.flow.StateFlow
 
 /** Destinos de la aplicación. Ampliado con emparejamiento en paso 21. */
@@ -38,7 +39,10 @@ object Destinations {
  * al pulsar la notificación ("abrir"), una vez por evento emitido.
  */
 @Composable
-fun AppNavHost(pendingFollowupId: StateFlow<String?>? = null) {
+fun AppNavHost(
+    pendingFollowupId: StateFlow<String?>? = null,
+    themeViewModel: ThemeViewModel,
+) {
     val navController = rememberNavController()
 
     if (pendingFollowupId != null) {
@@ -110,6 +114,7 @@ fun AppNavHost(pendingFollowupId: StateFlow<String?>? = null) {
         composable(Destinations.DIAGNOSTICS) {
             DiagnosticsScreen(
                 onBack = { navController.popBackStack() },
+                themeViewModel = themeViewModel,
             )
         }
         composable(

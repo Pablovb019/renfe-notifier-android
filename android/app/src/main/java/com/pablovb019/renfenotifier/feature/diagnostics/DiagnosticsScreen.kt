@@ -17,7 +17,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,12 +39,16 @@ import com.pablovb019.renfenotifier.core.diagnostics.AndroidDeviceEnvironment
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.security.PreferencesRepository
 import com.pablovb019.renfenotifier.feature.followups.MadridFormat
+import com.pablovb019.renfenotifier.ui.components.ThemeModeSelector
+import com.pablovb019.renfenotifier.ui.theme.ThemeMode
+import com.pablovb019.renfenotifier.ui.theme.ThemeViewModel
 
 /** Panel de diagnóstico y ajustes (paso 25). Nunca muestra tokens ni credenciales. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiagnosticsScreen(
     onBack: () -> Unit,
+    themeViewModel: ThemeViewModel,
     modifier: Modifier = Modifier,
     viewModel: DiagnosticsViewModel = viewModel {
         val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]
@@ -59,6 +62,9 @@ fun DiagnosticsScreen(
     },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeMode by themeViewModel.mode.collectAsStateWithLifecycle()
+    val themeLoading by themeViewModel.isLoading.collectAsStateWithLifecycle()
+    val themeSaveError by themeViewModel.saveError.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.refreshEnvironment()
@@ -91,7 +97,10 @@ fun DiagnosticsScreen(
     ) { innerPadding ->
         DiagnosticsContent(
             uiState = uiState,
-            onSetTheme = viewModel::setTheme,
+            themeMode = themeMode,
+            themeLoading = themeLoading,
+            themeSaveError = themeSaveError,
+            onSelectTheme = themeViewModel::setMode,
             onSetAlertsEnabled = viewModel::setAlertsEnabled,
             onSendTest = viewModel::sendTestNotification,
             modifier = Modifier.padding(innerPadding),
@@ -102,7 +111,10 @@ fun DiagnosticsScreen(
 @Composable
 private fun DiagnosticsContent(
     uiState: DiagnosticsUiState,
-    onSetTheme: (String) -> Unit,
+    themeMode: ThemeMode,
+    themeLoading: Boolean,
+    themeSaveError: String?,
+    onSelectTheme: (ThemeMode) -> Unit,
     onSetAlertsEnabled: (Boolean) -> Unit,
     onSendTest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -140,10 +152,14 @@ private fun DiagnosticsContent(
             text = stringResource(R.string.diag_settings_title),
             style = MaterialTheme.typography.titleMedium,
         )
+        ThemeCard(
+            themeMode = themeMode,
+            isLoading = themeLoading,
+            saveError = themeSaveError,
+            onSelectTheme = onSelectTheme,
+        )
         SettingsCard(
-            theme = uiState.theme,
             alertsEnabled = uiState.alertsEnabled,
-            onSetTheme = onSetTheme,
             onSetAlertsEnabled = onSetAlertsEnabled,
         )
 
@@ -357,11 +373,11 @@ private fun CountsCard(uiState: DiagnosticsUiState) {
 }
 
 @Composable
-private fun SettingsCard(
-    theme: String,
-    alertsEnabled: Boolean,
-    onSetTheme: (String) -> Unit,
-    onSetAlertsEnabled: (Boolean) -> Unit,
+private fun ThemeCard(
+    themeMode: ThemeMode,
+    isLoading: Boolean,
+    saveError: String?,
+    onSelectTheme: (ThemeMode) -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -374,20 +390,28 @@ private fun SettingsCard(
                 text = stringResource(R.string.diag_theme_label),
                 style = MaterialTheme.typography.titleSmall,
             )
-            val options = listOf(
-                PreferencesRepository.THEME_SYSTEM to R.string.diag_theme_system,
-                PreferencesRepository.THEME_LIGHT to R.string.diag_theme_light,
-                PreferencesRepository.THEME_DARK to R.string.diag_theme_dark,
+            ThemeModeSelector(
+                selected = themeMode,
+                onSelect = onSelectTheme,
+                isLoading = isLoading,
+                saveError = saveError,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                options.forEach { (value, labelRes) ->
-                    FilterChip(
-                        selected = theme == value,
-                        onClick = { onSetTheme(value) },
-                        label = { Text(text = stringResource(labelRes)) },
-                    )
-                }
-            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsCard(
+    alertsEnabled: Boolean,
+    onSetAlertsEnabled: (Boolean) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

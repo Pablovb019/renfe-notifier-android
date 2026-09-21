@@ -1142,3 +1142,31 @@ uff check .: All checks passed.
 - **Aceptacion**: dynamic color eliminado; sin claves nuevas en DataStore; cambio de tema sin reiniciar
   Activity (StateFlow + recomposicion).
 - **Pendiente**: UI del selector de modo de tema (fase 3); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 3: Selector de tema + contraste AA + previews (2026-09-21) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Tests instrumentales COMPILADOS
+  (APK androidTest generado) pero no ejecutados en dispositivo/emulador en esta fase.
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `bfaea7f`):
+  - `ui/components/ThemeModeSelector.kt`: lista M3 `selectableGroup` + filas `selectable` con
+    Role.RadioButton y RadioButton(onClick=null), heightIn(min=56.dp), estados isLoading/saveError.
+  - `src/test/.../ui/theme/ColorContrastTest.kt`: luminancia + ratio WCAG; 9 pares >=4.5 y
+    4 no-textuales >=3 en claro y oscuro (4 tests, todos verdes, paleta OK en ambos modos).
+  - `src/debug/.../ui/theme/RenfeThemePreviews.kt`: 4 previews 360x800 / spec 1080x2400/480,
+    noche/dia, showSystemUi y fontScale=2f.
+  - `src/androidTest/.../ui/theme/ThemeModeSelectorTest.kt`: 5 tests Compose instrumentales.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: chips de tema -> `ThemeCard` + `ThemeModeSelector`
+    con el ThemeViewModel compartido; conserva switch avisos, refreshEnvironment, sendTest,
+    computeStages. `DiagnosticsViewModel` intacto.
+  - `navigation/AppNavHost.kt:44-47`: parametro `themeViewModel` reenviado (linea 117).
+  - `MainActivity.kt:62-65`: pasa el VM compartido (una sola instancia, ambito Activity).
+  - `strings.xml:151-155`: diag_theme_system="Según el sistema", + desc y loading.
+  - Infra: `libs.versions.toml` + `app/build.gradle.kts` (deps androidTest via Compose BOM).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:testDebugUnitTest --tests "*ColorContrastTest"` -> BUILD SUCCESSFUL; 4 tests, 0 fallos.
+  - `:app:assembleDebug` -> BUILD SUCCESSFUL in 53s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest` -> BUILD SUCCESSFUL;
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint 0 errores / 53 warnings; androidTest APK OK.
+- **Aceptacion**: un solo ThemeViewModel; contrastes AA (4 tests) pasan; previews 360x800 spec 1080x2400/480.
+- **Pendiente**: ejecutar ThemeModeSelectorTest en el Realme/emulador (validacion); componentes base
+  (fase 4); migracion de colores (fase 5). Detenido a la espera de instrucciones.

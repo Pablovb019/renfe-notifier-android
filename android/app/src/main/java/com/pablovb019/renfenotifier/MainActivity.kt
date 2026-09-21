@@ -59,7 +59,10 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             RenfeNotifierTheme(darkTheme = darkTheme) {
-                AppNavHost(pendingFollowupId = pendingFollowupId)
+                AppNavHost(
+                    pendingFollowupId = pendingFollowupId,
+                    themeViewModel = themeViewModel,
+                )
             }
         }
     }
