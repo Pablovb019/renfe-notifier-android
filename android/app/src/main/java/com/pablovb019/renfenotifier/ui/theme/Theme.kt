@@ -1,75 +1,105 @@
 package com.pablovb019.renfenotifier.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-/** Azul Renfe con neutros cálidos: paleta fija usada cuando no hay color dinámico. */
+/** Esquema claro con los 36 roles de la paleta de Renfe Notifier. */
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF0057A6),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD6E3FF),
-    onPrimaryContainer = Color(0xFF001A3A),
-    secondary = Color(0xFF505F79),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD6E3FF),
-    onSecondaryContainer = Color(0xFF0D1D33),
-    tertiary = Color(0xFF00696C),
-    onTertiary = Color.White,
-    background = Color(0xFFF9F9FF),
-    onBackground = Color(0xFF191B21),
-    surface = Color(0xFFF9F9FF),
-    onSurface = Color(0xFF191B21),
-    outline = Color(0xFF75777F),
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    inversePrimary = LightInversePrimary,
+    secondary = LightSecondary,
+    onSecondary = LightOnSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightTertiary,
+    onTertiary = LightOnTertiary,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    background = LightBackground,
+    onBackground = LightOnBackground,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    surfaceTint = LightSurfaceTint,
+    inverseSurface = LightInverseSurface,
+    inverseOnSurface = LightInverseOnSurface,
+    error = LightError,
+    onError = LightOnError,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    scrim = LightScrim,
+    surfaceBright = LightSurfaceBright,
+    surfaceDim = LightSurfaceDim,
+    surfaceContainer = LightSurfaceContainer,
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaceContainerHighest,
+    surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainerLowest = LightSurfaceContainerLowest,
 )
 
+/** Esquema oscuro con los 36 roles de la paleta de Renfe Notifier. */
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFA8C8FF),
-    onPrimary = Color(0xFF002E62),
-    primaryContainer = Color(0xFF004388),
-    onPrimaryContainer = Color(0xFFD6E3FF),
-    secondary = Color(0xFFB9C4DE),
-    onSecondary = Color(0xFF232F44),
-    secondaryContainer = Color(0xFF39455B),
-    onSecondaryContainer = Color(0xFFD6E3FF),
-    tertiary = Color(0xFF4DD8DC),
-    onTertiary = Color(0xFF003739),
-    background = Color(0xFF12141B),
-    onBackground = Color(0xFFE2E2E9),
-    surface = Color(0xFF12141B),
-    onSurface = Color(0xFFE2E2E9),
-    outline = Color(0xFF8F9099),
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    inversePrimary = DarkInversePrimary,
+    secondary = DarkSecondary,
+    onSecondary = DarkOnSecondary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    tertiary = DarkTertiary,
+    onTertiary = DarkOnTertiary,
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiaryContainer = DarkOnTertiaryContainer,
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    surfaceTint = DarkSurfaceTint,
+    inverseSurface = DarkInverseSurface,
+    inverseOnSurface = DarkInverseOnSurface,
+    error = DarkError,
+    onError = DarkOnError,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
+    scrim = DarkScrim,
+    surfaceBright = DarkSurfaceBright,
+    surfaceDim = DarkSurfaceDim,
+    surfaceContainer = DarkSurfaceContainer,
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaceContainerHighest,
+    surfaceContainerLow = DarkSurfaceContainerLow,
+    surfaceContainerLowest = DarkSurfaceContainerLowest,
 )
 
 /**
- * Tema Material 3. Usa color dinámico (Android 12+) y conserva una paleta fija
- * con buen contraste como respaldo; soporta claro y oscuro según el sistema.
+ * Tema Material 3 de Renfe Notifier con la paleta fija (sin color dinamico).
+ * Soporta claro y oscuro segun el parametro [darkTheme] y aplica la tipografia
+ * y las formas del sistema visual de la fase 1.
  */
 @Composable
 fun RenfeNotifierTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
+        typography = RenfeTypography,
+        shapes = RenfeShapes,
         content = content,
     )
 }

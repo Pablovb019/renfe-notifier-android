@@ -170,3 +170,50 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   sigue siendo `Typography()` (por defecto) hasta el cableado de la fase 2.
 - **Comprobado**: los 4 archivos existen (aceptacion) y `labelSmall` >= 12 sp (aceptacion).
   Sin cambio funcional: la UI no varía visualmente hasta la fase 2.
+
+## FASE 2 - THEME: dynamic color OFF + ThemeMode + ThemeViewModel (2026-09-21)
+
+- **Objetivo cumplido**: `Theme.kt` refactorizado (solo paleta fija, sin dynamic color),
+  modo de tema gestionado por `ThemeMode` + `ThemeViewModel` sobre el DataStore existente,
+  y `MainActivity` observa el estado con `collectAsStateWithLifecycle`.
+- **Archivos creados**:
+  - `ui/theme/ThemeMode.kt`: enum `SYSTEM/LIGHT/DARK`; `fromStorage(String?)` mapea
+    `"system"/"light"/"dark"` y cualquier otro valor/null a `SYSTEM`; `toStorage()` devuelve
+    los strings exactos de `PreferencesRepository.THEME_SYSTEM/LIGHT/DARK`
+    (`android/app/src/main/java/com/pablovb019/renfenotifier/core/security/PreferencesRepository.kt:73-75`),
+    nunca `enum.name`.
+  - `ui/theme/ThemeViewModel.kt`: depende de `SettingsSource` (`PreferencesRepository.kt:24-29`);
+    `mode`/`isLoading`/`saveError` como `StateFlow`; `setMode()` optimista con escrituras
+    serializadas (se cancela el guardado anterior, gana la ultima); captura SOLO `IOException`
+    (lectura inicial y escritura). `ThemeViewModelFactory(Application)` explicita
+    (`ThemeViewModel.kt:49-59`).
+  - Tests: `src/test/.../ui/theme/ThemeModeTest.kt` (4) y `ThemeViewModelTest.kt` (7) con
+    `FakeSettingsSource` y `StandardTestDispatcher` como Main.
+- **Archivos modificados**:
+  - `ui/theme/Theme.kt`: `lightColorScheme`/`darkColorScheme` con los 36 roles de `Color.kt`
+    (lineas 9-49); firma `RenfeNotifierTheme(darkTheme: Boolean = isSystemInDarkTheme(), content)`
+    (lineas 55-65); `MaterialTheme(colorScheme, typography = RenfeTypography, shapes = RenfeShapes,
+    content)`. Eliminados imports de `dynamic*ColorScheme`, `Build` y `LocalContext`
+    (antes lineas 3-12).
+  - `MainActivity.kt`: sustituida la observacion manual de `prefs.theme` en `setContent`
+    (antes lineas 51-60) por `viewModel(factory = ThemeViewModelFactory(application))` +
+    `collectAsStateWithLifecycle` (lineas 50-63); `darkTheme = when(mode) { SYSTEM ->
+    isSystemInDarkTheme(); LIGHT -> false; DARK -> true }`. Se conservan `ApiModule.init`,
+    `FcmTokenGateway`, permisos, `pendingFollowupId`, `handleIntent` y `onNewIntent`.
+  - `ui/theme/Type.kt`: el puente `val Typography = Typography()` ya no es necesario
+    (Theme.kt usa ahora `RenfeTypography`) y se mantiene sin uso pendiente de migracion.
+- **Sin claves nuevas en DataStore**: `PreferencesRepository.kt` intacto; `ThemeMode` reutiliza
+  la clave `"theme"` y los valores `"system"/"light"/"dark"` existentes (aceptacion).
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:testDebugUnitTest --tests "*ThemeModeTest" --tests "*ThemeViewModelTest" --no-daemon` ->
+    BUILD SUCCESSFUL in 33s; XML: `ThemeModeTest` tests=4 failures=0, `ThemeViewModelTest` tests=7 failures=0.
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 20s.
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 59s;
+    suite completa **12 suites / 96 tests / 0 failures / 0 errors** (baseline era 10/85);
+    lint: **0 errors / 53 warnings** (igual que baseline).
+  - `rg "dynamicColor|dynamicLightColorScheme|dynamicDarkColorScheme"` -> 0 coincidencias (paso 8).
+- **Aceptacion**: dynamic color eliminado (0 matches); sin claves nuevas en DataStore;
+  cambio de tema sin reiniciar Activity (el VM + StateFlow propaga el guardado y la
+  recomposicion; el modo se aplica en vivo con `collectAsStateWithLifecycle`).
+- **Pendiente**: selector de modo de tema visible en la UI (fase 3) y migracion de
+  colores hardcodeados de las pantallas (fase 5). Detenido a la espera de instrucciones.

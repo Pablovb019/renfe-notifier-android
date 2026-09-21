@@ -1115,3 +1115,30 @@ uff check .: All checks passed.
   - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 22s; reporte XML: **10 suites, 85 tests, 0 failures, 0 errors**.
 - **Aceptacion**: 4 archivos en su sitio; `labelSmall >= 12 sp` (12 sp). Cumplida.
 - **Pendiente**: cablear paleta/tipografia/formas del tema en `Theme.kt` (fase 2); migracion de colores hardcodeados (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 2: Theme (dynamic color OFF) + ThemeMode + ThemeViewModel (2026-09-21) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Sin validacion en emulador/dispositivo
+  real (se hará en fases posteriores de validacion visual).
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `0be5233`):
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/ThemeMode.kt`: enum SYSTEM/LIGHT/DARK;
+    `fromStorage` (valores desconocidos/null -> SYSTEM) y `toStorage` con los strings exactos de
+    `PreferencesRepository.kt:73-75` (nunca `enum.name`).
+  - `.../ui/theme/ThemeViewModel.kt`: `SettingsSource` + StateFlow `mode`/`isLoading`/`saveError`;
+    `setMode` optimista y serializado (cancela el guardado anterior); captura solo `IOException`;
+    `ThemeViewModelFactory(Application)`.
+  - Tests: `android/app/src/test/java/com/pablovb019/renfenotifier/ui/theme/ThemeModeTest.kt` (4 tests)
+    y `ThemeViewModelTest.kt` (7 tests) con `FakeSettingsSource`.
+- **Archivos modificados**:
+  - `.../ui/theme/Theme.kt`: 36 roles de `Color.kt` en light/dark (lineas 9-49); firma
+    `RenfeNotifierTheme(darkTheme = isSystemInDarkTheme(), content)`; `MaterialTheme` con
+    `RenfeTypography` y `RenfeShapes`; eliminado dynamic color.
+  - `MainActivity.kt`: observacion manual de tema sustituida por `ThemeViewModel` +
+    `collectAsStateWithLifecycle` (lineas 50-63); resto de la Activity intacto.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:testDebugUnitTest --tests "*ThemeModeTest" --tests "*ThemeViewModelTest"` -> BUILD SUCCESSFUL; 4+7 tests, 0 failures.
+  - `:app:assembleDebug` -> BUILD SUCCESSFUL in 20s.
+  - `:app:testDebugUnitTest :app:lintDebug` -> BUILD SUCCESSFUL; **12 suites / 96 tests / 0 failures / 0 errors**; lint **0 errors / 53 warnings**.
+  - `rg "dynamicColor|dynamicLightColorScheme|dynamicDarkColorScheme"` -> 0 coincidencias.
+- **Aceptacion**: dynamic color eliminado; sin claves nuevas en DataStore; cambio de tema sin reiniciar
+  Activity (StateFlow + recomposicion).
+- **Pendiente**: UI del selector de modo de tema (fase 3); migracion de colores (fase 5). Detenido a la espera de instrucciones.
