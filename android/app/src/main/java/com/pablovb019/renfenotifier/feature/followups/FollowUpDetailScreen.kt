@@ -1,6 +1,5 @@
 package com.pablovb019.renfenotifier.feature.followups
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +42,8 @@ import com.pablovb019.renfenotifier.R
 import com.pablovb019.renfenotifier.core.model.FollowUpLifecycle
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.network.model.FollowUpDetailOut
+import com.pablovb019.renfenotifier.ui.components.RenfeErrorState
+import com.pablovb019.renfenotifier.ui.components.RenfeLoadingState
 
 /**
  * Detalle de un seguimiento: disponibilidad y última comprobación válida,
@@ -121,7 +123,7 @@ private fun FollowUpDetailContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (uiState.loading && detail == null) {
-            CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
+            RenfeLoadingState(modifier = Modifier.padding(vertical = 40.dp))
         } else if (detail != null) {
             DetailInfoCard(detail = detail, lastValidCheck = uiState.lastValidObservedAt)
 
@@ -193,16 +195,11 @@ private fun FollowUpDetailContent(
                 )
             }
         } else {
-            Text(
-                text = stringResource(R.string.followups_load_error),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = stringResource(R.string.followups_retry),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable(onClick = onRefresh),
-                style = MaterialTheme.typography.labelLarge,
+            RenfeErrorState(
+                icon = Icons.Filled.Warning,
+                title = stringResource(R.string.followups_load_error),
+                text = uiState.actionError ?: stringResource(R.string.followups_no_checks),
+                onRetry = onRefresh,
             )
         }
     }

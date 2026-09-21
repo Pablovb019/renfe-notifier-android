@@ -61,7 +61,6 @@
     <string name="followups_title">Mis seguimientos</string>
     <string name="followups_empty">Todavía no tienes seguimientos.</string>
     <string name="followups_load_error">No se pudieron cargar los seguimientos.</string>
-    <string name="followups_retry">Reintentar</string>
     <string name="followups_filter_all">Todos</string>
     <string name="followups_filter_active">Activos</string>
     <string name="followups_filter_paused">Pausados</string>
@@ -159,6 +158,10 @@
     <!-- Diálogos comunes -->
     <string name="dialog_accept">Aceptar</string>
     <string name="dialog_cancel">Cancelar</string>
+
+    <!-- Componentes base -->
+    <string name="common_back">Volver</string>
+    <string name="common_retry">Reintentar</string>
 
     <!-- Accesibilidad -->
     <string name="cd_search_back">Volver</string>

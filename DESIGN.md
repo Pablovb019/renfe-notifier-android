@@ -266,3 +266,68 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   se marcara "validado" cuando se lancen sobre el Realme en la fase de validacion.
 - **Pendiente**: componentes base reutilizables (fase 4) y migracion de colores (fase 5).
   Detenido a la espera de instrucciones.
+
+## FASE 4 - COMPONENTES BASE REUTILIZABLES (2026-09-22)
+
+- **Objetivo cumplido**: 5 componentes UI pequeños e independientes en `ui/components/`,
+  previews del set y tests instrumentales; migracion de loading/error SOLO donde fue
+  mecanica (FollowUps y FollowUpDetail). Sin megacomponentes (aceptacion).
+- **Archivos creados**:
+  - `ui/components/RenfeScreenScaffold.kt`: Scaffold M3 + `TopAppBar`. Parametros
+    `title`, `onBack: (() -> Unit)?` (null -> sin boton atras), `actions` (lambda, vacia por
+    defecto) y `content: @Composable (PaddingValues) -> Unit`; consume `innerPadding` UNA vez
+    (linea 44) y delega al content. Titulo con `titleLarge` (24 sp), `maxLines = 1`,
+    `TextOverflow.Ellipsis`; `contentDescription` del boton atras = `R.string.common_back`.
+  - `ui/components/RenfeLoadingState.kt`: `Box(fillMaxSize) + contentAlignment = Center`
+    con `CircularProgressIndicator()` **sin** `fillMaxWidth` sobre el circulo; `testTag`.
+  - `ui/components/RenfeEmptyState.kt`: icono (contentDescription null) + titulo `titleMedium`
+    + texto `bodyMedium` onSurfaceVariant + `actionLabel`/`onAction` opcionales
+    (`TextButton` solo si ambos presentes); `testTag`.
+  - `ui/components/RenfeErrorState.kt`: icono (tint error) + titulo + texto; boton
+    "Reintentar" (`R.string.common_retry`) SOLO si `onRetry != null`; `testTag`.
+  - `ui/components/RenfeStatusBadge.kt`: `enum RenfeStatusType (SUCCESS/WARNING/ERROR/NEUTRAL)`;
+    fondo `RoundedCornerShape(4.dp)` con `primaryContainer`/`tertiaryContainer`/`errorContainer`/
+    `surfaceVariant`, contenido `on*Container`/`onSurfaceVariant`, icono nullable 14 dp,
+    `labelSmall`. `modifier` = primer parametro opcional (lint ModifierParameter).
+  - `src/debug/.../ui/components/RenfeComponentsPreviews.kt`: 4 `@Preview` 360x800,
+    claro/oscuro, fontScale 1x (showSystemUi=true) y 2x, device `"spec:width=1080px,
+    height=2400px,dpi=480"`; contenido combinado en `RenfeScreenScaffold`: badges, empty y error.
+  - `src/androidTest/.../ui/components/RenfeComponentsTest.kt`: 7 tests Compose con
+    `createAndroidComposeRule<ComponentActivity>()`: titulo+atras del scaffold (conteo de
+    clics), loading tag, empty con accion, empty sin boton, error sin "Reintentar", error
+    con "Reintentar" clickable, y badges (labels visibles). Compilados, NO ejecutados en
+    dispositivo/emulador (igual que fase 3).
+- **Archivos modificados (migracion mecanica loading/error)**:
+  - `main/res/values/strings.xml`: nuevas `common_back` "Volver" (linea 163) y `common_retry`
+    "Reintentar" (linea 164), comunes a los componentes; eliminada `followups_retry` (ya sin
+    uso tras la migracion -> fuera de los 4 UnusedResources).
+  - `feature/followups/FollowUpsScreen.kt`: carga -> `RenfeLoadingState` (117) y bloque de
+    error de 3 `Text` + retry -> `RenfeErrorState` con `Icons.Filled.Warning`,
+    `followups_load_error` y `onRetry = onRefresh` (120-126). Eliminados imports en desuso
+    (`Box`, `Alignment`, `CircularProgressIndicator`).
+  - `feature/followups/FollowUpDetailScreen.kt`: indicador de carga `fillMaxWidth` ->
+    `RenfeLoadingState` (126); branch de error (sin detail) -> `RenfeErrorState` con
+    `Icons.Filled.Warning`, `followups_load_error` y `text = uiState.actionError ?:
+    followups_no_checks` (198-203); reintento del error -> `onRetry = onRefresh`. Se conserva
+    el `CircularProgressIndicator` del boton de accion (311, spinner inline, fuera de alcance).
+  - NO migrados (no mecanicos): empties (solo `Text` sin icono/descripcion) y spinners
+    inline de `SearchScreen.kt:223,461`, `HomeScreen.kt:140`, `DiagnosticsScreen.kt:140`,
+    `PairingScreen.kt:122` (estados parciales, no estados de pantalla).
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s (12 ejecutados,
+    26 up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon`
+    -> BUILD SUCCESSFUL in 1m; **13 suites / 100 tests / 0 failures / 0 errors** (igual que
+    fase 3, sin regresiones); lint: 0 errors / **54 warnings** (aparece `ModifierParameter`
+    en `RenfeStatusBadge` -> reordenado `modifier` primero, sin cambios en llamadas que ya
+    usaban `type =`); `app-debug.apk` y `app-debug-androidTest.apk` generados.
+  - Re-verificacion tras el fix de lint: `:app:assembleDebug :app:lintDebug` -> BUILD
+    SUCCESSFUL in 1m6s; lint **0 errors / 53 warnings** (baseline).
+- **Aceptacion**: 5 componentes pequenos (ningun megacomponente); loading sin fillMaxWidth
+  sobre el indicador; previews 360x800 claro/oscuro fontScale 1/2 spec 1080x2400/480;
+  builds, 100 tests de JVM y lint al baseline.
+- **Nota honesta**: `RenfeComponentsTest` (7 tests) y `ThemeModeSelectorTest` (5 tests)
+  compilados con `assembleDebugAndroidTest` pero NO ejecutados; la ejecucion sobre el Realme
+  se marcara como "validado" en la fase de validacion.
+- **Pendiente**: migracion de colores hardcodeados de las pantallas (fase 5). Detenido a la
+  espera de instrucciones.

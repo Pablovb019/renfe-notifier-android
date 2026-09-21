@@ -1170,3 +1170,40 @@ uff check .: All checks passed.
 - **Aceptacion**: un solo ThemeViewModel; contrastes AA (4 tests) pasan; previews 360x800 spec 1080x2400/480.
 - **Pendiente**: ejecutar ThemeModeSelectorTest en el Realme/emulador (validacion); componentes base
   (fase 4); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 4: Componentes base reutilizables (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Tests instrumentales COMPILADOS
+  (APK androidTest generado) pero no ejecutados en dispositivo/emulador en esta fase.
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `5472496`):
+  - `ui/components/RenfeScreenScaffold.kt`: Scaffold M3 + TopAppBar; params title, onBack
+    (null -> sin boton), actions y content(PaddingValues); innerPadding consumido una vez;
+    titulo titleLarge 24 sp, maxLines=1, Ellipsis; contentDescription=common_back.
+  - `ui/components/RenfeLoadingState.kt`: indicador centrado SIN fillMaxWidth sobre el circulo.
+  - `ui/components/RenfeEmptyState.kt`: icono + titulo + texto + accion opcional.
+  - `ui/components/RenfeErrorState.kt`: icono + titulo + texto + boton "Reintentar" solo si callback.
+  - `ui/components/RenfeStatusBadge.kt`: enum SUCCESS/WARNING/ERROR/NEUTRAL; contenedores
+    primaryContainer/tertiaryContainer/errorContainer/surfaceVariant; icono nullable; labelSmall.
+  - `src/debug/.../ui/components/RenfeComponentsPreviews.kt`: 4 previews 360x800, claro/oscuro,
+    fontScale 1/2, spec 1080x2400/480 con showSystemUi.
+  - `src/androidTest/.../ui/components/RenfeComponentsTest.kt`: 7 tests Compose instrumentales.
+- **Archivos modificados**:
+  - `strings.xml:163-164`: `common_back`="Volver", `common_retry`="Reintentar"; eliminada
+    `followups_retry` (sin usos tras la migracion).
+  - `feature/followups/FollowUpsScreen.kt:117,120-126`: loading -> RenfeLoadingState; bloque de
+    error (3 Text + retry) -> RenfeErrorState (Icons.Filled.Warning, followups_load_error, onRetry=onRefresh).
+  - `feature/followups/FollowUpDetailScreen.kt:126,198-203`: loading -> RenfeLoadingState; branch
+    de error -> RenfeErrorState con text = actionError ?: followups_no_checks y onRetry=onRefresh.
+  - NO migrados (no mecanicos): empties y spinners inline de Search/Home/Diagnostics/Pairing
+    (SearchScreen.kt:223,461; HomeScreen.kt:140; DiagnosticsScreen.kt:140; PairingScreen.kt:122).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s (12 ejecutados, 26 up-to-date).
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 1m; **13 suites / 100 tests / 0 fallos / 0 errores** (sin regresiones);
+    lint 0 errores / 54 warnings (nueva ModifierParameter en RenfeStatusBadge).
+  - Fix: `modifier` reordenado a primer parametro opcional en RenfeStatusBadge; re-verificacion
+    `:app:assembleDebug :app:lintDebug` -> BUILD SUCCESSFUL; lint **0 errores / 53 warnings**
+    (baseline). Nota: las llamadas usan `type =`, por lo que no rompió nada.
+- **Aceptacion**: 5 componentes pequenos (no megacomponente); loading sin fillMaxWidth;
+  previews 360x800 con spec 1080x2400/480 y showSystemUi.
+- **Pendiente**: ejecutar RenfeComponentsTest (+ ThemeModeSelectorTest de fase 3) en el
+  Realme/emulador (validacion); migracion de colores (fase 5). Detenido a la espera de instrucciones.

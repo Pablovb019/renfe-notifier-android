@@ -2,7 +2,6 @@ package com.pablovb019.renfenotifier.feature.followups
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
@@ -24,7 +23,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablovb019.renfenotifier.R
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.network.model.FollowUpOut
+import com.pablovb019.renfenotifier.ui.components.RenfeErrorState
+import com.pablovb019.renfenotifier.ui.components.RenfeLoadingState
 
 /**
  * Listado de seguimientos con filtro por ciclo de vida. Tocar un elemento abre
@@ -114,30 +114,15 @@ private fun FollowUpsContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (uiState.loading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                RenfeLoadingState(modifier = Modifier.padding(vertical = 32.dp))
             } else {
                 uiState.error?.let { error ->
-                    Text(
-                        text = stringResource(R.string.followups_load_error),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
+                    RenfeErrorState(
+                        icon = Icons.Filled.Warning,
+                        title = stringResource(R.string.followups_load_error),
                         text = error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = stringResource(R.string.followups_retry),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable(onClick = onRefresh),
-                        style = MaterialTheme.typography.labelLarge,
+                        onRetry = onRefresh,
+                        modifier = Modifier.padding(vertical = 16.dp),
                     )
                 }
 
