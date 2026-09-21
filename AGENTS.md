@@ -26,10 +26,16 @@
 - No ejecutar consultas de prueba reales contra Renfe sin autorización específica y controlada (usar fixtures y mocks).
 
 ## 4. Gestión del Repositorio y Git
-- Trabaja en ramas del nuevo repositorio (`renfe-notifier-android`).
-- No hagas `git push` ni `merge` sin autorización explícita.
+- Trabaja en ramas del nuevo repositorio (`renfe-notifier-android`)
 - Antes de proponer o ejecutar un push, advierte siempre si activará workflows de CI/CD.
 - Mantén la carpeta `prompts/` intacta.
+
+### 4.1 Git y ramas - Exclusiva del redesign de la UI
+- Los push se hacen a la rama de trabajo `redesign/ui-m3` al final de cada fase del plan de rediseño.
+- NUNCA se hace push a `main` durante el rediseño.
+- La fusión a `main` se hace al final del rediseño con autorización explícita del usuario.
+- No hacer force-push.
+- No hacer merge entre ramas durante el rediseño.
 
 ## 5. Registro y Verificación de Progreso
 - Al terminar cada paso, actualiza obligatoriamente `PROGRESS.md` documentando:
@@ -44,3 +50,9 @@
   - *Validado en dispositivo real (realme GT Neo 2) o VM*
 - **Nunca afirmes haber realizado una acción, prueba o verificación sin evidencia real comprobable**.
 - Al completar el paso asignado, resume lo realizado y detente a la espera de instrucciones.
+
+## Plan de rediseño
+- La carpeta `prompts/redesign-plan/` contiene el plan de prompts del rediseño visual.
+- El agente puede LEERLA, pero NO modificarla.
+- Los prompts se ejecutan uno a uno, en orden.
+- El estado real de cada fase vive en `DESIGN.md` y `PROGRESS.md`.
