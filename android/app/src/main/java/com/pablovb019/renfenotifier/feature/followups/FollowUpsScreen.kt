@@ -236,7 +236,7 @@ private fun alertLabel(value: String): String = when (value) {
 @Composable
 private fun lifecycleColor(value: String)
         : androidx.compose.ui.graphics.Color = when (value) {
-    "active" -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
+    "active" -> MaterialTheme.colorScheme.onPrimaryContainer
     "paused" -> MaterialTheme.colorScheme.tertiary
     "expired" -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -245,7 +245,7 @@ private fun lifecycleColor(value: String)
 @Composable
 private fun availabilityColor(value: String)
         : androidx.compose.ui.graphics.Color = when (value) {
-    "available" -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
+    "available" -> MaterialTheme.colorScheme.onPrimaryContainer
     "unavailable" -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

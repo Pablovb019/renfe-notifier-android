@@ -1,15 +1,12 @@
 package com.pablovb019.renfenotifier.feature.diagnostics
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
@@ -39,6 +35,8 @@ import com.pablovb019.renfenotifier.core.diagnostics.AndroidDeviceEnvironment
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.security.PreferencesRepository
 import com.pablovb019.renfenotifier.feature.followups.MadridFormat
+import com.pablovb019.renfenotifier.ui.components.BadgeType
+import com.pablovb019.renfenotifier.ui.components.RenfeStatusBadge
 import com.pablovb019.renfenotifier.ui.components.ThemeModeSelector
 import com.pablovb019.renfenotifier.ui.theme.ThemeMode
 import com.pablovb019.renfenotifier.ui.theme.ThemeViewModel
@@ -214,20 +212,11 @@ private fun StageCard(stage: DiagnosticStage) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Box(
-                modifier = Modifier
-                    .background(
-                        color = statusColor(stage.status),
-                        shape = RoundedCornerShape(4.dp),
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = stringResource(statusLabel(stage.status)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
-                )
-            }
+            RenfeStatusBadge(
+                label = stringResource(statusLabel(stage.status)),
+                icon = null,
+                type = statusType(stage.status),
+            )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(stageLabel(stage.kind)),
@@ -279,7 +268,7 @@ private fun ServerCard(uiState: DiagnosticsUiState) {
                     },
                 ),
                 color = if (uiState.googlePlayServicesAvailable) {
-                    Color(0xFF1B7F3A)
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.error
                 },
@@ -294,7 +283,7 @@ private fun ServerCard(uiState: DiagnosticsUiState) {
                     },
                 ),
                 color = if (uiState.postNotificationsGranted) {
-                    Color(0xFF1B7F3A)
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.error
                 },
@@ -309,7 +298,7 @@ private fun ServerCard(uiState: DiagnosticsUiState) {
                     },
                 ),
                 color = if (uiState.fcmChannelEnabled) {
-                    Color(0xFF1B7F3A)
+                    MaterialTheme.colorScheme.onPrimaryContainer
                 } else {
                     MaterialTheme.colorScheme.error
                 },
@@ -447,11 +436,11 @@ private fun statusLabel(status: StageStatus): Int = when (status) {
     StageStatus.UNKNOWN -> R.string.diag_status_unknown
 }
 
-private fun statusColor(status: StageStatus): Color = when (status) {
-    StageStatus.OK -> Color(0xFF1B7F3A)
-    StageStatus.ATTENTION -> Color(0xFFB87333)
-    StageStatus.BLOCKED -> Color(0xFFB00020)
-    StageStatus.UNKNOWN -> Color(0xFF75777F)
+private fun statusType(status: StageStatus): BadgeType = when (status) {
+    StageStatus.OK -> BadgeType.SUCCESS
+    StageStatus.ATTENTION -> BadgeType.WARNING
+    StageStatus.BLOCKED -> BadgeType.ERROR
+    StageStatus.UNKNOWN -> BadgeType.NEUTRAL
 }
 
 private fun formatBytes(value: Long): String = when {

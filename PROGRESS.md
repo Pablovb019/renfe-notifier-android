@@ -1207,3 +1207,33 @@ uff check .: All checks passed.
   previews 360x800 con spec 1080x2400/480 y showSystemUi.
 - **Pendiente**: ejecutar RenfeComponentsTest (+ ThemeModeSelectorTest de fase 3) en el
   Realme/emulador (validacion); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 5: Migracion de colores hardcodeados (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Sin cambio funcional.
+- **Comando previo verificado**: HEAD `f681ea8` (fase 4), rama `redesign/ui-m3`.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: `StageCard` (215-219) -> el Box con
+    background+Color.White se sustituye por `RenfeStatusBadge(icon=null, type=statusType(...))`;
+    nueva `statusType(status): BadgeType` (439) [OK->SUCCESS, ATTENTION->WARNING,
+    BLOCKED->ERROR, UNKNOWN->NEUTRAL]; eliminada `statusColor` y los imports sin uso
+    (background/Box/RoundedCornerShape/Color). `ServerCard` (271, 286, 301): verde ->
+    `onPrimaryContainer`.
+  - `feature/followups/FollowUpsScreen.kt:239,248` y `FollowUpDetailScreen.kt:415,424` y
+    `feature/search/SearchScreen.kt:501`: verde de exito/activo/disponible ->
+    `MaterialTheme.colorScheme.onPrimaryContainer`.
+  - `ui/components/RenfeStatusBadge.kt` (+ previews debug y RenfeComponentsTest): renombrado
+    el enum `RenfeStatusType` -> `BadgeType` (el prompt de fase 5 lo referencia como
+    `RenfeStatusBadge(BadgeType.SUCCESS)`).
+- **Decision documentada**: `primaryContainer` como color de TEXTO rompe AA (1.1:1 en claro);
+  por eso en texto se usa el rol de contenido de SUCCESS (`onPrimaryContainer`), contraste
+  verificado ~16.8:1 (claro) y ~13.5:1 (oscuro). Detalle en DESIGN.md.
+- **Grep de aceptacion**: `rg "Color\(0x|Color\.White|Color\.Black|Color\.Red|Color\.Gray"`
+  en `feature/` -> 0 coincidencias; `rg "0x"` en `feature/` -> 0 coincidencias.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 39s (exit 0).
+  - `:app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 57s (exit 0);
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errores / 53 warnings** (baseline).
+- **Aceptacion**: 0 literal de color en pantallas; suite real verde (100 tests, el "85/85" del
+  prompt es un numero desactualizado de fases previas).
+- **Pendiente**: refactor de las pantallas de feature al sistema de componentes (fases 6-11).
+  Detenido a la espera de instrucciones.

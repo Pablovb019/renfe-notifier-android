@@ -129,10 +129,10 @@ class RenfeComponentsTest {
         composeRule.setContent {
             RenfeNotifierTheme {
                 Column {
-                    RenfeStatusBadge(label = "Activo", icon = Icons.Filled.CheckCircle, type = RenfeStatusType.SUCCESS)
-                    RenfeStatusBadge(label = "Revisar", icon = Icons.Filled.Info, type = RenfeStatusType.WARNING)
-                    RenfeStatusBadge(label = "Bloqueado", icon = null, type = RenfeStatusType.ERROR)
-                    RenfeStatusBadge(label = "Desconocido", icon = null, type = RenfeStatusType.NEUTRAL)
+                    RenfeStatusBadge(label = "Activo", icon = Icons.Filled.CheckCircle, type = BadgeType.SUCCESS)
+                    RenfeStatusBadge(label = "Revisar", icon = Icons.Filled.Info, type = BadgeType.WARNING)
+                    RenfeStatusBadge(label = "Bloqueado", icon = null, type = BadgeType.ERROR)
+                    RenfeStatusBadge(label = "Desconocido", icon = null, type = BadgeType.NEUTRAL)
                 }
             }
         }

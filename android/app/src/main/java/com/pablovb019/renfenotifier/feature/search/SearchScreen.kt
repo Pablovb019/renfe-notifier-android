@@ -498,7 +498,7 @@ private fun formatTime(value: String?): String = value?.take(5) ?: "--:--"
 
 @Composable
 private fun availabilityColor(value: String) = when (value) {
-    Availability.AVAILABLE -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
+    Availability.AVAILABLE -> MaterialTheme.colorScheme.onPrimaryContainer
     Availability.NO_AVAILABILITY -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

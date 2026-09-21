@@ -78,10 +78,10 @@ private fun RenfeComponentsPreviewContent() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            RenfeStatusBadge(label = "Activo", icon = Icons.Filled.CheckCircle, type = RenfeStatusType.SUCCESS)
-            RenfeStatusBadge(label = "Revisar", icon = Icons.Filled.Info, type = RenfeStatusType.WARNING)
-            RenfeStatusBadge(label = "Bloqueado", icon = Icons.Filled.Warning, type = RenfeStatusType.ERROR)
-            RenfeStatusBadge(label = "Desconocido", icon = null, type = RenfeStatusType.NEUTRAL)
+            RenfeStatusBadge(label = "Activo", icon = Icons.Filled.CheckCircle, type = BadgeType.SUCCESS)
+            RenfeStatusBadge(label = "Revisar", icon = Icons.Filled.Info, type = BadgeType.WARNING)
+            RenfeStatusBadge(label = "Bloqueado", icon = Icons.Filled.Warning, type = BadgeType.ERROR)
+            RenfeStatusBadge(label = "Desconocido", icon = null, type = BadgeType.NEUTRAL)
             RenfeEmptyState(
                 icon = Icons.Filled.Info,
                 title = "Sin datos",

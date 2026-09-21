@@ -412,7 +412,7 @@ private fun lifecycleLabel(value: String): String = when (value) {
 @Composable
 private fun lifecycleColor(value: String)
         : androidx.compose.ui.graphics.Color = when (value) {
-    FollowUpLifecycle.ACTIVE -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
+    FollowUpLifecycle.ACTIVE -> MaterialTheme.colorScheme.onPrimaryContainer
     FollowUpLifecycle.PAUSED -> MaterialTheme.colorScheme.tertiary
     FollowUpLifecycle.EXPIRED -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -421,7 +421,7 @@ private fun lifecycleColor(value: String)
 @Composable
 private fun availabilityColor(value: String)
         : androidx.compose.ui.graphics.Color = when (value) {
-    "available" -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
+    "available" -> MaterialTheme.colorScheme.onPrimaryContainer
     "unavailable" -> MaterialTheme.colorScheme.error
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

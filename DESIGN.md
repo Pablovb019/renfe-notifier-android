@@ -331,3 +331,55 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   se marcara como "validado" en la fase de validacion.
 - **Pendiente**: migracion de colores hardcodeados de las pantallas (fase 5). Detenido a la
   espera de instrucciones.
+
+## FASE 5 - MIGRACION DE COLORES HARDCODEADOS (2026-09-22)
+
+- **Objetivo cumplido**: 0 literales de color (`Color(0x...)`, `Color.White/Black/Red/Gray`)
+  fuera de `ui/theme`. Sin cambios funcionales.
+- **Decision**: en la fase 5 del plan el enum de la insignia se referencia como `BadgeType`
+  (`RenfeStatusBadge(BadgeType.SUCCESS)`), por lo que se renombra el enum `RenfeStatusType`
+  -> `BadgeType` (mismo archivo `ui/components/RenfeStatusBadge.kt:19`), junto con sus usos en
+  `src/debug` (previews) y `src/androidTest` (RenfeComponentsTest).
+- **Sustituciones** (mapeo segun prompt, sobre roles de `MaterialTheme.colorScheme`):
+  - `Color(0xFF1B7F3A)` (exito/activo/disponible) -> `onPrimaryContainer` en **texto** sobre
+    superficie: el rol contenedor `primaryContainer` como color de texto romperia el contraste
+    AA (LightPrimaryContainer `#FFD8EF` vs LightSurface `#FFF8FA` ~= 1.1:1), asi que para
+    texto se usa el rol de contenido de `BadgeType.SUCCESS` definido en fase 4
+    (`onPrimaryContainer`), que cumple AA con amplio margen (claro 16.8:1, oscuro 13.5:1).
+  - `Color.White` sobre fondo de estado -> eliminado: ese fondo pasivo ahora lo pinta el propio
+    `RenfeStatusBadge` (contenidos `onPrimaryContainer/onTertiaryContainer/onErrorContainer/
+    onSurfaceVariant`).
+  - `Color(0xFFB87333)` / `Color(0xFFB00020)` / `Color(0xFF75777F)` ya no existen: el mapeo de
+    sitio en sitio usa `tertiary`/`error`/`onSurfaceVariant` (fase 4) o el badge con
+    `BadgeType.WARNING/ERROR/NEUTRAL`.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`:
+    - `StageCard` (lineas 215-219): el `Box` con `background(statusColor)` + `Text(Color.White)`
+      que simulaba una insignia se sustituye por `RenfeStatusBadge(label, icon = null,
+      type = statusType(stage.status))`. Se elimina `statusColor(status): Color` (antes
+      450-455) y se crea `statusType(status): BadgeType` (linea 439): OK->SUCCESS,
+      ATTENTION->WARNING, BLOCKED->ERROR, UNKNOWN->NEUTRAL.
+    - `ServerCard` (lineas 271, 286, 301): los 3 textos de estado OK/permiso/canal pasan de
+      `Color(0xFF1B7F3A)` a `MaterialTheme.colorScheme.onPrimaryContainer`.
+    - Imports sin uso eliminados: `background`, `Box`, `RoundedCornerShape`,
+      `androidx.compose.ui.graphics.Color`; anadidos `BadgeType` y `RenfeStatusBadge`
+      (linea 39-40).
+  - `feature/followups/FollowUpsScreen.kt:239,248` (`lifecycleColor`/`availabilityColor`):
+    rama "active"/"available" de verde -> `onPrimaryContainer` (el resto ya usaba
+    tertiary/error/onSurfaceVariant).
+  - `feature/followups/FollowUpDetailScreen.kt:415,424`: idem (`FollowUpLifecycle.ACTIVE`,
+    "available" -> `onPrimaryContainer`).
+  - `feature/search/SearchScreen.kt:501`: `Availability.AVAILABLE` -> `onPrimaryContainer`.
+  - `ui/components/RenfeStatusBadge.kt`, `src/debug/.../RenfeComponentsPreviews.kt`,
+    `src/androidTest/.../RenfeComponentsTest.kt`: renombrado `RenfeStatusType` -> `BadgeType`.
+- **Grep de aceptacion (paso 3)**: `rg "Color\(0x|Color\.White|Color\.Black|Color\.Red|Color\.Gray"`
+  en `feature/` -> 0 coincidencias (exit 1); `rg "0x"` en `feature/` -> 0 coincidencias.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 39s (4 ejecutados, 34 up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 57s;
+    **13 suites / 100 tests / 0 failures / 0 errors** (el "85/85" del prompt esta desactualizado:
+    la suite actual es 100 y verde) y lint **0 errors / 53 warnings** (baseline).
+- **Aceptacion**: 0 literales de color en pantallas (comprobado con grep); suite verde
+  (100/100 reales, no 85).
+- **Pendiente**: pantallas de feature refactorizadas al sistema de componentes (home/search/
+  followups/detail/diagnostics/pairing, fases 6-11). Detenido a la espera de instrucciones.

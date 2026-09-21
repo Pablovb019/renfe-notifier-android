@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /** Tipo de estado representado por una [RenfeStatusBadge]. */
-enum class RenfeStatusType { SUCCESS, WARNING, ERROR, NEUTRAL }
+enum class BadgeType { SUCCESS, WARNING, ERROR, NEUTRAL }
 
 /**
  * Insignia compacta de estado: fondo tintado con color del esquema (SUCCESS ->
@@ -28,19 +28,19 @@ fun RenfeStatusBadge(
     label: String,
     icon: ImageVector?,
     modifier: Modifier = Modifier,
-    type: RenfeStatusType = RenfeStatusType.NEUTRAL,
+    type: BadgeType = BadgeType.NEUTRAL,
 ) {
     val container = when (type) {
-        RenfeStatusType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer
-        RenfeStatusType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
-        RenfeStatusType.ERROR -> MaterialTheme.colorScheme.errorContainer
-        RenfeStatusType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant
+        BadgeType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer
+        BadgeType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
+        BadgeType.ERROR -> MaterialTheme.colorScheme.errorContainer
+        BadgeType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant
     }
     val content = when (type) {
-        RenfeStatusType.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
-        RenfeStatusType.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
-        RenfeStatusType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
-        RenfeStatusType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+        BadgeType.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
+        BadgeType.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
+        BadgeType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
+        BadgeType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Row(
         modifier = modifier
