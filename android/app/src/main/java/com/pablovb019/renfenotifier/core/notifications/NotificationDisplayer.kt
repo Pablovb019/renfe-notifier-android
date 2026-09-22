@@ -53,7 +53,7 @@ object NotificationDisplayer {
         title: CharSequence,
         body: CharSequence,
     ) = NotificationCompat.Builder(context, channelId)
-        .setSmallIcon(R.drawable.ic_stat_train)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
         .setContentTitle(title)
         .setContentText(body)
         .setStyle(NotificationCompat.BigTextStyle().bigText(body))
