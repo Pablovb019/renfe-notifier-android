@@ -1527,3 +1527,26 @@ uff check .: All checks passed.
 - **Pendiente**: autorizacion explicita del usuario para el merge `redesign/ui-m3` -> `main`
   (AGENTS.md 4.1; este push SI activa CI), CI verde en main, tag `v0.2.0`, Release privada y
   validacion del APK firmado en el realme GT Neo 2.
+
+## Release v0.2.0 (2026-09-22) - Cierre de release COMPLETADO
+- **Merge**: PR #1 "Rediseno UI Material 3 + release v0.2.0" (`redesign/ui-m3` -> `main`) con CI de la
+  PR verde (**Passed: 5, Failed: 0**, `rtk gh pr checks 1`) y fusionada con **merge commit**
+  (`rtk gh pr merge 1 --merge`) -> `origin/main` en `5f90446`.
+- **CI en main** tras el merge (push): `android-ci` (run 35778588295) y `backend-ci`
+  (run 35778588334) ambos `[ok]` (evidencia en `rtk gh run list`).
+- **Tag**: `v0.2.0` (anotado) creado sobre `5f90446` y empujado a origin -> dispara
+  `android-release.yml` (run 35779719995, concl=success tras ~4 min).
+- **Release**: "Release v0.2.0" privada creada por `github-actions[bot]`
+  (https://github.com/Pablovb019/renfe-notifier-android/releases/tag/v0.2.0).
+  Assets descargados y verificados: `app-release.apk` (**9.029.115 B**) y
+  `app-release.apk.sha256`.
+- **Checksum (evidencia, leido del asset .sha256)**:
+  `0d4058f24dac3a6ec9ae09e2907cfff13fc5f6eb62ce445711c14816941bd2d2`.
+- **README**: seccion "Estado" actualizada a v0.2.0 (codigo 12, APK firmado + checksum,
+  PENDIENTE de instalar en realme) en commit de `main` 2026-09-22. PROGRESS.md actualizado
+  con esta entrada.
+- **Pendiente (sin dispositivo, valida cuando haya Realme)**:
+  - Instalar y validar funcionalmente el APK v0.2.0 en el realme GT Neo 2 (9 grupos de tests
+    instrumentales, revision visual de la UI M3, TalkBack, fontScale 1.3, persistencia, 6 modos).
+  - Riesgo de accesibilidad documentado: seleccion de tren por color (primary/surfaceContainerLow)
+    1.18:1 claro / 1.31:1 oscuro < 3:1 (WCAG 1.4.11).

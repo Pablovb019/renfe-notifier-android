@@ -8,9 +8,11 @@ Aplicación Android nativa + backend ligero (Python/FastAPI) de **uso personal y
 
 ## Estado
 
-- **Última release**: `v0.1.10` (código 11) — APP firmada + checksum. Instalada y validada en el realme (autocompletado validado por el usuario en el flujo real).
-  - `app-release.apk` (8.995.411 B) — SHA256 `37a59734efc5567f3362b671d87aebf037c2374c4a68fa4649bbcb718bdf4c76`
-  - Evidencia verificada vía API de releases de GitHub (2026-09-20).
+- **Última release**: `v0.2.0` (código 12) — UI rediseñada a **Material 3** (fases 0–13 del rediseño) + APP firmada + checksum. Publicada 2026-09-22 por `android-release.yml`.
+  - `app-release.apk` (9.029.115 B) — SHA256 `0d4058f24dac3a6ec9ae09e2907cfff13fc5f6eb62ce445711c14816941bd2d2`
+  - Evidencia verificada descargando los assets de la Release v0.2.0 (API GitHub).
+  - PENDIENTE: instalar y validar en el realme (sin dispositivo al cierre de la release); ver `PROGRESS.md`.
+  - Anterior: `v0.1.10` (código 11), instalada y validada en el realme (autocompletado validado).
 - **Backend en producción (VM e2-micro)**: desplegado con fix DWR (`899f740`), validado 100/100 contra Renfe real, CI verde. Ranking 197 tests OK, ruff/mypy OK.
 - Bloques A–D completos. Los residuos del bot anterior NO se han eliminado (el bot anterior se conserva).
 
