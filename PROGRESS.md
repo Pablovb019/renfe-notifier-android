@@ -1300,3 +1300,30 @@ uff check .: All checks passed.
   no disponible" (grep sin "0 €" en UI).
 - **Pendiente**: validacion visual en Realme/emulador; Search ViewModel intacto (validacion/fecha
   sin cambios). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 8: FollowUps rediseñados (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `376c7b5`.
+- **Archivos creados**:
+  - `feature/followups/FollowUpComponents.kt`: `FollowUpFilters` (36; LazyRow en 41 con
+    testTag "followups_filters" y contentPadding 16 dp, items key=name de LifecycleFilter.entries),
+    `FollowUpCard` (65; ruta maxLines=2 Ellipsis con fallback codigo, badge ciclo de vida
+    RenfeStatusBadge SUCCESS/WARNING/ERROR/NEUTRAL, fecha MadridFormat, disponibilidad+alerta).
+  - `src/debug/.../feature/followups/FollowUpsPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0; 4 FollowUpOut con los 4 ciclos de vida + ruta larga y destino null.
+  - `src/androidTest/.../feature/followups/FollowUpsContentTest.kt`: 5 tests (filtros
+    accesibles via performScrollToNode; click filtro op one; click tarjeta abre id; empty;
+    error + Reintentar -> onRefresh).
+- **Archivos modificados**:
+  - `feature/followups/FollowUpsScreen.kt`: RenfeScreenScaffold (47); LaunchedEffect (45) sin
+    tocar; FollowUpsContent publico (63) con margenes 16 dp; estados Loading/Empty/Error
+    conservados (82-85); key estable followupId.
+  - `strings.xml`: + `followup_card_desc` (71); `followups_back_cd` se mantiene (la usa el
+    detalle, FollowUpDetailScreen.kt:84).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 43s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 1m1s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint
+    **0 errors / 53 warnings**; androidTest APK con FollowUpsContentTest compilado.
+- **Aceptacion**: 5 filtros accesibles a 2x (LazyRow scrollable, verificado en previews/test).
+- **Pendiente**: ejecutar FollowUpsContentTest (+ acumulados) en Realme/emulador; detalle de
+  seguimiento (fase 9). Detenido a la espera de instrucciones.

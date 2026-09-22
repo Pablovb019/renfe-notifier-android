@@ -68,6 +68,7 @@
     <string name="followups_filter_expired">Vencidos</string>
     <string name="followups_filter_deleted">Eliminados</string>
     <string name="followups_card_route">%1$s → %2$s</string>
+    <string name="followup_card_desc">Seguimiento %1$s</string>
     <string name="followups_card_date">Viaje: %1$s</string>
     <string name="followups_lifecycle_active">Activo</string>
     <string name="followups_lifecycle_paused">Pausado</string>

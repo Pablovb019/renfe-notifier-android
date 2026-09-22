@@ -478,3 +478,44 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   en UI (solo aparece en un comentario KDoc).
 - **Pendiente**: validación visual en Realme/emulador (FlowRow y tarjetas); Search ViewModel
   intacto (validación/fecha sin cambios). Detenido a la espera de instrucciones.
+
+## FASE 8 - FOLLOWUPS REDISEÑADOS (2026-09-22)
+
+- **Objetivo cumplido**: lista de seguimientos con 5 filtros accesibles a 2× (LazyRow, no Row
+  estática), tarjeta con ruta jerárquica (fallback al código, 2 líneas con elipsis), fecha en
+  formato Europe/Madrid y badge de ciclo de vida; estados Loading/Empty/Error con reintento.
+- **Archivos creados**:
+  - `feature/followups/FollowUpComponents.kt`: `FollowUpFilters` (36) — `LazyRow` (41) con
+    `contentPadding` horizontal 16 dp y `testTag("followups_filters")` (44), `items(key =
+    item.name)` de `LifecycleFilter.entries`; los 5 filtros accesibles haciendo scroll. 
+    `FollowUpCard` (65) — `Card` semántica `followup_card_desc` ("Seguimiento %1$s"),
+    `Route` con `maxLines = 2`/Ellipsis y `Modifier.weight(1f)`, badge `RenfeStatusBadge` del
+    ciclo de vida (`lifecycleBadgeType`: ACTIVE→SUCCESS, PAUSED→WARNING, EXPIRED→ERROR,
+    DELETED→NEUTRAL), fecha con `MadridFormat.showTravelDate`, disponibilidad + alerta.
+  - `src/debug/.../feature/followups/FollowUpsPreviews.kt`: 4 previews 360×800 claro/oscuro ×
+    fontScale 1.0/2.0 (showSystemUi en las 2 de fuente base), con 4 `FollowUpOut` cubriendo los
+    4 ciclos de vida y un caso de ruta larga/fallback (destinationName = null).
+  - `src/androidTest/.../feature/followups/FollowUpsContentTest.kt`: 5 tests instrumentales:
+    los 5 filtros accesibles vía `performScrollToNode`; clic en filtro invoca
+    `onFilterSelected` una vez; clic en tarjeta invoca `onOpenDetail` con su id; estado vacío
+    muestra el mensaje; estado error muestra "Reintentar" que dispara `onRefresh`.
+- **Archivos modificados**:
+  - `feature/followups/FollowUpsScreen.kt`: Scaffold/TopAppBar propios sustituidos por
+    `RenfeScreenScaffold` (47); el `LaunchedEffect(Unit) { viewModel.load() }` (45) NO se
+    modifica; `FollowUpsContent` pasa a público (63) con márgenes 16 dp (`RenfeSpacing.
+    screenMargin`); estados conservados: `RenfeLoadingState` (82), `RenfeErrorState` con
+    `onRetry = onRefresh` (85), vacío `followups_empty`, `LazyColumn` con `items(key =
+    it.followupId)`.
+  - `res/values/strings.xml`: nueva `followup_card_desc` (71). `followups_back_cd` se
+    conserva: la usa `FollowUpDetailScreen.kt:84`.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 43s.
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest
+    --no-daemon` -> BUILD SUCCESSFUL in 1m1s; reporte XML **13 suites / 100 tests / 0 failures /
+    0 errors**; lint **0 errors / 53 warnings** (baseline). APK androidTest regenerado con
+    `FollowUpsContentTest` compilado.
+- **Aceptación**: 5 filtros accesibles a 2× (LazyRow hace scroll; verificado en previews 2× y
+  test con `performScrollToNode`).
+- **Nota honesta**: `FollowUpsContentTest` compilado pero NO ejecutado en emulador/dispositivo
+  (misma política que fases previas; pendiente de validación en Realme).
+- **Pendiente**: detalle de seguimiento (fase 9). Detenido a la espera de instrucciones.
