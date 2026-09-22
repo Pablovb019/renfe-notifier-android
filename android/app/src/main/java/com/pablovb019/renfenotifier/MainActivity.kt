@@ -11,18 +11,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.notifications.FcmTokenGateway
 import com.pablovb019.renfenotifier.core.notifications.NotificationDisplayer
 import com.pablovb019.renfenotifier.core.security.PreferencesRepository
 import com.pablovb019.renfenotifier.navigation.AppNavHost
 import com.pablovb019.renfenotifier.ui.theme.RenfeNotifierTheme
+import com.pablovb019.renfenotifier.ui.theme.ThemeMode
+import com.pablovb019.renfenotifier.ui.theme.ThemeViewModel
+import com.pablovb019.renfenotifier.ui.theme.ThemeViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -48,18 +49,20 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         enableEdgeToEdge()
         setContent {
-            val prefs = remember { PreferencesRepository(applicationContext) }
-            var themePreference by remember { mutableStateOf(PreferencesRepository.THEME_SYSTEM) }
-            LaunchedEffect(prefs) {
-                prefs.theme.collect { themePreference = it }
-            }
-            val darkTheme = when (themePreference) {
-                PreferencesRepository.THEME_LIGHT -> false
-                PreferencesRepository.THEME_DARK -> true
-                else -> isSystemInDarkTheme()
+            val themeViewModel: ThemeViewModel = viewModel(
+                factory = ThemeViewModelFactory(application),
+            )
+            val themeMode by themeViewModel.mode.collectAsStateWithLifecycle()
+            val darkTheme = when (themeMode) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
             }
             RenfeNotifierTheme(darkTheme = darkTheme) {
-                AppNavHost(pendingFollowupId = pendingFollowupId)
+                AppNavHost(
+                    pendingFollowupId = pendingFollowupId,
+                    themeViewModel = themeViewModel,
+                )
             }
         }
     }

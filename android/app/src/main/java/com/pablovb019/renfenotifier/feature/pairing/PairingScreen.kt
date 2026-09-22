@@ -6,24 +6,28 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,12 +36,13 @@ import com.pablovb019.renfenotifier.R
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.security.KeystoreTokenVault
 import com.pablovb019.renfenotifier.core.security.PreferencesRepository
+import com.pablovb019.renfenotifier.ui.components.RenfeScreenScaffold
+import com.pablovb019.renfenotifier.ui.theme.RenfeSpacing
 
 /**
  * Pantalla de emparejamiento: el usuario introduce el código OTP emitido por el
  * administrador. Solo llama a `onPaired()` cuando el backend respondió OK.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(
     onPaired: () -> Unit,
@@ -66,11 +71,10 @@ fun PairingScreen(
         if (uiState.paired) onPaired()
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(title = { Text(text = stringResource(R.string.pairing_title)) })
-        },
+    RenfeScreenScaffold(
+        title = stringResource(R.string.pairing_title),
+        onBack = null,
+        modifier = modifier,
     ) { innerPadding ->
         PairingContent(
             uiState = uiState,
@@ -81,8 +85,14 @@ fun PairingScreen(
     }
 }
 
+/**
+ * Contenido del formulario de emparejamiento: campo RF-XXXXXX con teclado de
+ * texto (no numérico), error asociado al campo y botón deshabilitado mientras
+ * no haya código o se esté validando. Columna scrollable, márgenes 16 dp e
+ * `imePadding` para que el teclado no tape el campo.
+ */
 @Composable
-private fun PairingContent(
+fun PairingContent(
     uiState: PairingUiState,
     onCodeChange: (String) -> Unit,
     onClaim: () -> Unit,
@@ -93,8 +103,10 @@ private fun PairingContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .padding(horizontal = RenfeSpacing.screenMargin, vertical = RenfeSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(RenfeSpacing.md),
     ) {
         Text(
             text = stringResource(R.string.pairing_hint),
@@ -111,19 +123,8 @@ private fun PairingContent(
             label = { Text(text = stringResource(R.string.pairing_code_label)) },
             placeholder = { Text(text = "RF-XXXXXX") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
         )
-
-        Button(
-            onClick = onClaim,
-            enabled = !uiState.isLoading && uiState.code.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-            } else {
-                Text(text = stringResource(R.string.pairing_button))
-            }
-        }
 
         uiState.error?.let { message ->
             Text(
@@ -132,6 +133,21 @@ private fun PairingContent(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.semantics { contentDescription = errorDescription },
             )
+        }
+
+        Button(
+            onClick = onClaim,
+            enabled = !uiState.isLoading && uiState.code.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag("pairing_claim_button"),
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            } else {
+                Text(text = stringResource(R.string.pairing_button))
+            }
         }
     }
 }

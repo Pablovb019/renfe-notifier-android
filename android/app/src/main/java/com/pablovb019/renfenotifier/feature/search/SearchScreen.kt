@@ -1,6 +1,5 @@
 package com.pablovb019.renfenotifier.feature.search
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,29 +10,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,23 +32,22 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pablovb019.renfenotifier.R
-import com.pablovb019.renfenotifier.core.model.Availability
 import com.pablovb019.renfenotifier.core.model.FollowUpMode
 import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.core.network.model.StationOut
-import com.pablovb019.renfenotifier.core.network.model.TrainOut
-import java.time.Instant
+import com.pablovb019.renfenotifier.ui.components.RenfeErrorState
+import com.pablovb019.renfenotifier.ui.components.RenfeLoadingState
+import com.pablovb019.renfenotifier.ui.components.RenfeScreenScaffold
+import com.pablovb019.renfenotifier.ui.theme.RenfeSpacing
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
  * Pantalla de búsqueda: estaciones predictivas (alias/tildes/grupos), origen,
- * destino, fecha y Plaza H; resultados con precio desconocido representado como
- * tal; creación de seguimiento (tren concreto, primero, último o todos)
+ * destino, fecha y Plaza H; resultados con precio desconocido representado
+ * como tal; creación de seguimiento (tren concreto, primero, último o todos)
  * reutilizando la ruta y fecha vigentes.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
@@ -78,21 +60,10 @@ fun SearchScreen(
     },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(R.string.search_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_search_back),
-                        )
-                    }
-                },
-            )
-        },
+    RenfeScreenScaffold(
+        title = stringResource(R.string.search_title),
+        onBack = onBack,
+        modifier = modifier,
     ) { innerPadding ->
         SearchContent(
             uiState = uiState,
@@ -115,7 +86,6 @@ fun SearchScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchContent(
     uiState: SearchUiState,
@@ -139,11 +109,11 @@ fun SearchContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = RenfeSpacing.screenMargin),
+        verticalArrangement = Arrangement.spacedBy(RenfeSpacing.md),
     ) {
         item {
-            StationField(
+            SearchStationField(
                 label = stringResource(R.string.search_origin),
                 value = uiState.originQuery,
                 suggestions = uiState.originSuggestions,
@@ -152,7 +122,7 @@ fun SearchContent(
             )
         }
         item {
-            StationField(
+            SearchStationField(
                 label = stringResource(R.string.search_destination),
                 value = uiState.destinationQuery,
                 suggestions = uiState.destinationSuggestions,
@@ -202,25 +172,36 @@ fun SearchContent(
             Button(
                 onClick = onSearch,
                 enabled = !uiState.isSearching,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp),
             ) {
                 Text(text = stringResource(R.string.search_button))
             }
         }
 
-        uiState.searchError?.let { error ->
-            item {
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-
         if (uiState.isSearching) {
             item {
-                CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 240.dp),
+                ) {
+                    RenfeLoadingState()
+                }
+            }
+        } else if (uiState.searchError != null) {
+            item {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 240.dp),
+                ) {
+                    RenfeErrorState(
+                        icon = Icons.Filled.Warning,
+                        title = stringResource(R.string.search_error_title),
+                        text = uiState.searchError.orEmpty(),
+                        onRetry = onSearch,
+                    )
+                }
             }
         } else if (uiState.isEmptyResult) {
             item {
@@ -236,8 +217,8 @@ fun SearchContent(
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
-            itemsIndexed(uiState.trains, key = { index, train -> "${train.identity}#$index" }) { index, train ->
-                TrainCard(
+            items(uiState.trains, key = { it.identity }) { train ->
+                SearchTrainCard(
                     train = train,
                     selected = uiState.mode == FollowUpMode.SPECIFIC &&
                         uiState.selectedTrainIdentity == train.identity,
@@ -248,7 +229,7 @@ fun SearchContent(
 
         if (uiState.trains.isNotEmpty()) {
             item {
-                FollowUpCreator(
+                SearchFollowUpCreator(
                     uiState = uiState,
                     onModeSelected = onModeSelected,
                     onCreateFollowUp = onCreateFollowUp,
@@ -265,240 +246,4 @@ fun SearchContent(
             onDismiss = { showDatePicker = false },
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchDatePickerDialog(
-    initialDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                datePickerState.selectedDateMillis?.let { millis ->
-                    onDateSelected(
-                        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate(),
-                    )
-                }
-                onDismiss()
-            }) {
-                Text(text = stringResource(R.string.dialog_accept))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.dialog_cancel))
-            }
-        },
-    ) {
-        DatePicker(state = datePickerState)
-    }
-}
-
-@Composable
-private fun StationField(
-    label: String,
-    value: String,
-    suggestions: List<StationOut>,
-    onQueryChange: (String) -> Unit,
-    onSelected: (StationOut) -> Unit,
-) {
-    // Las sugerencias se muestran EN FLUJO (no popup) justo debajo del campo:
-    // siempre aparecen debajo, nunca por encima ni "popean" por carácter. Solo
-    // se muestran cuando ya hay sugerencias cargadas (tras el debounce, cuando
-    // el usuario deja de teclear) y con scroll para no alargar la pantalla.
-    val showSuggestions = value.isNotEmpty() && suggestions.isNotEmpty()
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onQueryChange(it) },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = label) },
-            singleLine = true,
-        )
-        if (showSuggestions) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 192.dp)
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = 4.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Column {
-                    suggestions.forEach { station ->
-                        Text(
-                            text = if (station.isGroup) {
-                                stringResource(R.string.search_station_group, station.name)
-                            } else {
-                                station.name
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelected(station) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrainCard(
-    train: TrainOut,
-    selected: Boolean,
-    onSelected: () -> Unit,
-) {
-    val trainDescription = stringResource(R.string.search_train_desc, train.identity)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = trainDescription }
-            .clickable(onClick = onSelected),
-        colors = if (selected) {
-            androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            )
-        } else {
-            androidx.compose.material3.CardDefaults.cardColors()
-        },
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.search_train_time,
-                        formatTime(train.departure),
-                        formatTime(train.arrival),
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = when (train.availability) {
-                        Availability.AVAILABLE -> stringResource(R.string.av_available)
-                        Availability.NO_AVAILABILITY -> stringResource(R.string.av_none)
-                        else -> stringResource(R.string.av_unknown)
-                    },
-                    color = availabilityColor(train.availability),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-            Text(
-                text = stringResource(
-                    R.string.search_price,
-                    train.price ?: stringResource(R.string.search_price_unknown),
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (selected) {
-                Text(
-                    text = stringResource(R.string.search_train_selected),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FollowUpCreator(
-    uiState: SearchUiState,
-    onModeSelected: (FollowUpMode) -> Unit,
-    onCreateFollowUp: () -> Unit,
-    onCreatedAccepted: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.search_mode_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = uiState.mode == FollowUpMode.FIRST,
-                onClick = { onModeSelected(FollowUpMode.FIRST) },
-                label = { Text(text = stringResource(R.string.search_mode_first)) },
-            )
-            FilterChip(
-                selected = uiState.mode == FollowUpMode.LAST,
-                onClick = { onModeSelected(FollowUpMode.LAST) },
-                label = { Text(text = stringResource(R.string.search_mode_last)) },
-            )
-            FilterChip(
-                selected = uiState.mode == FollowUpMode.ALL,
-                onClick = { onModeSelected(FollowUpMode.ALL) },
-                label = { Text(text = stringResource(R.string.search_mode_all)) },
-            )
-        }
-        if (uiState.mode == FollowUpMode.SPECIFIC && uiState.selectedTrainIdentity == null) {
-            Text(
-                text = stringResource(R.string.search_specific_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Button(
-            onClick = onCreateFollowUp,
-            enabled = !uiState.isCreatingFollowUp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = stringResource(R.string.search_create))
-        }
-        if (uiState.isCreatingFollowUp) {
-            CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-        uiState.followUpError?.let { error ->
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        uiState.createdFollowUpId?.let {
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text(text = stringResource(R.string.search_created)) },
-                text = { Text(text = stringResource(R.string.search_created_hint)) },
-                confirmButton = {
-                    TextButton(onClick = onCreatedAccepted) {
-                        Text(text = stringResource(R.string.dialog_accept))
-                    }
-                },
-            )
-        }
-        if (uiState.availableTrainNotice) {
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text(text = stringResource(R.string.search_train_available)) },
-                text = { Text(text = stringResource(R.string.search_train_available_hint)) },
-                confirmButton = {
-                    TextButton(onClick = onCreatedAccepted) {
-                        Text(text = stringResource(R.string.dialog_accept))
-                    }
-                },
-            )
-        }
-    }
-}
-
-private fun formatTime(value: String?): String = value?.take(5) ?: "--:--"
-
-@Composable
-private fun availabilityColor(value: String) = when (value) {
-    Availability.AVAILABLE -> androidx.compose.ui.graphics.Color(0xFF1B7F3A)
-    Availability.NO_AVAILABILITY -> MaterialTheme.colorScheme.error
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
 }

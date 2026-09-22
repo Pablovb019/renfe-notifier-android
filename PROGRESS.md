@@ -1088,3 +1088,442 @@ uff check .: All checks passed.
   docs/requirements-checklist.md. Este fichero no modifica ese estatus.
 - Progreso del repositorio en PROGRESS.md; el original renfe-notifier-bot se
   conserva intacto (rollback documentado en docs/transicion.md).
+
+## Rediseno UI - Fase 0: Auditoria inicial (2026-09-21) - COMPLETADO
+- **Estado**: auditado. Branch `redesign/ui-m3`, HEAD `f5943c33bdd63207761e7266bed58e293e208687`. Sin archivos funcionales modificados.
+- **Entorno**: JDK 17.0.20.1 (Microsoft) detectado; Gradle wrapper 8.9; AGP 8.5.2; Kotlin 2.0.21; Compose BOM 2024.12.01; navigation 2.8.5; datastore 1.1.1; compileSdk 34/minSdk 26/targetSdk 34; versionName 0.1.10/code 11.
+- **Baseline ejecutado (salida real, exit 0 todos)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL (15 s, 38 tasks up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL; reporte XML: **10 suites, 85 tests, 0 failures, 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL; **0 errores, 53 warnings** (42 GradleDependency, 4 UnusedResources, 3 AndroidGradlePluginVersion, 1 MissingApplicationIcon, 1 PluralsCandidate, 1 HardwareIds).
+- **Dispositivo (ADB serial 1ecdc196, realme GT Neo 2 RMX3370)**: 1080x2400 px @ 480 dpi -> **360x800 dp**; font_scale 1.0; modo noche activo; status bar 110 px (~36.7 dp), nav bar por gestos (visible=false), IME oculto. Segundo serial ADB presente por Wi-Fi (192.168.1.200:5555); lecturas solo sobre el USB.
+- **Auditoria theme/persistencia**: paleta fija M3 en `Theme.kt` (respardo; primary 0xFF0057A6) + dynamicColor en SDK>=31; `MainActivity` observa `PreferencesRepository.theme` (DataStore `app_preferences`, clave "theme" = system/light/dark). Tipografia M3 por defecto (`Type.kt`). Detalle en DESIGN.md.
+- **Riesgos 360 dp documentados en DESIGN.md (file:linea)**: colores hardcodeados (0xFF1B7F3A/0xFFB87333/0xFFB00020 en Search/FollowUps/Detail/Diagnostics), Row de 5 FilterChip en FollowUpsScreen.kt:95-108, fecha larga sin maxLines en SearchScreen.kt:175, scroll anidado (sugerencias `verticalScroll` dentro de LazyColumn, SearchScreen.kt:325-351), boton "Recargar" con `onRefresh={}` vacio en HomeScreen.kt:57, tipografia por defecto.
+- **Archivos**: DESIGN.md (creado), PROGRESS.md (esta entrada). `prompts/` respetada (sin tocar; modificaciones de mojibake previas quedan sin commitear y fuera del commit de esta fase).
+- **Bloqueos**: ninguno en la fase 0. Detenido a la espera de instrucciones para la fase 1.
+
+## Rediseno UI - Fase 1: Sistema visual (color/type/shape/spacing) (2026-09-21) - COMPLETADO
+- **Estado**: implementado el sistema de tokens visuales. No cableado aun en `Theme.kt` (fase 2). Sin cambios funcionales en pantallas.
+- **Archivos creados/modificados** (sobre branch `redesign/ui-m3`, commit previo `7e222a9`):
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/Color.kt` (nuevo): 36 roles M3 en claro/oscuro (48 constantes `val`). Paleta de la especificacion: primary `#830065`/`#D98BC7`, secondary `#5D5E63`/`#C5C5CB`, tertiary `#885018`/`#FFB877`, background `#EFF3F6`/`#1A1519`, surface `#FFF8FA`/`#1E191D`, surface containers, error, outline, scrim.
+  - `.../ui/theme/Type.kt` (modificado): `RenfeTypography` (FontFamily.SansSerif) con headline 28/36, 24/32, 24/28; title 20/28, 16/24 SemiBold, 14/20 Medium; body 16/24, 14/20, 12/16; label 14/20 Medium, 12/16 Medium, 12/16 (**labelSmall = 12 sp**).
+  - `.../ui/theme/Shape.kt` (nuevo): `RenfeShapes` = 4/8/12/20/28 dp.
+  - `.../ui/theme/Spacing.kt` (nuevo): `object RenfeSpacing` = 4/8/12/16/20/24/32 dp; `screenMargin`=16.dp, `screenMarginWide`=20.dp.
+  - Puente temporal `val Typography = Typography()` en Type.kt para no romper `Theme.kt:72`.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 29s.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 22s; reporte XML: **10 suites, 85 tests, 0 failures, 0 errors**.
+- **Aceptacion**: 4 archivos en su sitio; `labelSmall >= 12 sp` (12 sp). Cumplida.
+- **Pendiente**: cablear paleta/tipografia/formas del tema en `Theme.kt` (fase 2); migracion de colores hardcodeados (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 2: Theme (dynamic color OFF) + ThemeMode + ThemeViewModel (2026-09-21) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Sin validacion en emulador/dispositivo
+  real (se hará en fases posteriores de validacion visual).
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `0be5233`):
+  - `android/app/src/main/java/com/pablovb019/renfenotifier/ui/theme/ThemeMode.kt`: enum SYSTEM/LIGHT/DARK;
+    `fromStorage` (valores desconocidos/null -> SYSTEM) y `toStorage` con los strings exactos de
+    `PreferencesRepository.kt:73-75` (nunca `enum.name`).
+  - `.../ui/theme/ThemeViewModel.kt`: `SettingsSource` + StateFlow `mode`/`isLoading`/`saveError`;
+    `setMode` optimista y serializado (cancela el guardado anterior); captura solo `IOException`;
+    `ThemeViewModelFactory(Application)`.
+  - Tests: `android/app/src/test/java/com/pablovb019/renfenotifier/ui/theme/ThemeModeTest.kt` (4 tests)
+    y `ThemeViewModelTest.kt` (7 tests) con `FakeSettingsSource`.
+- **Archivos modificados**:
+  - `.../ui/theme/Theme.kt`: 36 roles de `Color.kt` en light/dark (lineas 9-49); firma
+    `RenfeNotifierTheme(darkTheme = isSystemInDarkTheme(), content)`; `MaterialTheme` con
+    `RenfeTypography` y `RenfeShapes`; eliminado dynamic color.
+  - `MainActivity.kt`: observacion manual de tema sustituida por `ThemeViewModel` +
+    `collectAsStateWithLifecycle` (lineas 50-63); resto de la Activity intacto.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:testDebugUnitTest --tests "*ThemeModeTest" --tests "*ThemeViewModelTest"` -> BUILD SUCCESSFUL; 4+7 tests, 0 failures.
+  - `:app:assembleDebug` -> BUILD SUCCESSFUL in 20s.
+  - `:app:testDebugUnitTest :app:lintDebug` -> BUILD SUCCESSFUL; **12 suites / 96 tests / 0 failures / 0 errors**; lint **0 errors / 53 warnings**.
+  - `rg "dynamicColor|dynamicLightColorScheme|dynamicDarkColorScheme"` -> 0 coincidencias.
+- **Aceptacion**: dynamic color eliminado; sin claves nuevas en DataStore; cambio de tema sin reiniciar
+  Activity (StateFlow + recomposicion).
+- **Pendiente**: UI del selector de modo de tema (fase 3); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 3: Selector de tema + contraste AA + previews (2026-09-21) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Tests instrumentales COMPILADOS
+  (APK androidTest generado) pero no ejecutados en dispositivo/emulador en esta fase.
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `bfaea7f`):
+  - `ui/components/ThemeModeSelector.kt`: lista M3 `selectableGroup` + filas `selectable` con
+    Role.RadioButton y RadioButton(onClick=null), heightIn(min=56.dp), estados isLoading/saveError.
+  - `src/test/.../ui/theme/ColorContrastTest.kt`: luminancia + ratio WCAG; 9 pares >=4.5 y
+    4 no-textuales >=3 en claro y oscuro (4 tests, todos verdes, paleta OK en ambos modos).
+  - `src/debug/.../ui/theme/RenfeThemePreviews.kt`: 4 previews 360x800 / spec 1080x2400/480,
+    noche/dia, showSystemUi y fontScale=2f.
+  - `src/androidTest/.../ui/theme/ThemeModeSelectorTest.kt`: 5 tests Compose instrumentales.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: chips de tema -> `ThemeCard` + `ThemeModeSelector`
+    con el ThemeViewModel compartido; conserva switch avisos, refreshEnvironment, sendTest,
+    computeStages. `DiagnosticsViewModel` intacto.
+  - `navigation/AppNavHost.kt:44-47`: parametro `themeViewModel` reenviado (linea 117).
+  - `MainActivity.kt:62-65`: pasa el VM compartido (una sola instancia, ambito Activity).
+  - `strings.xml:151-155`: diag_theme_system="Según el sistema", + desc y loading.
+  - Infra: `libs.versions.toml` + `app/build.gradle.kts` (deps androidTest via Compose BOM).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:testDebugUnitTest --tests "*ColorContrastTest"` -> BUILD SUCCESSFUL; 4 tests, 0 fallos.
+  - `:app:assembleDebug` -> BUILD SUCCESSFUL in 53s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest` -> BUILD SUCCESSFUL;
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint 0 errores / 53 warnings; androidTest APK OK.
+- **Aceptacion**: un solo ThemeViewModel; contrastes AA (4 tests) pasan; previews 360x800 spec 1080x2400/480.
+- **Pendiente**: ejecutar ThemeModeSelectorTest en el Realme/emulador (validacion); componentes base
+  (fase 4); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 4: Componentes base reutilizables (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Tests instrumentales COMPILADOS
+  (APK androidTest generado) pero no ejecutados en dispositivo/emulador en esta fase.
+- **Archivos creados** (sobre `redesign/ui-m3`, commit previo `5472496`):
+  - `ui/components/RenfeScreenScaffold.kt`: Scaffold M3 + TopAppBar; params title, onBack
+    (null -> sin boton), actions y content(PaddingValues); innerPadding consumido una vez;
+    titulo titleLarge 24 sp, maxLines=1, Ellipsis; contentDescription=common_back.
+  - `ui/components/RenfeLoadingState.kt`: indicador centrado SIN fillMaxWidth sobre el circulo.
+  - `ui/components/RenfeEmptyState.kt`: icono + titulo + texto + accion opcional.
+  - `ui/components/RenfeErrorState.kt`: icono + titulo + texto + boton "Reintentar" solo si callback.
+  - `ui/components/RenfeStatusBadge.kt`: enum SUCCESS/WARNING/ERROR/NEUTRAL; contenedores
+    primaryContainer/tertiaryContainer/errorContainer/surfaceVariant; icono nullable; labelSmall.
+  - `src/debug/.../ui/components/RenfeComponentsPreviews.kt`: 4 previews 360x800, claro/oscuro,
+    fontScale 1/2, spec 1080x2400/480 con showSystemUi.
+  - `src/androidTest/.../ui/components/RenfeComponentsTest.kt`: 7 tests Compose instrumentales.
+- **Archivos modificados**:
+  - `strings.xml:163-164`: `common_back`="Volver", `common_retry`="Reintentar"; eliminada
+    `followups_retry` (sin usos tras la migracion).
+  - `feature/followups/FollowUpsScreen.kt:117,120-126`: loading -> RenfeLoadingState; bloque de
+    error (3 Text + retry) -> RenfeErrorState (Icons.Filled.Warning, followups_load_error, onRetry=onRefresh).
+  - `feature/followups/FollowUpDetailScreen.kt:126,198-203`: loading -> RenfeLoadingState; branch
+    de error -> RenfeErrorState con text = actionError ?: followups_no_checks y onRetry=onRefresh.
+  - NO migrados (no mecanicos): empties y spinners inline de Search/Home/Diagnostics/Pairing
+    (SearchScreen.kt:223,461; HomeScreen.kt:140; DiagnosticsScreen.kt:140; PairingScreen.kt:122).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s (12 ejecutados, 26 up-to-date).
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 1m; **13 suites / 100 tests / 0 fallos / 0 errores** (sin regresiones);
+    lint 0 errores / 54 warnings (nueva ModifierParameter en RenfeStatusBadge).
+  - Fix: `modifier` reordenado a primer parametro opcional en RenfeStatusBadge; re-verificacion
+    `:app:assembleDebug :app:lintDebug` -> BUILD SUCCESSFUL; lint **0 errores / 53 warnings**
+    (baseline). Nota: las llamadas usan `type =`, por lo que no rompió nada.
+- **Aceptacion**: 5 componentes pequenos (no megacomponente); loading sin fillMaxWidth;
+  previews 360x800 con spec 1080x2400/480 y showSystemUi.
+- **Pendiente**: ejecutar RenfeComponentsTest (+ ThemeModeSelectorTest de fase 3) en el
+  Realme/emulador (validacion); migracion de colores (fase 5). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 5: Migracion de colores hardcodeados (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Sin cambio funcional.
+- **Comando previo verificado**: HEAD `f681ea8` (fase 4), rama `redesign/ui-m3`.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: `StageCard` (215-219) -> el Box con
+    background+Color.White se sustituye por `RenfeStatusBadge(icon=null, type=statusType(...))`;
+    nueva `statusType(status): BadgeType` (439) [OK->SUCCESS, ATTENTION->WARNING,
+    BLOCKED->ERROR, UNKNOWN->NEUTRAL]; eliminada `statusColor` y los imports sin uso
+    (background/Box/RoundedCornerShape/Color). `ServerCard` (271, 286, 301): verde ->
+    `onPrimaryContainer`.
+  - `feature/followups/FollowUpsScreen.kt:239,248` y `FollowUpDetailScreen.kt:415,424` y
+    `feature/search/SearchScreen.kt:501`: verde de exito/activo/disponible ->
+    `MaterialTheme.colorScheme.onPrimaryContainer`.
+  - `ui/components/RenfeStatusBadge.kt` (+ previews debug y RenfeComponentsTest): renombrado
+    el enum `RenfeStatusType` -> `BadgeType` (el prompt de fase 5 lo referencia como
+    `RenfeStatusBadge(BadgeType.SUCCESS)`).
+- **Decision documentada**: `primaryContainer` como color de TEXTO rompe AA (1.1:1 en claro);
+  por eso en texto se usa el rol de contenido de SUCCESS (`onPrimaryContainer`), contraste
+  verificado ~16.8:1 (claro) y ~13.5:1 (oscuro). Detalle en DESIGN.md.
+- **Grep de aceptacion**: `rg "Color\(0x|Color\.White|Color\.Black|Color\.Red|Color\.Gray"`
+  en `feature/` -> 0 coincidencias; `rg "0x"` en `feature/` -> 0 coincidencias.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 39s (exit 0).
+  - `:app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 57s (exit 0);
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errores / 53 warnings** (baseline).
+- **Aceptacion**: 0 literal de color en pantallas; suite real verde (100 tests, el "85/85" del
+  prompt es un numero desactualizado de fases previas).
+- **Pendiente**: refactor de las pantallas de feature al sistema de componentes (fases 6-11).
+  Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 6: Home ferroviaria minimalista (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `552ee8b`.
+- **Archivos creados**:
+  - `feature/home/HomeComponents.kt`: `HomeHeader` (headlineMedium 28sp, maxLines=2),
+    `HomePairedBadge` (RenfeStatusBadge SUCCESS + CheckCircle + "Dispositivo vinculado"),
+    `HomeMeta` (hora+version discretas), `HomeNotificationNotice` (permisos + boton ajustes).
+  - `src/debug/.../feature/home/HomePreviews.kt`: 4 previews 360x800, claro/oscuro, fontScale
+    1/2, spec 1080x2400/480, showSystemUi (2 primeras); variantes isPaired true/false.
+  - `src/androidTest/.../feature/home/HomeContentTest.kt`: 6 tests Compose (4 callbacks una vez,
+    sin "Recargar", badge "Dispositivo vinculado").
+- **Archivos modificados**:
+  - `feature/home/HomeScreen.kt`: contenido con `RenfeScreenScaffold` (78) + action "Ajustes"
+    (82-84) -> onNavigateToDiagnostics; columna scrollable (90) con `RenfeSpacing.screenMargin`;
+    CTAs con `heightIn(min=56.dp)` (111, 123, 132); se elimina `onRefresh`, el boton "Recargar",
+    el Scaffold/TopAppBar propios y el spinner inline (HomeMeta omite la hora si `now == null`).
+  - `strings.xml`: `home_not_paired_cta` -> "Vincular dispositivo", `home_search_button` ->
+    "Buscar trenes", + `home_paired`, `home_settings`; eliminadas `home_refresh`, `cd_refresh`,
+    `home_diagnostics_button`, `home_status_pending`.
+- **Correcciones durante la fase** (solo el punto que fallo, re-ejecutando):
+  1. `assembleDebug` FAILED: faltaba `import androidx.compose.ui.unit.dp` en `HomeComponents.kt`
+     (62, 89) -> arreglado; BUILD SUCCESSFUL in 54s.
+  2. AndroidTest FAILED: `import androidx.compose.ui.test.assertExists` no existe en esta version
+     -> sustituido por `assertIsDisplayed()`; BUILD SUCCESSFUL in 38s.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 54s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 38s; androidTest APK regenerado (HomeContentTest compilado).
+  - `:app:testDebugUnitTest --no-daemon --rerun-tasks` (test en codigo final) -> BUILD SUCCESSFUL
+    in 1m1s; XML: **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53 warnings**.
+- **Aceptacion**: boton no-op eliminado (riesgo 0/5 cerrado); callbacks operativos.
+- **Pendiente**: ejecutar HomeContentTest (+ anteriores) en Realme/emulador (validacion); Search
+  (fase 7). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 7: Search rediseñada (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `e7556f3`.
+- **Archivos creados**:
+  - `feature/search/SearchComponents.kt`: `SearchStationField` (54; sugerencias en flujo,
+    contenedor heightIn(max=192dp) en 77, filas >= 48 dp en 87, 2 lineas Ellipsis, sin scroll
+    anidado), `SearchTrainCard` (117; badge disponibilidad + identity + precio), `SearchFollowUpModes`
+    (185; FlowRow en 190 con FIRST/LAST/ALL/SPECIFIC), `SearchDatePickerDialog` (220),
+    `SearchFollowUpCreator` (254; CTA enabled=!isCreatingFollowUp, dialogos intactos).
+  - `src/debug/.../feature/search/SearchPreviews.kt`: 4 previews 360x800 claro/oscuro x fuente
+    1.0/2.0 (2 formulario + showSystemUi, 2 resultados a 2x; un tren con price null).
+- **Archivos modificados**:
+  - `feature/search/SearchScreen.kt`: `RenfeScreenScaffold` (63); margen 16 dp screenMargin;
+    campos heightIn(min=56dp) singleLine; CTA Buscar fullWidth heightIn(min=56dp)
+    enabled=!isSearching; `items(key = { it.identity })` (220); carga `RenfeLoadingState` (189);
+    error `RenfeErrorState` onRetry=onSearch (198); vacio texto search_no_trains.
+  - `strings.xml`: `search_price_unknown` -> "Precio no disponible"; + `search_train_type`,
+    `search_mode_specific`, `search_error_title`; - `cd_search_back`.
+- **Decision**: `TrainOut` (ApiModels.kt:47-54) no tiene campo de tipo de tren; no se inventa
+  API, se muestra `identity` como identificación y el "tipo" de disponibilidad queda en el badge.
+- **Correccion durante la fase** (solo el punto que fallo): `assembleDebug` FAILED por imports
+  `Row`/`Column` ausentes en `SearchScreen.kt` -> añadidos; BUILD SUCCESSFUL in 43s.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 43s.
+  - `:app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 59s; XML:
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53 warnings** (baseline).
+- **Aceptacion**: sin popups; 4 modos en FlowRow (360 dp / 2x accesibles); price null -> "Precio
+  no disponible" (grep sin "0 €" en UI).
+- **Pendiente**: validacion visual en Realme/emulador; Search ViewModel intacto (validacion/fecha
+  sin cambios). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 8: FollowUps rediseñados (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `376c7b5`.
+- **Archivos creados**:
+  - `feature/followups/FollowUpComponents.kt`: `FollowUpFilters` (36; LazyRow en 41 con
+    testTag "followups_filters" y contentPadding 16 dp, items key=name de LifecycleFilter.entries),
+    `FollowUpCard` (65; ruta maxLines=2 Ellipsis con fallback codigo, badge ciclo de vida
+    RenfeStatusBadge SUCCESS/WARNING/ERROR/NEUTRAL, fecha MadridFormat, disponibilidad+alerta).
+  - `src/debug/.../feature/followups/FollowUpsPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0; 4 FollowUpOut con los 4 ciclos de vida + ruta larga y destino null.
+  - `src/androidTest/.../feature/followups/FollowUpsContentTest.kt`: 5 tests (filtros
+    accesibles via performScrollToNode; click filtro op one; click tarjeta abre id; empty;
+    error + Reintentar -> onRefresh).
+- **Archivos modificados**:
+  - `feature/followups/FollowUpsScreen.kt`: RenfeScreenScaffold (47); LaunchedEffect (45) sin
+    tocar; FollowUpsContent publico (63) con margenes 16 dp; estados Loading/Empty/Error
+    conservados (82-85); key estable followupId.
+  - `strings.xml`: + `followup_card_desc` (71); `followups_back_cd` se mantiene (la usa el
+    detalle, FollowUpDetailScreen.kt:84).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 43s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 1m1s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint
+    **0 errors / 53 warnings**; androidTest APK con FollowUpsContentTest compilado.
+- **Aceptacion**: 5 filtros accesibles a 2x (LazyRow scrollable, verificado en previews/test).
+- **Pendiente**: ejecutar FollowUpsContentTest (+ acumulados) en Realme/emulador; detalle de
+  seguimiento (fase 9). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 9: Detalle de seguimiento (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `eebe9f4`.
+- **Archivos creados**:
+  - `src/debug/.../feature/followups/FollowUpDetailPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0 (spec 1080x2400/480); detalle de ejemplo con 2 episodios, specificTrainId
+    "AVANT 8492|11:08|12:13", plazaH, ACTIVE + pending_alert.
+  - `src/androidTest/.../feature/followups/FollowUpDetailContentTest.kt`: 7 tests (acciones
+    separadas con assertCountEquals; pausar una vez; PAUSED muestra Reanudar y no Pausar;
+    confirmar aviso no elimina; cancelar dialogo de borrado no invoca onDelete y "Si, eliminar"
+    si; botones deshabilitados en actionInProgress; cabecera con ultima comprobacion valida
+    exacta y "Episodios: 2").
+- **Archivos modificados**:
+  - `feature/followups/FollowUpComponents.kt`: + `FollowUpDetailHeader` (139; ruta 2 lineas
+    elipsis + badge ciclo de vida + badge modo NEUTRAL + fecha + disponibilidad + Plaza H +
+    ultima comprobacion lastValidObservedAt + caducidad + episodio_count), + `FollowUpDetailEpisodes`
+    (231), + `FollowUpDetailActionButtons` (280; Pausar/Reanudar + Renovar + Confirmar aviso +
+    Eliminar separados, enabled = !actionInProgress); helpers movidos/adaptados: detailRouteLabel
+    (348), modeLabel (355), specificTrainTimes (374).
+  - `feature/followups/FollowUpDetailScreen.kt`: RenfeScreenScaffold; LaunchedEffect(load) y
+    LaunchedEffect(deleted) preservados (53 y 66); FollowUpDetailContent publico (83) con
+    margenes 16 dp; delegados header/episodios/acciones; AlertDialog de borrado con dismiss que
+    NO llama onDelete; eliminados helpers privados antiguos.
+  - `strings.xml`: + `followups_episode_count`; - `followups_lifecycle_detail`, - `followups_back_cd`
+    (ambas huerfanas tras el scaffold); indentacion arreglada de `followups_mode_specific_times`.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> 1er
+    intento FAILED en androidTest (assertDoesNotExist/assertCountEquals no top-level -> miembro y
+    onAllNodesWithText) -> BUILD SUCCESSFUL in 40s; XML **13 suites / 100 tests / 0 fallos /
+    0 errores**; lint **0 errors / 53 warnings** (baseline); androidTest APK con
+    FollowUpDetailContentTest compilado.
+- **Aceptacion**: 5 acciones separadas; cancelar borrado no elimina; confirmar aviso no elimina;
+  ultima comprobacion = lastValidObservedAt (instante real del ultimo episodio, no now); previews
+  360x800 1x/2x.
+- **Pendiente**: ejecutar los 5 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
+  HomeContent, FollowUpsContent, FollowUpDetail) en Realme/emulador; fase 10. Detenido a la espera
+  de instrucciones.
+
+## Rediseno UI - Fase 10: Diagnostics como Ajustes (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `396380b`.
+- **Archivos creados**:
+  - `feature/diagnostics/DiagnosticsComponents.kt`: `DiagnosticsThemeCard` (ThemeModeSelector fase 3),
+    `DiagnosticsAlertsCard` (switch testTag "diagnostics_alerts_switch"), `DiagnosticsTechSection`
+    (plegable con rememberSaveable, testTag "diagnostics_section_tech", iconos
+    KeyboardArrowUp/ArrowDown; al expandir: 5 StageCard + ServerCard + CountsCard + TestCard),
+    `DiagnosticsTestCard` (boton "Enviar prueba" corto, enabled = !Sending, resultado adjunto sin
+    tokens/OTP/credenciales). Helpers privados stageLabel/statusLabel/statusType/formatBytes.
+  - `src/debug/.../feature/diagnostics/DiagnosticsPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0 (spec 1080x2400/480).
+  - `src/androidTest/.../feature/diagnostics/DiagnosticsContentTest.kt`: 10 tests (titulo "Ajustes"
+    + secciones; plegado inicial; expandir muestra 5 etapas; recolapsar oculta; info servidor al
+    expandir; boton prueba invoca una vez; Sending deshabilita y muestra "Enviando…"; clic en boton
+    deshabilitado no reenvia; switch alterna; selector tema 3 opciones). Tests envueltos en
+    RenfeScreenScaffold.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: RenfeScreenScaffold (title diag_title="Ajustes",
+    onBack, action "Refrescar" -> refreshEnvironment+load); DiagnosticsContent publico (87) con
+    margenes 16 dp; LaunchedEffect de carga (51-53) conservado; VM NO tocado (load/
+    refreshEnvironment/sendTestNotification/computeStages intactos).
+  - `strings.xml`: diag_title -> "Ajustes"; + diag_section_appearance/alerts/tech/tech_toggle_cd;
+    diag_test_button -> "Enviar prueba"; - diag_back_cd, - diag_stages_title, - diag_server_title,
+    - diag_counts_title, - diag_settings_title (todas huerfanas; grep de referencias = 0).
+    diag_refresh se conserva (la usa RenfeThemePreviews.kt:94).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> 1er intento FAILED (ExpandLess/ExpandMore no existen en
+    material-icons-core; falta import de dp) -> corregido (KeyboardArrowUp/ArrowDown + import) ->
+    BUILD SUCCESSFUL in 54s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> BUILD
+    SUCCESSFUL in 1m2s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53
+    warnings** (baseline); androidTest APK con DiagnosticsContentTest compilado.
+- **Aceptacion**: titulo "Ajustes" visible; informacion previa accesible al expandir; margenes
+  16 dp; previews 360x800 1x/2x.
+- **Pendiente**: ejecutar los 6 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
+  HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics) en Realme/emulador; fase 11. Detenido
+  a la espera de instrucciones.
+
+## Rediseno UI - Fase 11: Emparejamiento (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `94b9cfa`.
+- **Archivos modificados**:
+  - `feature/pairing/PairingScreen.kt`: RenfeScreenScaffold (title pairing_title, onBack=null);
+    PairingContent publico (87) con verticalScroll + imePadding + margenes 16 dp (screenMargin/sm)
+    y spacedBy(RenfeSpacing.md); error asociado bajo el campo (cd_pairing_error, 128-136); boton con
+    testTag "pairing_claim_button", enabled = !isLoading && code.isNotBlank(), heightIn(min=56.dp)
+    (140-143) y spinner CircularProgressIndicator(20.dp); keyboardOptions KeyboardType.Text (126);
+    LaunchedEffect(paired) (70-73) y factory del VM intactos.
+  - `strings.xml`: sin cambios (reutiliza 6 strings de pairing).
+- **Archivos creados**:
+  - `src/debug/.../feature/pairing/PairingPreviews.kt`: 4 previews 360x800 claro/oscuro x fuente
+    1.0/2.0 (spec 1080x2400/480); estados vacio, isLoading y error.
+  - `src/androidTest/.../feature/pairing/PairingContentTest.kt`: 6 tests (hint; boton deshabilitado
+    sin codigo / habilitado con codigo -> onClaim una vez; isLoading deshabilita campo y boton; error
+    asociado visible; escribir "RF-12AB34" -> onCodeChange).
+- **Nota teclado**: compose-ui 1.7.6 no expone SemanticsProperties.KeyboardType (verificado con
+  javap del ui-release.aar); el teclado de texto se garantiza por codigo (KeyboardType.Text en
+  PairingScreen.kt:126) y con test de entrada alfanumerica, no por semantica.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 32s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> 1er intento
+    FAILED en androidTest (SemanticsMatcher con paquete erroneo; SemanticsProperties.KeyboardType no
+    existe) -> quitado ese test -> BUILD SUCCESSFUL in 41s; XML **13 suites / 100 tests / 0 fallos /
+    0 errores**; lint **0 errors / 53 warnings** (baseline); androidTest APK con PairingContentTest.
+- **Aceptacion**: teclado de texto; sin capturas del codigo (la UI solo hace onClaim; el token solo
+  se guarda en Keystore tras respuesta OK del backend).
+- **Pendiente**: ejecutar los 7 tests instrumentales acumulados en Realme/emulador; fase 12. Detenido
+  a la espera de instrucciones.
+
+## Rediseno UI - Fase 12: Motion (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `37181f0`.
+- **Archivos creados**:
+  - `ui/theme/Motion.kt`: `object RenfeMotion { Short=150, Normal=200, Medium=250 }` y `renfeSpring()`
+    (spring, dampingRatio 0.9f, stiffness `Spring.StiffnessMedium`).
+  - `src/androidTest/.../ui/MotionBehaviorTest.kt`: 4 tests instrumentales (duraciones cortas y
+    ordenadas; resorte renfe; Crossfade de carga de FollowUpsContent conserva orden de la lista y
+    un solo callback por clic; detalle cruza de carga a contenido).
+- **Archivos modificados**:
+  - `navigation/AppNavHost.kt`: `NavHost` (67-155) con enterTransition = fadeIn(150)+slideIn(150)
+    `{ it/16 }` (70-73), exitTransition = fadeOut(150) (74-76), popEnterTransition = fadeIn(150)
+    (77-79) y popExitTransition = fadeOut(150)+slideOut(150) `{ it/16 }` (80-83). Rutas, argumentos
+    (followupId), popUpTo, launchSingleTop y pendingFollowupId intactos.
+  - `feature/diagnostics/DiagnosticsComponents.kt`: seccion tecnica plegable (ya con rememberSaveable,
+    107) anade `.animateContentSize()` a la Column interior (110-114).
+  - `feature/followups/FollowUpsScreen.kt` y `FollowUpDetailScreen.kt`: carga->contenido con
+    Crossfade (tween RenfeMotion.Normal) sin reordenar listas (items key=followupId) ni mover el
+    dialogo de borrado.
+- **Decision colores (badges/chips)**: cambio de golpe (NO animateColorAsState): interpolar entre
+  roles de container no garantiza contraste >= 4.5:1 en TODOS los intermedios; pares origen/destino
+  cumplen AA (FASE 3 + ColorContrastTest) y el cambio es instantaneo. Documentado en DESIGN.md.
+- **Escala de duracion del sistema**: los tween del NavHost y Crossfade respetan el animator
+  duration scale (0 detiene el movimiento y salta al estado final); Motion.kt lo documenta.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 37s (38 tareas: 6 ejecutadas, 32 up-to-date).
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> BUILD
+    SUCCESSFUL in 1m1s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53
+    warnings** (baseline); androidTest APK con MotionBehaviorTest compilado.
+- **Aceptacion**: movimiento corto (150-200 ms); sin doble callback (test de clic unico tras
+  Crossfade); sin Lottie ni shared transitions.
+- **Pendiente**: ejecutar los 8 tests instrumentales acumulados en Realme/emulador (ThemeModeSelector,
+  RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics, Pairing,
+  MotionBehavior); fase 13. Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 13: Validacion final (2026-09-22) - COMPLETADO (validacion en dispositivo PENDIENTE)
+- **Estado**: auditorias y comandos finales ejecutados y verificados localmente; la validacion en
+  Realme/emulador sigue PENDIENTE (no habia dispositivo: `adb devices` mostraba `192.168.1.200:5555`
+  offline el 2026-09-22). Commit previo `35e9d59`. Entregables con evidencia:
+  `design/validation/validation-matrix.md` y `design/validation/contrast-report.md`.
+- **Auditoria de alcance** (`git diff f5943c33..HEAD`): zonas protegidas (backend/, core/,
+  RenfeNotifierApp.kt, AndroidManifest.xml, .github/, 6 ViewModels de feature) -> **0 cambios**
+  (salida vacia). Solo UI de feature + MainActivity + navigation + ui/theme + ui/components +
+  strings.xml + tests/previews + 2 ficheros de infra de test.
+- **Auditoria estatica**: `import androidx.compose.material.*` sin icons -> 0 matches;
+  `Color(0x` fuera de ui/theme -> 0; `dynamicColor` -> 0.
+- **Contraste**: `ColorContrastTest` ampliado a **17 pares de texto** + 4 no textuales por esquema
+  (anadidos los 8 pares reales de badges/tarjetas). Verificado: ratios todos >= 4.5 (texto) y >= 3
+  (no textual) calculadas con script sobre los hex reales de `ui/theme/Color.kt`.
+- **Hallazgo accesibilidad**: la tarjeta de tren seleccionada se comunica solo por color
+  (primaryContainer 1.18:1 claro / 1.31:1 oscuro vs surfaceContainerLow, bajo 3:1 de 1.4.11).
+  Se documenta como riesgo PENDIENTE en contrast-report.md (fuera del alcance de la fase 13:
+  SearchComponents.kt no esta en la lista de ficheros modificables de la fase).
+- **Previews**: las 9 `@Preview` usan `spec:width=1080px,height=2400px,dpi=480`, claro/oscuro y
+  fontScale 1.0 (implicito) + 2.0. **fontScale 1.3 y revision visual en Realme -> PENDIENTE**
+- **RedesignRegressionTest.kt** (androidTest, 6 tests): renderiza cada `Content` publico con fakes
+  (estados falsos + callbacks vacios, sin OTP, sin red, sin Renfe) y verifica elementos clave.
+  Compilado con assembleDebugAndroidTest; ejecucion PENDIENTE.
+- **Matriz 6 modos / persistencia / fuentes en dispositivo**: PENDIENTE (sin dispositivo). Tabla en
+  validation-matrix.md secciones 1-3 (aprobada por estructura; la porcion de dispositivo queda sin
+  evidenciar).
+- **Verificacion final (salida real, exit 0, comandos UNO a UNO)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 19s, exit 0.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 27s, exit 0;
+    XML **13 suites / 100 tests / 0 failures / 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 41s, exit 0;
+    **0 errors / 53 warnings** (baseline).
+  - `.\gradlew.bat :app:assembleDebugAndroidTest --no-daemon` -> BUILD SUCCESSFUL in 28s, exit 0
+    (compila RedesignRegressionTest).
+  - `:app:connectedDebugAndroidTest` -> NO ejecutado (sin dispositivo conectado).
+- **Aceptacion**: comandos finales en verde (4/4), M3 exclusivo (auditorias estaticas), contraste AA
+  sobre esquemas finales, flujos con fakes compilados, archivados -> DESIGN.md (seccion FASE 13) y
+  PROGRESS.md. La validacion en Realme/emulador (matriz 6 modos, persistencia, fuentes 1.0/2.0,
+  TalkBack, fontScale 1.3, connectedDebugAndroidTest) queda PENDIENTE con evidencia de la causa
+  (sin dispositivo) y NO se claim "validado".
+- **Pendiente**: ejecutar en Realme/emulador los 9 tests instrumentales acumulados (8 previos +
+  RedesignRegressionTest), la matriz de 6 modos, persistencia, fuentes 1.0/2.0, TalkBack y fontScale
+  1.3; resolver (o documentar como aceptado) el hallazgo de seleccion por color. Detenido a la espera
+  de instrucciones.
+
+## Release v0.2.0 (2026-09-22) - Paso: bump de version y verificacion local COMPLETADO
+- **Estado**: nomenclatura decidida por el usuario = **v0.2.0** (semver; preserva la serie 0.x y
+  marca la UI rediseñada como hito). versionCode **12** (anterior 11) y versionName **"0.2.0"**
+  (anterior "0.1.10") en `android/app/build.gradle.kts:25-26`.
+- **Verificacion local (UNO a UNO, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 36s.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 20s;
+    XML **13 suites / 100 tests / 0 failures / 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 46s;
+    **0 errors / 53 warnings** (baseline).
+- **Commit**: bump de version en `redesign/ui-m3`.
+- **Pendiente**: autorizacion explicita del usuario para el merge `redesign/ui-m3` -> `main`
+  (AGENTS.md 4.1; este push SI activa CI), CI verde en main, tag `v0.2.0`, Release privada y
+  validacion del APK firmado en el realme GT Neo 2.
