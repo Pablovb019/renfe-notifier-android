@@ -8,7 +8,7 @@ Aplicación Android nativa + backend ligero (Python/FastAPI) de **uso personal y
 
 ## Estado
 
-- **En curso**: `v0.2.2` (código 14) — fix de layout del detalle (solape de botones sobre el contenido en el realme) + icono launcher adaptativo sin marco blanco. Pendiente de build firmado y validación en el realme.
+- **En curso**: `v0.2.3` (código 15) — icono launcher xxhdpi retocado manualmente (validado el más representativo del realme).
 - **Última release publicada**: `v0.2.0` (código 12) — UI rediseñada a **Material 3** (fases 0–13 del rediseño) + APP firmada + checksum. Publicada 2026-09-22 por `android-release.yml`.
   - `app-release.apk` (9.029.115 B) — SHA256 `0d4058f24dac3a6ec9ae09e2907cfff13fc5f6eb62ce445711c14816941bd2d2`
   - Evidencia verificada descargando los assets de la Release v0.2.0 (API GitHub).

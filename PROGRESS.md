@@ -1571,3 +1571,17 @@ uff check .: All checks passed.
 
 - **Entregables v0.2.1**: commits `81ed31d` (fix + icono) y `3101c2f` (bump versionCode 13 / versionName 0.2.1). CI main verde (android-ci `35786006838`). APK firmado `35786405761` instalado en el realme a las 23:27 (conserva vinculacion). README "Estado" actualizado a v0.2.1 (en curso).
 - **Pendiente (siguiente paso)**: resolver los pixeles blancos del icono; despues decidir publicacion de la Release v0.2.1 (tag + assets) y cerrar README con datos reales.
+
+## v0.2.3 (2026-09-23) - Icono xxhdpi retocado a mano por el usuario + icono de notificacion apartado
+
+- **ESTADO: EN CURSO** (push + instalacion en el realme pendientes de terminar).
+- **Decisiones del usuario**:
+  1. Los commits automatizados de iconos + bump se revirtieron a posta (reverts `b8cbbbb` y `075c2a4`).
+  2. El icono launcher xxhdpi (densidad real del realme GT Neo 2, 1080x2400 @ 480dpi) se retoco MANUALMENTE por el usuario (4 PNG: ic_launcher, background, foreground, monochrome).
+  3. Version: subir de nuevo a **v0.2.3 / versionCode 15** (la instalada es codigo 15; un codigo 14 fallaria por downgrade).
+  4. Iconos de notificacion generados y APARTADOS para revision manual (sin cablear en `NotificationDisplayer.kt`).
+- **Verificacion de los PNG retocados (script)**: 324x324; fondo magenta solido 127,1,94 100% opaco; foreground tren centrado bbox [83,94][257,220] (offset ~1% del lienzo), blanco puro + detalle gris plata 192,192,192; monochrome silueta negra con esquinas transparentes.
+- **Iconos de notificacion regenerados** desde el foreground xxhdpi aprobado por el usuario (no de la version anterior): `drawable-{mdpi..xxxhdpi}/ic_stat_train.png` escritos en `res/` y en `logo-gen/logos/android/drawable-*`. **El usuario los aprobo a mano** ("drawable-xxhdpi/ic_stat_train.png, esta perfecto") y quedaron CABLEADOS: `NotificationDisplayer.kt:56` -> `.setSmallIcon(R.drawable.ic_stat_train)` (import `R` ya presente).
+- **Bump a v0.2.3**: `build.gradle.kts` versionCode 15 / versionName "0.2.3"; README "Estado" -> v0.2.3 (código 15) icono xxhdpi retocado manualmente.
+- **Commit unico local**: `72a671b` (icono xxhdpi + icono notificacion + bump).
+- **Pendiente**: push a main (avisa que activa CI android-ci); build firmado v0.2.3; `adb install -r` en el realme; validacion visual del usuario; al cerrar, decidir publicacion de la Release v0.2.3 (tag + assets).
