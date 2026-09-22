@@ -60,6 +60,12 @@ val DarkInverseSurface = Color(0xFFEEDFE8)
 val LightInverseOnSurface = Color(0xFFF9EEF4)
 val DarkInverseOnSurface = Color(0xFF362E33)
 
+// success (badge SUCCESS / disponibilidad "Disponible")
+val LightSuccessContainer = Color(0xFFB8F1C4)
+val DarkSuccessContainer = Color(0xFF00522E)
+val LightOnSuccessContainer = Color(0xFF00391E)
+val DarkOnSuccessContainer = Color(0xFFB8F1C4)
+
 // error
 val LightError = Color(0xFFBA1A1A)
 val DarkError = Color(0xFFFFB4AB)

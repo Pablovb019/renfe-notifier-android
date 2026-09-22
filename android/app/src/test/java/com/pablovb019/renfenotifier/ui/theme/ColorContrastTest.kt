@@ -49,6 +49,8 @@ class ColorContrastTest {
         "inverseSurface/inverseOnSurface" to (LightInverseSurface to LightInverseOnSurface),
         "onPrimaryContainer/primaryContainer (texto badge SUCCESS)" to
             (LightOnPrimaryContainer to LightPrimaryContainer),
+        "onSuccessContainer/successContainer (verde badge SUCCESS)" to
+            (LightOnSuccessContainer to LightSuccessContainer),
         "onTertiaryContainer/tertiaryContainer (texto badge WARNING)" to
             (LightOnTertiaryContainer to LightTertiaryContainer),
         "onErrorContainer/errorContainer (texto badge ERROR)" to
@@ -77,6 +79,8 @@ class ColorContrastTest {
         "inverseSurface/inverseOnSurface" to (DarkInverseSurface to DarkInverseOnSurface),
         "onPrimaryContainer/primaryContainer (texto badge SUCCESS)" to
             (DarkOnPrimaryContainer to DarkPrimaryContainer),
+        "onSuccessContainer/successContainer (verde badge SUCCESS)" to
+            (DarkOnSuccessContainer to DarkSuccessContainer),
         "onTertiaryContainer/tertiaryContainer (texto badge WARNING)" to
             (DarkOnTertiaryContainer to DarkTertiaryContainer),
         "onErrorContainer/errorContainer (texto badge ERROR)" to

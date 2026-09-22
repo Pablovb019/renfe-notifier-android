@@ -14,13 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.pablovb019.renfenotifier.ui.theme.LocalSuccessColors
 
 /** Tipo de estado representado por una [RenfeStatusBadge]. */
 enum class BadgeType { SUCCESS, WARNING, ERROR, NEUTRAL }
 
 /**
  * Insignia compacta de estado: fondo tintado con color del esquema (SUCCESS ->
- * primaryContainer, WARNING -> tertiaryContainer, ERROR -> errorContainer,
+ * verde success, WARNING -> tertiaryContainer, ERROR -> errorContainer,
  * NEUTRAL -> surfaceVariant), icono opcional y etiqueta.
  */
 @Composable
@@ -30,14 +31,15 @@ fun RenfeStatusBadge(
     modifier: Modifier = Modifier,
     type: BadgeType = BadgeType.NEUTRAL,
 ) {
+    val success = LocalSuccessColors.current
     val container = when (type) {
-        BadgeType.SUCCESS -> MaterialTheme.colorScheme.primaryContainer
+        BadgeType.SUCCESS -> success.container
         BadgeType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
         BadgeType.ERROR -> MaterialTheme.colorScheme.errorContainer
         BadgeType.NEUTRAL -> MaterialTheme.colorScheme.surfaceVariant
     }
     val content = when (type) {
-        BadgeType.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
+        BadgeType.SUCCESS -> success.onContainer
         BadgeType.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
         BadgeType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
         BadgeType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant

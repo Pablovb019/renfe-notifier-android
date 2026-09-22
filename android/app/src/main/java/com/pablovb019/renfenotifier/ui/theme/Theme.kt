@@ -5,6 +5,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
+
+/**
+ * Colores extended de la paleta (fuera del rol estandar M3): el verde "success"
+ * se expone compuesto con [container]/[onContainer] para que el badge SUCCESS no
+ * dependa del rosado primary y contraste contra el error (rojo).
+ */
+data class RenfeSuccessColors(
+    val container: Color,
+    val onContainer: Color,
+)
+
+private val LightSuccess = RenfeSuccessColors(
+    container = LightSuccessContainer,
+    onContainer = LightOnSuccessContainer,
+)
+
+private val DarkSuccess = RenfeSuccessColors(
+    container = DarkSuccessContainer,
+    onContainer = DarkOnSuccessContainer,
+)
+
+/** Acceso a [#RenfeSuccessColors]] dentro del arbol; se define sobre el esquema activo. */
+val LocalSuccessColors = staticCompositionLocalOf<RenfeSuccessColors> {
+    error("LocalSuccessColors no provisto por RenfeNotifierTheme")
+}
 
 /** Esquema claro con los 36 roles de la paleta de Renfe Notifier. */
 private val LightColors = lightColorScheme(
@@ -100,6 +128,11 @@ fun RenfeNotifierTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = RenfeTypography,
         shapes = RenfeShapes,
-        content = content,
-    )
+    ) {
+        CompositionLocalProvider(
+            LocalSuccessColors provides if (darkTheme) DarkSuccess else LightSuccess,
+        ) {
+            content()
+        }
+    }
 }

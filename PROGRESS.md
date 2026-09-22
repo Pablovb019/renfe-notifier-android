@@ -1585,3 +1585,15 @@ uff check .: All checks passed.
 - **Bump a v0.2.3**: `build.gradle.kts` versionCode 15 / versionName "0.2.3"; README "Estado" -> v0.2.3 (código 15) icono xxhdpi retocado manualmente.
 - **Commit unico local**: `72a671b` (icono xxhdpi + icono notificacion + bump).
 - **Pendiente**: push a main (avisa que activa CI android-ci); build firmado v0.2.3; `adb install -r` en el realme; validacion visual del usuario; al cerrar, decidir publicacion de la Release v0.2.3 (tag + assets).
+
+## v0.2.3 (2026-09-23) - Badge "Disponible" en verde success
+
+- **Solicitud del usuario**: en la UI el badge "Disponible" usa el rosado `primaryContainer` (cuadra con Renfe) pero no contrasta con el rojo de "Sin Plazas"; sugerencia de ponerlo en verde para que resalte.
+- **Implementacion** (4 archivos, sin cambio funcional en logica):
+  - `ui/theme/Color.kt`: nuevo par `Light/DarkSuccessContainer` + `Light/DarkOnSuccessContainer` (verde M3: claro `B8F1C4`/`00391E`, oscuro `00522E`/`B8F1C4`).
+  - `ui/theme/Theme.kt`: `RenfeSuccessColors(container, onContainer)` + `LocalSuccessColors` CompositionLocal provisto por `RenfeNotifierTheme` segun esquema activo (respeta modo manual claro/oscuro, no usa `isSystemInDarkTheme` en el badge).
+  - `ui/components/RenfeStatusBadge.kt:34-44`: `BadgeType.SUCCESS` usa `LocalSuccessColors.current` en lugar de `primaryContainer/onPrimaryContainer`. Afecta de forma coherente a todos los usos SUCCESS (disponibilidad, ciclo de vida ACTIVE, diagnostico OK, dispositivo vinculado).
+  - `ColorContrastTest.kt`: anadidos los 2 pares verde (texto AA 4.5) en claro y oscuro.
+- **Verificacion local**: `testDebugUnitTest` (82), `lintDebug` y `assembleDebug` en verde (BUILD SUCCESSFUL en 20 s).
+- **Pendiente**: push a main (avisa que activa CI android-ci); build firmado v0.2.3; `adb install -r` en el realme; validacion visual del usuario.
+- **Nota**: el APK debug NO puede sobrescribir el release firmado instalado (firmas distintas -> `INSTALL_FAILED_UPDATE_INCOMPATIBLE`); para verlo en el realme se necesita el release firmado (mismo flujo que el icono).
