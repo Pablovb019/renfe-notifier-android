@@ -1237,3 +1237,36 @@ uff check .: All checks passed.
   prompt es un numero desactualizado de fases previas).
 - **Pendiente**: refactor de las pantallas de feature al sistema de componentes (fases 6-11).
   Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 6: Home ferroviaria minimalista (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `552ee8b`.
+- **Archivos creados**:
+  - `feature/home/HomeComponents.kt`: `HomeHeader` (headlineMedium 28sp, maxLines=2),
+    `HomePairedBadge` (RenfeStatusBadge SUCCESS + CheckCircle + "Dispositivo vinculado"),
+    `HomeMeta` (hora+version discretas), `HomeNotificationNotice` (permisos + boton ajustes).
+  - `src/debug/.../feature/home/HomePreviews.kt`: 4 previews 360x800, claro/oscuro, fontScale
+    1/2, spec 1080x2400/480, showSystemUi (2 primeras); variantes isPaired true/false.
+  - `src/androidTest/.../feature/home/HomeContentTest.kt`: 6 tests Compose (4 callbacks una vez,
+    sin "Recargar", badge "Dispositivo vinculado").
+- **Archivos modificados**:
+  - `feature/home/HomeScreen.kt`: contenido con `RenfeScreenScaffold` (78) + action "Ajustes"
+    (82-84) -> onNavigateToDiagnostics; columna scrollable (90) con `RenfeSpacing.screenMargin`;
+    CTAs con `heightIn(min=56.dp)` (111, 123, 132); se elimina `onRefresh`, el boton "Recargar",
+    el Scaffold/TopAppBar propios y el spinner inline (HomeMeta omite la hora si `now == null`).
+  - `strings.xml`: `home_not_paired_cta` -> "Vincular dispositivo", `home_search_button` ->
+    "Buscar trenes", + `home_paired`, `home_settings`; eliminadas `home_refresh`, `cd_refresh`,
+    `home_diagnostics_button`, `home_status_pending`.
+- **Correcciones durante la fase** (solo el punto que fallo, re-ejecutando):
+  1. `assembleDebug` FAILED: faltaba `import androidx.compose.ui.unit.dp` en `HomeComponents.kt`
+     (62, 89) -> arreglado; BUILD SUCCESSFUL in 54s.
+  2. AndroidTest FAILED: `import androidx.compose.ui.test.assertExists` no existe en esta version
+     -> sustituido por `assertIsDisplayed()`; BUILD SUCCESSFUL in 38s.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 54s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    BUILD SUCCESSFUL in 38s; androidTest APK regenerado (HomeContentTest compilado).
+  - `:app:testDebugUnitTest --no-daemon --rerun-tasks` (test en codigo final) -> BUILD SUCCESSFUL
+    in 1m1s; XML: **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53 warnings**.
+- **Aceptacion**: boton no-op eliminado (riesgo 0/5 cerrado); callbacks operativos.
+- **Pendiente**: ejecutar HomeContentTest (+ anteriores) en Realme/emulador (validacion); Search
+  (fase 7). Detenido a la espera de instrucciones.

@@ -5,17 +5,15 @@
 
     <string name="home_title">Renfe Notifier</string>
     <string name="home_subtitle">Avisos de plazas de tren</string>
-    <string name="home_status_pending">Pendiente de emparejamiento</string>
+    <string name="home_paired">Dispositivo vinculado</string>
+    <string name="home_settings">Ajustes</string>
     <string name="home_not_paired_title">Todavía no estás conectado</string>
-    <string name="home_not_paired_cta">Emparejar dispositivo</string>
-    <string name="home_search_button">Buscar viajes</string>
+    <string name="home_not_paired_cta">Vincular dispositivo</string>
+    <string name="home_search_button">Buscar trenes</string>
     <string name="home_followups_button">Mis seguimientos</string>
-    <string name="home_diagnostics_button">Diagnóstico y ajustes</string>
     <string name="home_clock">Hora local: %1$s</string>
     <string name="home_version">Versión: %1$s</string>
     <string name="home_loading">Cargando…</string>
-    <string name="home_refresh">Recargar</string>
-    <string name="cd_refresh">Recargar estado</string>
     <string name="home_notifs_denied_title">Notificaciones desactivadas</string>
     <string name="home_notifs_denied_body">Sin permiso de notificaciones no podrás recibir avisos de plazas. Puedes activarlas desde los ajustes del sistema.</string>
     <string name="home_notifs_open_settings">Abrir ajustes</string>

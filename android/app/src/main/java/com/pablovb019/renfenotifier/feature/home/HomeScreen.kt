@@ -8,15 +8,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,16 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.pablovb019.renfenotifier.core.notifications.NotificationChannels
-import java.time.format.DateTimeFormatter
 import com.pablovb019.renfenotifier.R
+import com.pablovb019.renfenotifier.core.notifications.NotificationChannels
+import com.pablovb019.renfenotifier.ui.components.RenfeScreenScaffold
+import com.pablovb019.renfenotifier.ui.theme.RenfeSpacing
 
 @Composable
 fun HomeScreen(
@@ -54,7 +52,6 @@ fun HomeScreen(
     }
     HomeContent(
         uiState = uiState,
-        onRefresh = {},
         onNavigateToPairing = onNavigateToPairing,
         onNavigateToSearch = onNavigateToSearch,
         onNavigateToFollowUps = onNavigateToFollowUps,
@@ -63,11 +60,13 @@ fun HomeScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Contenido de la pantalla de inicio: cabecera, estado de emparejamiento,
+ * informacion de meta y CTAs principales. Sin llamadas de red.
+ */
 @Composable
 fun HomeContent(
     uiState: HomeUiState,
-    onRefresh: () -> Unit,
     onNavigateToPairing: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToFollowUps: () -> Unit = {},
@@ -75,104 +74,68 @@ fun HomeContent(
     notificationsDenied: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val refreshLabel = stringResource(R.string.home_refresh)
-    val refreshDescription = stringResource(R.string.cd_refresh)
     val context = LocalContext.current
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(R.string.home_title)) },
-                actions = {
-                    Button(
-                        onClick = onRefresh,
-                        modifier = Modifier.semantics {
-                            contentDescription = refreshDescription
-                        },
-                    ) {
-                        Text(text = refreshLabel)
-                    }
-                },
-            )
+    RenfeScreenScaffold(
+        title = stringResource(R.string.home_title),
+        onBack = null,
+        actions = {
+            TextButton(onClick = onNavigateToDiagnostics) {
+                Text(text = stringResource(R.string.home_settings))
+            }
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+                .padding(horizontal = RenfeSpacing.screenMargin),
+            verticalArrangement = Arrangement.spacedBy(RenfeSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (notificationsDenied) {
-                Text(
-                    text = stringResource(R.string.home_notifs_denied_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.error,
+                HomeNotificationNotice(
+                    onOpenSettings = { NotificationChannels.openSystemSettings(context) },
                 )
-                Text(
-                    text = stringResource(R.string.home_notifs_denied_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                OutlinedButton(onClick = { NotificationChannels.openSystemSettings(context) }) {
-                    Text(text = stringResource(R.string.home_notifs_open_settings))
-                }
             }
-            if (!uiState.isPaired) {
-                Text(
-                    text = stringResource(R.string.home_not_paired_title),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Button(onClick = onNavigateToPairing) {
+
+            if (uiState.isPaired) {
+                HomeHeader(title = stringResource(R.string.home_subtitle))
+                HomePairedBadge()
+            } else {
+                HomeHeader(title = stringResource(R.string.home_not_paired_title))
+                Button(
+                    onClick = onNavigateToPairing,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp),
+                ) {
                     Text(text = stringResource(R.string.home_not_paired_cta))
                 }
-            } else {
-                Text(
-                    text = stringResource(R.string.home_subtitle),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = stringResource(R.string.home_status_pending),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
             }
-            if (uiState.loading) {
-                CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
-            } else {
-                uiState.now?.let { now ->
-                    Text(
-                        text = stringResource(R.string.home_clock, now.format(HOUR_FORMAT)),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.home_version, uiState.versionName),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+
+            HomeMeta(now = uiState.now, versionName = uiState.versionName)
+
             Button(
                 onClick = onNavigateToSearch,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp),
             ) {
                 Text(text = stringResource(R.string.home_search_button))
             }
-            Button(
+
+            OutlinedButton(
                 onClick = onNavigateToFollowUps,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp),
             ) {
                 Text(text = stringResource(R.string.home_followups_button))
-            }
-            Button(
-                onClick = onNavigateToDiagnostics,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(R.string.home_diagnostics_button))
             }
         }
     }
 }
-
-private val HOUR_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 private fun notificationsPermissionGranted(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true

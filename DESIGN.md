@@ -383,3 +383,56 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   (100/100 reales, no 85).
 - **Pendiente**: pantallas de feature refactorizadas al sistema de componentes (home/search/
   followups/detail/diagnostics/pairing, fases 6-11). Detenido a la espera de instrucciones.
+
+## FASE 6 - HOME FERROVIARIA MINIMALISTA (2026-09-22)
+
+- **Objetivo cumplido**: Home rediseñada con `RenfeScreenScaffold`, CTAs de altura mínima
+  56 dp, textos con `maxLines`/`overflow`; eliminado el botón "Recargar" no-op. Sin red nueva.
+- **Archivos creados**:
+  - `feature/home/HomeComponents.kt`: subcomponentes de la pantalla: `HomeHeader` (titulo
+    `headlineMedium` 28 sp, `maxLines = 2`, Ellipsis, centrado), `HomePairedBadge`
+    (`RenfeStatusBadge` tipo `BadgeType.SUCCESS` con `Icons.Filled.CheckCircle` y
+    `home_paired`), `HomeMeta` (hora + version en `bodySmall`/`onSurfaceVariant`, máx. 1 línea),
+    `HomeNotificationNotice` (aviso de permisos con `OutlinedButton` a ajustes). `HOUR_FORMAT`
+    movido aquí desde `HomeScreen.kt`.
+  - `src/debug/.../feature/home/HomePreviews.kt`: 4 `@Preview` 360x800, claro/oscuro y
+    fontScale 1/2, spec 1080x2400/480, `showSystemUi = true` en las dos primeras; variantes
+    `isPaired` (emparejado con badges; no emparejado con aviso de permisos).
+  - `src/androidTest/.../feature/home/HomeContentTest.kt`: 6 tests Compose
+    (`createAndroidComposeRule<ComponentActivity>()`): cada CTA (Vincular dispositivo, Buscar
+    trenes, Mis seguimientos, Ajustes) invoca su callback una sola vez; no existe botón
+    "Recargar"; emparejado muestra "Dispositivo vinculado".
+- **Archivos modificados**:
+  - `feature/home/HomeScreen.kt`: `HomeContent` usa `RenfeScreenScaffold` (78) con
+    `onBack = null` y action "Ajustes" (`TextButton`, linea 82-84, -> `onNavigateToDiagnostics`).
+    Columna `verticalScroll` (90) y `padding(horizontal = RenfeSpacing.screenMargin)`; al no
+    emparejar: `HomeHeader` (home_not_paired_title) + `Button` "Vincular dispositivo"
+    (`heightIn(min = 56.dp)`, 111); emparejado: `HomeHeader(home_subtitle)` + `HomePairedBadge` (104).
+    `HomeMeta` (117) sustituye el bloque loading/clock (el spinner inline desaparece: `now == null`
+    mientras carga y `HomeMeta` omite la hora; sin cambio funcional). CTA principal
+    `Button` "Buscar trenes" (123) y secundaria `OutlinedButton` "Mis seguimientos" (132), ambos
+    `heightIn(min = 56.dp)`. Eliminada la firma `onRefresh` y el `TopAppBar`/`Scaffold` propios,
+    y con ellos `CircularProgressIndicator`, `semantics`, `@OptIn(ExperimentalMaterial3Api)`.
+  - `res/values/strings.xml`: `home_not_paired_cta` -> "Vincular dispositivo", `home_search_button`
+    -> "Buscar trenes", nueva `home_paired` "Dispositivo vinculado" y `home_settings` "Ajustes";
+    eliminadas las ahora sin uso `home_refresh`, `cd_refresh`, `home_diagnostics_button`,
+    `home_status_pending` (no aparecen como UnusedResources en lint).
+- **Riesgo 0/5 resuelto**: el botón "Recargar" no-op (`HomeScreen.kt` onRefresh = {}) ya no
+  existe; documentado aquí como cierre del punto 5 de RIESGOS PARA 360dp (fase 0).
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> 1er intento FAILED (faltaba
+    `import androidx.compose.ui.unit.dp` en `HomeComponents.kt:62,89`); corregido -> BUILD
+    SUCCESSFUL in 54s (6 ejecutados, 32 up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    1er intento FAILED en `compileDebugAndroidTestKotlin` (import `assertExists`
+    inexistente en esta version); sustituido por `assertIsDisplayed` -> BUILD SUCCESSFUL in 38s.
+  - Re-ejecucion forzada del test de unidad sobre el codigo final:
+    `.\gradlew.bat :app:testDebugUnitTest --no-daemon --rerun-tasks` -> BUILD SUCCESSFUL in 1m1s;
+    reporte XML **13 suites / 100 tests / 0 failures / 0 errors**; lint **0 errors / 53 warnings**
+    (baseline; las strings retiradas no generan UnusedResources).
+- **Aceptacion**: boton no-op eliminado y sin referencia residual (`rg` de las strings -> nada
+  en codigo); los 4 callbacks operativos (6 tests instrumentales compilados, pendientes de
+  ejecucion en dispositivo).
+- **Nota honesta**: `HomeContentTest` compilado con `assembleDebugAndroidTest` pero NO ejecutado
+  en emulador/dispositivo (misma politica que fases 3-4).
+- **Pendiente**: pantalla de busqueda (fase 7). Detenido a la espera de instrucciones.
