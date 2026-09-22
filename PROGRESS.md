@@ -1327,3 +1327,41 @@ uff check .: All checks passed.
 - **Aceptacion**: 5 filtros accesibles a 2x (LazyRow scrollable, verificado en previews/test).
 - **Pendiente**: ejecutar FollowUpsContentTest (+ acumulados) en Realme/emulador; detalle de
   seguimiento (fase 9). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 9: Detalle de seguimiento (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `eebe9f4`.
+- **Archivos creados**:
+  - `src/debug/.../feature/followups/FollowUpDetailPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0 (spec 1080x2400/480); detalle de ejemplo con 2 episodios, specificTrainId
+    "AVANT 8492|11:08|12:13", plazaH, ACTIVE + pending_alert.
+  - `src/androidTest/.../feature/followups/FollowUpDetailContentTest.kt`: 7 tests (acciones
+    separadas con assertCountEquals; pausar una vez; PAUSED muestra Reanudar y no Pausar;
+    confirmar aviso no elimina; cancelar dialogo de borrado no invoca onDelete y "Si, eliminar"
+    si; botones deshabilitados en actionInProgress; cabecera con ultima comprobacion valida
+    exacta y "Episodios: 2").
+- **Archivos modificados**:
+  - `feature/followups/FollowUpComponents.kt`: + `FollowUpDetailHeader` (139; ruta 2 lineas
+    elipsis + badge ciclo de vida + badge modo NEUTRAL + fecha + disponibilidad + Plaza H +
+    ultima comprobacion lastValidObservedAt + caducidad + episodio_count), + `FollowUpDetailEpisodes`
+    (231), + `FollowUpDetailActionButtons` (280; Pausar/Reanudar + Renovar + Confirmar aviso +
+    Eliminar separados, enabled = !actionInProgress); helpers movidos/adaptados: detailRouteLabel
+    (348), modeLabel (355), specificTrainTimes (374).
+  - `feature/followups/FollowUpDetailScreen.kt`: RenfeScreenScaffold; LaunchedEffect(load) y
+    LaunchedEffect(deleted) preservados (53 y 66); FollowUpDetailContent publico (83) con
+    margenes 16 dp; delegados header/episodios/acciones; AlertDialog de borrado con dismiss que
+    NO llama onDelete; eliminados helpers privados antiguos.
+  - `strings.xml`: + `followups_episode_count`; - `followups_lifecycle_detail`, - `followups_back_cd`
+    (ambas huerfanas tras el scaffold); indentacion arreglada de `followups_mode_specific_times`.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> 1er
+    intento FAILED en androidTest (assertDoesNotExist/assertCountEquals no top-level -> miembro y
+    onAllNodesWithText) -> BUILD SUCCESSFUL in 40s; XML **13 suites / 100 tests / 0 fallos /
+    0 errores**; lint **0 errors / 53 warnings** (baseline); androidTest APK con
+    FollowUpDetailContentTest compilado.
+- **Aceptacion**: 5 acciones separadas; cancelar borrado no elimina; confirmar aviso no elimina;
+  ultima comprobacion = lastValidObservedAt (instante real del ultimo episodio, no now); previews
+  360x800 1x/2x.
+- **Pendiente**: ejecutar los 5 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
+  HomeContent, FollowUpsContent, FollowUpDetail) en Realme/emulador; fase 10. Detenido a la espera
+  de instrucciones.

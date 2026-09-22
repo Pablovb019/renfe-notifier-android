@@ -82,11 +82,11 @@
     <string name="followups_last_check">Última comprobación válida: %1$s</string>
     <string name="followups_no_checks">Sin comprobaciones válidas registradas todavía.</string>
     <string name="followups_expires">Caduca: %1$s</string>
-    <string name="followups_lifecycle_detail">Estado: %1$s</string>
     <string name="followups_mode_specific">Tren concreto: %1$s</string>
-<string name="followups_mode_specific_times">Tren de %1$s a %2$s</string>
+    <string name="followups_mode_specific_times">Tren de %1$s a %2$s</string>
     <string name="followups_reminder_note">Recordatorios acotados: se avisará un número limitado de veces hasta que confirmes o hasta que desaparezca la disponibilidad.</string>
     <string name="followups_episodes_title">Episodios</string>
+    <string name="followups_episode_count">Episodios: %1$d</string>
     <string name="followups_no_episodes">Aún no hay episodios registrados.</string>
     <string name="followups_episodes_item">Episodio %1$d — detectado %2$s</string>
     <string name="followups_episodes_trains">%1$d tren(es) disponible(s)</string>
@@ -101,7 +101,6 @@
     <string name="followups_delete_dialog_message">¿Eliminar el seguimiento? Se cancelarán sus avisos. Esta acción no puede deshacerse.</string>
     <string name="followups_delete_confirm">Sí, eliminar</string>
     <string name="followups_detail_title">Seguimiento</string>
-    <string name="followups_back_cd">Volver</string>
 
     <!-- Notificaciones -->
     <string name="notif_channel_alert">Avisos de plazas</string>

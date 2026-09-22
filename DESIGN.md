@@ -519,3 +519,68 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
 - **Nota honesta**: `FollowUpsContentTest` compilado pero NO ejecutado en emulador/dispositivo
   (misma política que fases previas; pendiente de validación en Realme).
 - **Pendiente**: detalle de seguimiento (fase 9). Detenido a la espera de instrucciones.
+
+## FASE 9 - DETALLE DE SEGUIMIENTO (2026-09-22)
+
+- **Objetivo cumplido**: detalle con cabecera (ruta + fecha + badge de modo + badge de ciclo de
+  vida) y sección de información (última comprobación válida, caducidad Europe/Madrid, Plaza H
+  y nº episodios); 5 acciones SEPARADAS; eliminar exige confirmación y confirmar aviso NO borra;
+  sin swipe-to-delete; `actionInProgress` deshabilita los botones. Scaffold unificado.
+- **Archivos creados**:
+  - `feature/followups/FollowUpDetailPreviews.kt` NO: las previews viven en
+    `src/debug/.../feature/followups/FollowUpDetailPreviews.kt`: 4 `@Preview` 360×800
+    claro/oscuro × fontScale 1.0/2.0 (showSystemUi en las 2 de fuente base), spec
+    1080x2400/480; detalle de ejemplo: modo "specific" con `specificTrainId
+    "AVANT 8492|11:08|12:13"`, plazaH, ACTIVE + pending_alert, 2 episodios.
+  - `src/androidTest/.../feature/followups/FollowUpDetailContentTest.kt`: 7 tests instrumentales:
+    acciones separadas (assertCountEquals por botón), pausar → onPause una vez, ciclo PAUSED → se
+    muestra Reanudar (y no Pausar) → onResume, confirmar aviso → onAcknowledge y NO onDelete,
+    cancelar el diálogo de borrado no invoca onDelete (y confirmar "Sí, eliminar" sí), botones
+    deshabilitados con `actionInProgress`, y cabecera con "Última comprobación válida:
+    23/09/2026 08:30" (instante real del último episodio, NO hora actual) + "Episodios: 2".
+- **Archivos modificados**:
+  - `feature/followups/FollowUpComponents.kt`: nuevos `FollowUpDetailHeader` (139) — `Card` con
+    ruta (`maxLines = 2`/Ellipsis, `weight(1f)`), badge ciclo de vida y badge de modo
+    (`RenfeStatusBadge` tipo `BadgeType.NEUTRAL`), fecha `MadridFormat.showTravelDate`,
+    disponibilidad coloreada, Plaza H condicional, última comprobación vía `lastValidObservedAt`
+    (param `java.time.Instant?`, null → `followups_no_checks`), caducidad `showInstant`, nº
+    episodios `followups_episode_count`; `FollowUpDetailEpisodes` (231) — una `Card` por
+    episodio (episodio + instante, nº de trenes); `FollowUpDetailActionButtons` (280) — la fila
+    de acciones: `Button` Pausar (ACTIVE) o Reanudar (PAUSED), `OutlinedButton` Renovar (oculto
+    en DELETED), `Button` "Confirmar aviso" (solo `pending_alert`, NO elimina), `OutlinedButton`
+    "Eliminar seguimiento" en `error`; todas `enabled = !actionInProgress` y separadas con
+    `Arrangement.spacedBy(RenfeSpacing.sm)`. Helpers movidos desde el detalle y adaptados:
+    `detailRouteLabel` (348), `modeLabel` (355) + `specificTrainTimes` (374) — misma lógica que
+    el `modeText` antiguo, ahora con `FollowUpDetailOut` como parámetro.
+  - `feature/followups/FollowUpDetailScreen.kt`: Scaffold/TopAppBar propios sustituidos por
+    `RenfeScreenScaffold` (title `followups_detail_title`, onBack); `LaunchedEffect(Unit)` de
+    carga y `LaunchedEffect(uiState.deleted)` → `onDeleted()` (preservados sin tocar, líneas 53 y
+    66); `FollowUpDetailContent` pública (83) con columna `verticalScroll` y márgenes 16 dp
+    (`RenfeSpacing.screenMargin`) / 8 dp verticales, separación 12 dp; cabecera → `FollowUpDetailHeader`,
+    episodios → `FollowUpDetailEpisodes`, acciones → `FollowUpDetailActionButtons`; estado error
+    → `RenfeErrorState` con reintento → `onRefresh`; AlertDialog de eliminación conservado
+    (dismiss = "Cancelar" solo cierra el diálogo, NO llama a `onDelete`); eliminados los helpers
+    privados del detalle (modeText/specificTrainTimes/lifecycleColor…) al moverse a components.
+  - `res/values/strings.xml`: nueva `followups_episode_count` ("Episodios: %1$d"); eliminadas las
+    huérfanas `followups_lifecycle_detail` (el ciclo de vida ahora es badge sin prefijo "Estado:")
+    y `followups_back_cd` (tras migrar el detalle al `RenfeScreenScaffold`, que usa `common_back`);
+    corregida la indentación de `followups_mode_specific_times`.
+- **Aceptación (fase 9 del plan)**: 5 acciones separadas como botones distintos (verificado con
+  `assertCountEquals(1)` por botón y una sola acción por test); **cancelar el borrado no elimina**
+  (test: click "Eliminar" → diálogo → "Cancelar" → `onDelete` 0 veces → diálogo cerrado; luego
+  "Sí, eliminar" → 1 vez); confirmar aviso no elimina (test); last check usa `lastValidObservedAt`
+  = instante del último episodio, no `now` (test con string exacta); caducidad y episodios en
+  Europe/Madrid; previews 360×800 fontScale 1.0/2.0.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 44s.
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` ->
+    1er intento FAILED en `compileDebugAndroidTestKotlin`: `assertDoesNotExist` y
+    `assertCountEquals` no son extensions top-level en esta versión (miembro de
+    `SemanticsNodeInteraction` / colección); corregido: se usa el miembro y `onAllNodesWithText`
+    para `assertCountEquals` -> BUILD SUCCESSFUL in 40s. Reporte XML **13 suites / 100 tests / 0
+    failures / 0 errors**; lint **0 errors / 53 warnings** (baseline; las strings retiradas no
+    generan UnusedResources ni quedan referencias).
+- **Nota honesta**: `FollowUpDetailContentTest` compilado pero NO ejecutado en
+  emulador/dispositivo (misma política que fases 3-8; acumulados pendientes de validación en
+  Realme: ThemeModeSelector, RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail).
+- **Pendiente**: Fase 10 del plan. Detenido a la espera de instrucciones.
