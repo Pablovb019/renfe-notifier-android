@@ -1550,3 +1550,24 @@ uff check .: All checks passed.
     instrumentales, revision visual de la UI M3, TalkBack, fontScale 1.3, persistencia, 6 modos).
   - Riesgo de accesibilidad documentado: seleccion de tren por color (primary/surfaceContainerLow)
     1.18:1 claro / 1.31:1 oscuro < 3:1 (WCAG 1.4.11).
+---
+
+## v0.2.1 (2026-09-22) - Fix bug visual del detalle + icono launcher
+
+- **Bug visual detalle - ESTADO: ARREGLADO y verificado (dispositivo real)**
+  - Reporte: el usuario (imagen en el realme) vio botones Pausar/Renovar/Eliminar solapando el contenido del detalle ("Renovar" pisa "Viaje: 25/09/2026", "Eliminar" pisa "Solo Plaza H"). El modelo no puede ver imagenes: verificacion por uiautomator + muestreo de pixeles.
+  - Evidencia PRE-fix (tanto en v0.2.0 como tras reinstalar el artefacto reconstruido de main): el ScrollView del detalle renderizaba intercalado (Pausar [48,326][1032,470], ruta [96,470], Renovar [48,494][1032,638], Disponibilidad [638], Eliminar [48,662][1032,806]) con fecha, badge y titulos ausentes del arbol. Descartado APK desfasado (dex release v0.2.0 == dex artefacto de main run 35782713389) y remoto/local identicos en la fuente del detalle.
+  - Causa raiz adoptada: cada rama del `Crossfade` en `FollowUpDetailContent` emitia una secuencia de composables SIN un root unico (los hijos se apilaban en el contenedor del Crossfade) y las acciones quedaban dentro del Crossfade.
+  - Fix (commit `81ed31d`): una unica `Column` como root por rama en el Crossfade; botones de accion como bloque propio FUERA del Crossfade dentro del Column desplazable; `maxLines`/ellipsis en el titulo de episodio.
+  - Verificacion local: `assembleDebug`, `testDebugUnitTest`, `lintDebug` sin errores. Instalado en el realme: release v0.2.1 (codigo 13), SHA256 `c5c3575a7b2829136aba19de884321a9292a7cd56cf0527a2ce01c12e0e053b2`, `install -r` Success, `dumpsys` versionCode=13/versionName=0.2.1.
+  - Verificacion on-device post-fix (h2.xml): orden limpio y completo - Card cabecera [48,326][1032,1060] con ruta, badge Activo, Viaje, "Tren de 15:54 a 16:54", Disponibilidad, Solo Plaza H, Sin comprobaciones, Caduca, Episodios; Recordatorios [48,1096]; Episodios [48,1270]; "Aun no hay episodios" [48,1363]; Acciones [48,1508]; Pausar [48,1589][1032,1733]; Renovar [48,1757][1032,1901]; Eliminar [48,1925][1032,2069]. Sin solapes ni intercalado.
+  - **Confirmado por el usuario en el realme: "el fix del bug visual va perfecto".**
+
+- **Icono launcher - ESTADO: INSTALADO, retoque pendiente (pixeles blancos)**
+  - Origen: `C:\Users\pablo\Downloads\logo-gen\logos` (maestras, preview y conjuntos `android/`).
+  - Copiados a `android/app/src/main/res/mipmap-{anydpi-v26,mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}` (adaptive bg+fg+monochrome + 5 densidades) y declarados `android:icon="@mipmap/ic_launcher"` + `android:roundIcon` en el manifest. `aapt dump badging` confirma `icon='res/BW.xml'` (adaptativo). Proyectaba icono generico (robot Android) porque el manifest no tenia icon.
+  - Instalado en el realme con v0.2.1.
+  - El usuario reporta "un poco de pixeles blancos al logo en la caja de aplicaciones". Analisis de pixeles de los PNG: background 27.119 px blancos, foreground 16.189 px blancos (83% de su area opaca), monochrome sin transparencia; el compuesto mostraba un marco blanquecino en el borde del rombo y una barra vertical blanca interior. Pendiente: localizar el artefacto exacto del compuesto y retocar/regenerar los PNG.
+
+- **Entregables v0.2.1**: commits `81ed31d` (fix + icono) y `3101c2f` (bump versionCode 13 / versionName 0.2.1). CI main verde (android-ci `35786006838`). APK firmado `35786405761` instalado en el realme a las 23:27 (conserva vinculacion). README "Estado" actualizado a v0.2.1 (en curso).
+- **Pendiente (siguiente paso)**: resolver los pixeles blancos del icono; despues decidir publicacion de la Release v0.2.1 (tag + assets) y cerrar README con datos reales.
