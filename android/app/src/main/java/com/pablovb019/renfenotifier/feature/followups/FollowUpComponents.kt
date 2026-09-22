@@ -255,6 +255,8 @@ fun FollowUpDetailEpisodes(
                                 MadridFormat.showInstant(episode.observedAt),
                             ),
                             style = MaterialTheme.typography.titleSmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             text = stringResource(

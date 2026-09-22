@@ -4,7 +4,10 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -107,23 +110,44 @@ fun FollowUpDetailContent(
             if (isLoading) {
                 RenfeLoadingState(modifier = Modifier.padding(vertical = 40.dp))
             } else if (detail != null) {
-                FollowUpDetailHeader(
-                    detail = detail,
-                    lastValidCheck = uiState.lastValidObservedAt,
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(RenfeSpacing.md),
+                ) {
+                    FollowUpDetailHeader(
+                        detail = detail,
+                        lastValidCheck = uiState.lastValidObservedAt,
+                    )
 
-                Text(
-                    text = stringResource(R.string.followups_reminder_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    Text(
+                        text = stringResource(R.string.followups_reminder_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
 
-                Text(
-                    text = stringResource(R.string.followups_episodes_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    Text(
+                        text = stringResource(R.string.followups_episodes_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    FollowUpDetailEpisodes(detail = detail)
+                }
+            } else {
+                RenfeErrorState(
+                    icon = Icons.Filled.Warning,
+                    title = stringResource(R.string.followups_load_error),
+                    text = uiState.actionError ?: stringResource(R.string.followups_no_checks),
+                    onRetry = onRefresh,
                 )
-                FollowUpDetailEpisodes(detail = detail)
+            }
+        }
 
+        if (detail != null) {
+            Spacer(modifier = Modifier.height(RenfeSpacing.sm))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(RenfeSpacing.sm),
+            ) {
                 Text(
                     text = stringResource(R.string.followups_actions_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -152,13 +176,6 @@ fun FollowUpDetailContent(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-            } else {
-                RenfeErrorState(
-                    icon = Icons.Filled.Warning,
-                    title = stringResource(R.string.followups_load_error),
-                    text = uiState.actionError ?: stringResource(R.string.followups_no_checks),
-                    onRetry = onRefresh,
-                )
             }
         }
     }
