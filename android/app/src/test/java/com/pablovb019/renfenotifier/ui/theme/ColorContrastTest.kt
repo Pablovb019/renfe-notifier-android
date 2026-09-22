@@ -47,6 +47,22 @@ class ColorContrastTest {
         "surface/onSurface" to (LightSurface to LightOnSurface),
         "surfaceVariant/onSurfaceVariant" to (LightSurfaceVariant to LightOnSurfaceVariant),
         "inverseSurface/inverseOnSurface" to (LightInverseSurface to LightInverseOnSurface),
+        "onPrimaryContainer/primaryContainer (texto badge SUCCESS)" to
+            (LightOnPrimaryContainer to LightPrimaryContainer),
+        "onTertiaryContainer/tertiaryContainer (texto badge WARNING)" to
+            (LightOnTertiaryContainer to LightTertiaryContainer),
+        "onErrorContainer/errorContainer (texto badge ERROR)" to
+            (LightOnErrorContainer to LightErrorContainer),
+        "onPrimaryContainer/surfaceContainerLow (texto acento exito en tarjetas)" to
+            (LightOnPrimaryContainer to LightSurfaceContainerLow),
+        "onSurface/primaryContainer (texto en tarjeta seleccionada)" to
+            (LightOnSurface to LightPrimaryContainer),
+        "onSurfaceVariant/primaryContainer (texto secundario en tarjeta seleccionada)" to
+            (LightOnSurfaceVariant to LightPrimaryContainer),
+        "onSurface/surfaceContainerLow (texto en tarjetas)" to
+            (LightOnSurface to LightSurfaceContainerLow),
+        "onSurfaceVariant/surfaceContainerLow (texto secundario en tarjetas)" to
+            (LightOnSurfaceVariant to LightSurfaceContainerLow),
     )
 
     private val darkTextPairs = listOf(
@@ -59,6 +75,22 @@ class ColorContrastTest {
         "surface/onSurface" to (DarkSurface to DarkOnSurface),
         "surfaceVariant/onSurfaceVariant" to (DarkSurfaceVariant to DarkOnSurfaceVariant),
         "inverseSurface/inverseOnSurface" to (DarkInverseSurface to DarkInverseOnSurface),
+        "onPrimaryContainer/primaryContainer (texto badge SUCCESS)" to
+            (DarkOnPrimaryContainer to DarkPrimaryContainer),
+        "onTertiaryContainer/tertiaryContainer (texto badge WARNING)" to
+            (DarkOnTertiaryContainer to DarkTertiaryContainer),
+        "onErrorContainer/errorContainer (texto badge ERROR)" to
+            (DarkOnErrorContainer to DarkErrorContainer),
+        "onPrimaryContainer/surfaceContainerLow (texto acento exito en tarjetas)" to
+            (DarkOnPrimaryContainer to DarkSurfaceContainerLow),
+        "onSurface/primaryContainer (texto en tarjeta seleccionada)" to
+            (DarkOnSurface to DarkPrimaryContainer),
+        "onSurfaceVariant/primaryContainer (texto secundario en tarjeta seleccionada)" to
+            (DarkOnSurfaceVariant to DarkPrimaryContainer),
+        "onSurface/surfaceContainerLow (texto en tarjetas)" to
+            (DarkOnSurface to DarkSurfaceContainerLow),
+        "onSurfaceVariant/surfaceContainerLow (texto secundario en tarjetas)" to
+            (DarkOnSurfaceVariant to DarkSurfaceContainerLow),
     )
 
     private val lightNonTextPairs = listOf(

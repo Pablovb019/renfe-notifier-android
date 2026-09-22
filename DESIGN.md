@@ -755,3 +755,62 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   Pairing, MotionBehavior). El campo de entrada del PairingScreen conserva su teclado de texto
   (sin foco alterado por las transiciones).
 - **Pendiente**: fase 13. Detenido a la espera de instrucciones.
+
+## FASE 13 - VALIDACION FINAL (2026-09-22)
+
+- **Estado**: fase de validacion del rediseno. Comandos finales en verde (4/4), ejecucion en
+  dispositivo PENDIENTE (no habia dispositivo disponible: `adb devices` solo mostraba
+  `192.168.1.200:5555` offline). Detalles con evidencia en `design/validation/validation-matrix.md`
+  y `design/validation/contrast-report.md`.
+- **Auditoria de alcance** (`git diff BASELINE_SHA..HEAD`, BASELINE_SHA en linea 10): solos UI.
+  Comando de auditoria sobre las zonas protegidas (**0 cambios**): backend/, core/, RenfeNotifierApp.kt,
+  AndroidManifest.xml, .github/, y los 6 ViewModels de feature.
+- **Auditoria estatica**:
+  - `rg -P "import androidx\.compose\.material\.(?!icons)"` -> 0 matches (solo material3/icons).
+  - `Color(0x` fuera de `ui/theme` -> 0 matches.
+  - `dynamicColor` -> 0 matches.
+- **Contraste AA** (WCAG 1.4.3/1.4.11): `ColorContrastTest` ampliado de 9 a **17 pares de texto**
+  por esquema (anadidos los 8 pares de badges y tarjetas) y mantiene los 4 pares no textuales.
+  Todos pasan >= 4.5:1 / >= 3:1 (verificado con el reporte XML 13/100/0). Ratios calculadas tambien
+  con un script sobre los hex reales de `Color.kt` (todas >= 4.5 texto / >= 3 no textual); el par
+  NO textual `primaryContainer/surfaceContainerLow` (seleccion de tarjeta de tren) queda **FUERA**
+  del test por fallar 1.4.11 (1.18:1 claro / 1.31:1 oscuro) -> hallazgo de accesibilidad documentado
+  en `contrast-report.md` como riesgo/PENDIENTE (no se modifica en fase 13: fuera de alcance).
+- **Accesibilidad**: botones/campos >= 56 dp (fases previas), M3 48 dp minimo interactivo,
+  badges siempre con etiqueta de texto (no info solo por color). Hallazgo: tarjeta de tren
+  seleccionada solo por color (ver contraste). TalkBack -> PENDIENTE (sin dispositivo).
+- **Previews**: las 9 `@Preview` auditaron `spec:width=1080px,height=2400px,dpi=480` con claro/oscuro
+  y fontScale 1.0 (implicito) + 2.0 (dos por fichero). **fontScale 1.3 PENDIENTE** (no cubierto; el
+  device profile real informa font_scale 1.0). Inspeccion visual en Realme -> PENDIENTE (sin dispositivo).
+- **Flujos con fakes (sin OTP ni Renfe real)**: nuevo `src/androidTest/.../ui/RedesignRegressionTest.kt`
+  (6 tests Compose): compone cada `Content` publico (Home, Search, FollowUps, Detalle, Diagnostics,
+  Pairing) con estados falsos y callbacks vacios y verifica elementos clave. Compilado con
+  `assembleDebugAndroidTest`; ejecucion -> PENDIENTE.
+- **Dispositivo (paso 6)**: `wm size`/`wm density` medidos en fase 0 (1080x2400 px, 480 dpi =
+  360x800 dp real). Matriz de 6 modos (app x sistema), persistencia del tema y fuentes 1.0/2.0 en
+  Realme/emulador -> PENDIENTE (sin dispositivo). Tabla en `validation-matrix.md` seccion 1-3.
+- **Verificación final (salida real, comandos UNO a UNO)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 19s, exit 0.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 27s, exit 0.
+    Reporte XML: **13 suites / 100 tests / 0 failures / 0 errors** (los nuevos pares viven dentro
+    de los 4 tests existentes).
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 41s, exit 0.
+    Reporte: **0 errors / 53 warnings** (baseline).
+  - `.\gradlew.bat :app:assembleDebugAndroidTest --no-daemon` -> BUILD SUCCESSFUL in 28s, exit 0
+    (compila `RedesignRegressionTest`).
+  - `:app:connectedDebugAndroidTest` -> NO ejecutado: sin dispositivo conectado.
+- **Inventario final del rediseno**: 36 roles M3 (Color.kt, fase 1), tipografia `RenfeTypography`
+  (fase 1), `ThemeMode` SYSTEM/LIGHT/DARK (fase 2), DEVICE_PROFILE 360x800 dp (fase 0),
+  tokens de Motion (fase 12). Tablas y detalle en las secciones de cada fase de este documento.
+- **Nota honesta (estados)**: `implementado` y `probado local` (JVM+lint+builds) = todo el
+  rediseno de fases 1-13. `validado en emulador` = nada (no hubo emulador). `validado en Realme`
+  = PENDIENTE en su totalidad (los 8 grupos de tests instrumentales + matriz 6 modos + persistencia
+  + fuentes + TalkBack + fontScale 1.3). `pendiente` = todo lo anterior mas el hallazgo de contraste
+  y el foco: sin dispositivo no se puede claim "validado".
+- **Nota propuesta no oficial**: este rediseno es una PROPUESTA visual (Material 3, azul->magenta
+  de la especificacion) sobre el repositorio `renfe-notifier-android`; NO forma parte del
+  repositorio original `Pablovb019/renfe-notifier-bot` ni se ha desplegado en produccion. Los
+  cambios de UI vive en la rama `redesign/ui-m3`; la fusion a `main` queda a decision explicita
+  del usuario al terminar el rediseno (AGENTS.md 4.1).
+- **Delta vs baseline**: HEAD de la fase 13 = `35e9d59` + commit de esta fase. Sin regresiones
+  (13/100/0 y lint 0/53 iguales al baseline de la fase 0, salvo el crecimiento permitido de tests).

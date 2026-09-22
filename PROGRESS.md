@@ -1467,3 +1467,48 @@ uff check .: All checks passed.
 - **Pendiente**: ejecutar los 8 tests instrumentales acumulados en Realme/emulador (ThemeModeSelector,
   RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics, Pairing,
   MotionBehavior); fase 13. Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 13: Validacion final (2026-09-22) - COMPLETADO (validacion en dispositivo PENDIENTE)
+- **Estado**: auditorias y comandos finales ejecutados y verificados localmente; la validacion en
+  Realme/emulador sigue PENDIENTE (no habia dispositivo: `adb devices` mostraba `192.168.1.200:5555`
+  offline el 2026-09-22). Commit previo `35e9d59`. Entregables con evidencia:
+  `design/validation/validation-matrix.md` y `design/validation/contrast-report.md`.
+- **Auditoria de alcance** (`git diff f5943c33..HEAD`): zonas protegidas (backend/, core/,
+  RenfeNotifierApp.kt, AndroidManifest.xml, .github/, 6 ViewModels de feature) -> **0 cambios**
+  (salida vacia). Solo UI de feature + MainActivity + navigation + ui/theme + ui/components +
+  strings.xml + tests/previews + 2 ficheros de infra de test.
+- **Auditoria estatica**: `import androidx.compose.material.*` sin icons -> 0 matches;
+  `Color(0x` fuera de ui/theme -> 0; `dynamicColor` -> 0.
+- **Contraste**: `ColorContrastTest` ampliado a **17 pares de texto** + 4 no textuales por esquema
+  (anadidos los 8 pares reales de badges/tarjetas). Verificado: ratios todos >= 4.5 (texto) y >= 3
+  (no textual) calculadas con script sobre los hex reales de `ui/theme/Color.kt`.
+- **Hallazgo accesibilidad**: la tarjeta de tren seleccionada se comunica solo por color
+  (primaryContainer 1.18:1 claro / 1.31:1 oscuro vs surfaceContainerLow, bajo 3:1 de 1.4.11).
+  Se documenta como riesgo PENDIENTE en contrast-report.md (fuera del alcance de la fase 13:
+  SearchComponents.kt no esta en la lista de ficheros modificables de la fase).
+- **Previews**: las 9 `@Preview` usan `spec:width=1080px,height=2400px,dpi=480`, claro/oscuro y
+  fontScale 1.0 (implicito) + 2.0. **fontScale 1.3 y revision visual en Realme -> PENDIENTE**
+- **RedesignRegressionTest.kt** (androidTest, 6 tests): renderiza cada `Content` publico con fakes
+  (estados falsos + callbacks vacios, sin OTP, sin red, sin Renfe) y verifica elementos clave.
+  Compilado con assembleDebugAndroidTest; ejecucion PENDIENTE.
+- **Matriz 6 modos / persistencia / fuentes en dispositivo**: PENDIENTE (sin dispositivo). Tabla en
+  validation-matrix.md secciones 1-3 (aprobada por estructura; la porcion de dispositivo queda sin
+  evidenciar).
+- **Verificacion final (salida real, exit 0, comandos UNO a UNO)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 19s, exit 0.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 27s, exit 0;
+    XML **13 suites / 100 tests / 0 failures / 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 41s, exit 0;
+    **0 errors / 53 warnings** (baseline).
+  - `.\gradlew.bat :app:assembleDebugAndroidTest --no-daemon` -> BUILD SUCCESSFUL in 28s, exit 0
+    (compila RedesignRegressionTest).
+  - `:app:connectedDebugAndroidTest` -> NO ejecutado (sin dispositivo conectado).
+- **Aceptacion**: comandos finales en verde (4/4), M3 exclusivo (auditorias estaticas), contraste AA
+  sobre esquemas finales, flujos con fakes compilados, archivados -> DESIGN.md (seccion FASE 13) y
+  PROGRESS.md. La validacion en Realme/emulador (matriz 6 modos, persistencia, fuentes 1.0/2.0,
+  TalkBack, fontScale 1.3, connectedDebugAndroidTest) queda PENDIENTE con evidencia de la causa
+  (sin dispositivo) y NO se claim "validado".
+- **Pendiente**: ejecutar en Realme/emulador los 9 tests instrumentales acumulados (8 previos +
+  RedesignRegressionTest), la matriz de 6 modos, persistencia, fuentes 1.0/2.0, TalkBack y fontScale
+  1.3; resolver (o documentar como aceptado) el hallazgo de seleccion por color. Detenido a la espera
+  de instrucciones.
