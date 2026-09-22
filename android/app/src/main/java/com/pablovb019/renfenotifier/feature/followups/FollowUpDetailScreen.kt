@@ -1,5 +1,7 @@
 package com.pablovb019.renfenotifier.feature.followups
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +32,7 @@ import com.pablovb019.renfenotifier.core.network.model.FollowUpDetailOut
 import com.pablovb019.renfenotifier.ui.components.RenfeErrorState
 import com.pablovb019.renfenotifier.ui.components.RenfeLoadingState
 import com.pablovb019.renfenotifier.ui.components.RenfeScreenScaffold
+import com.pablovb019.renfenotifier.ui.theme.RenfeMotion
 import com.pablovb019.renfenotifier.ui.theme.RenfeSpacing
 
 /**
@@ -97,61 +100,66 @@ fun FollowUpDetailContent(
             .padding(horizontal = RenfeSpacing.screenMargin, vertical = RenfeSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(RenfeSpacing.md),
     ) {
-        if (uiState.loading && detail == null) {
-            RenfeLoadingState(modifier = Modifier.padding(vertical = 40.dp))
-        } else if (detail != null) {
-            FollowUpDetailHeader(
-                detail = detail,
-                lastValidCheck = uiState.lastValidObservedAt,
-            )
+        Crossfade(
+            targetState = uiState.loading && detail == null,
+            animationSpec = tween(RenfeMotion.Normal),
+        ) { isLoading ->
+            if (isLoading) {
+                RenfeLoadingState(modifier = Modifier.padding(vertical = 40.dp))
+            } else if (detail != null) {
+                FollowUpDetailHeader(
+                    detail = detail,
+                    lastValidCheck = uiState.lastValidObservedAt,
+                )
 
-            Text(
-                text = stringResource(R.string.followups_reminder_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Text(
-                text = stringResource(R.string.followups_episodes_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            FollowUpDetailEpisodes(detail = detail)
-
-            Text(
-                text = stringResource(R.string.followups_actions_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            FollowUpDetailActionButtons(
-                uiState = uiState,
-                onPause = onPause,
-                onResume = onResume,
-                onRenew = onRenew,
-                onAcknowledge = onAcknowledge,
-                onAskDelete = { showDeleteDialog = true },
-            )
-
-            if (detail.alertState == "pending_alert") {
                 Text(
-                    text = stringResource(R.string.followups_acknowledge_note),
+                    text = stringResource(R.string.followups_reminder_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
 
-            uiState.actionError?.let { error ->
                 Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(R.string.followups_episodes_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                FollowUpDetailEpisodes(detail = detail)
+
+                Text(
+                    text = stringResource(R.string.followups_actions_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                FollowUpDetailActionButtons(
+                    uiState = uiState,
+                    onPause = onPause,
+                    onResume = onResume,
+                    onRenew = onRenew,
+                    onAcknowledge = onAcknowledge,
+                    onAskDelete = { showDeleteDialog = true },
+                )
+
+                if (detail.alertState == "pending_alert") {
+                    Text(
+                        text = stringResource(R.string.followups_acknowledge_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                uiState.actionError?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            } else {
+                RenfeErrorState(
+                    icon = Icons.Filled.Warning,
+                    title = stringResource(R.string.followups_load_error),
+                    text = uiState.actionError ?: stringResource(R.string.followups_no_checks),
+                    onRetry = onRefresh,
                 )
             }
-        } else {
-            RenfeErrorState(
-                icon = Icons.Filled.Warning,
-                title = stringResource(R.string.followups_load_error),
-                text = uiState.actionError ?: stringResource(R.string.followups_no_checks),
-                onRetry = onRefresh,
-            )
         }
     }
 

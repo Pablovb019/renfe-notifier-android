@@ -1,5 +1,7 @@
 package com.pablovb019.renfenotifier.feature.followups
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +25,7 @@ import com.pablovb019.renfenotifier.core.network.ApiModule
 import com.pablovb019.renfenotifier.ui.components.RenfeErrorState
 import com.pablovb019.renfenotifier.ui.components.RenfeLoadingState
 import com.pablovb019.renfenotifier.ui.components.RenfeScreenScaffold
+import com.pablovb019.renfenotifier.ui.theme.RenfeMotion
 import com.pablovb019.renfenotifier.ui.theme.RenfeSpacing
 
 /**
@@ -78,32 +81,37 @@ fun FollowUpsContent(
                 .padding(horizontal = RenfeSpacing.screenMargin),
             verticalArrangement = Arrangement.spacedBy(RenfeSpacing.sm),
         ) {
-            if (uiState.loading) {
-                RenfeLoadingState(modifier = Modifier.padding(vertical = RenfeSpacing.xxxl))
-            } else {
-                uiState.error?.let { error ->
-                    RenfeErrorState(
-                        icon = Icons.Filled.Warning,
-                        title = stringResource(R.string.followups_load_error),
-                        text = error,
-                        onRetry = onRefresh,
-                        modifier = Modifier.padding(vertical = RenfeSpacing.lg),
-                    )
-                }
-
-                if (uiState.isEmpty) {
-                    Text(
-                        text = stringResource(R.string.followups_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(RenfeSpacing.sm)) {
-                    items(uiState.items, key = { it.followupId }) { followUp ->
-                        FollowUpCard(
-                            followUp = followUp,
-                            onClick = { onOpenDetail(followUp.followupId) },
+            Crossfade(
+                targetState = uiState.loading,
+                animationSpec = tween(RenfeMotion.Normal),
+            ) { isLoading ->
+                if (isLoading) {
+                    RenfeLoadingState(modifier = Modifier.padding(vertical = RenfeSpacing.xxxl))
+                } else {
+                    uiState.error?.let { error ->
+                        RenfeErrorState(
+                            icon = Icons.Filled.Warning,
+                            title = stringResource(R.string.followups_load_error),
+                            text = error,
+                            onRetry = onRefresh,
+                            modifier = Modifier.padding(vertical = RenfeSpacing.lg),
                         )
+                    }
+
+                    if (uiState.isEmpty) {
+                        Text(
+                            text = stringResource(R.string.followups_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(RenfeSpacing.sm)) {
+                        items(uiState.items, key = { it.followupId }) { followUp ->
+                            FollowUpCard(
+                                followUp = followUp,
+                                onClick = { onOpenDetail(followUp.followupId) },
+                            )
+                        }
                     }
                 }
             }

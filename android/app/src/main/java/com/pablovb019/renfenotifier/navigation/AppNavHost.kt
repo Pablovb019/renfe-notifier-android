@@ -1,5 +1,10 @@
 package com.pablovb019.renfenotifier.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
@@ -13,6 +18,7 @@ import com.pablovb019.renfenotifier.feature.followups.FollowUpsScreen
 import com.pablovb019.renfenotifier.feature.home.HomeScreen
 import com.pablovb019.renfenotifier.feature.pairing.PairingScreen
 import com.pablovb019.renfenotifier.feature.search.SearchScreen
+import com.pablovb019.renfenotifier.ui.theme.RenfeMotion
 import com.pablovb019.renfenotifier.ui.theme.ThemeViewModel
 import kotlinx.coroutines.flow.StateFlow
 
@@ -61,6 +67,20 @@ fun AppNavHost(
     NavHost(
         navController = navController,
         startDestination = Destinations.HOME,
+        enterTransition = {
+            fadeIn(animationSpec = tween(RenfeMotion.Short)) +
+                slideInHorizontally(animationSpec = tween(RenfeMotion.Short)) { it / 16 }
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(RenfeMotion.Short))
+        },
+        popEnterTransition = {
+            fadeIn(animationSpec = tween(RenfeMotion.Short))
+        },
+        popExitTransition = {
+            fadeOut(animationSpec = tween(RenfeMotion.Short)) +
+                slideOutHorizontally(animationSpec = tween(RenfeMotion.Short)) { it / 16 }
+        },
     ) {
         composable(Destinations.HOME) {
             HomeScreen(

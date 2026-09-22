@@ -1433,3 +1433,37 @@ uff check .: All checks passed.
   se guarda en Keystore tras respuesta OK del backend).
 - **Pendiente**: ejecutar los 7 tests instrumentales acumulados en Realme/emulador; fase 12. Detenido
   a la espera de instrucciones.
+
+## Rediseno UI - Fase 12: Motion (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `37181f0`.
+- **Archivos creados**:
+  - `ui/theme/Motion.kt`: `object RenfeMotion { Short=150, Normal=200, Medium=250 }` y `renfeSpring()`
+    (spring, dampingRatio 0.9f, stiffness `Spring.StiffnessMedium`).
+  - `src/androidTest/.../ui/MotionBehaviorTest.kt`: 4 tests instrumentales (duraciones cortas y
+    ordenadas; resorte renfe; Crossfade de carga de FollowUpsContent conserva orden de la lista y
+    un solo callback por clic; detalle cruza de carga a contenido).
+- **Archivos modificados**:
+  - `navigation/AppNavHost.kt`: `NavHost` (67-155) con enterTransition = fadeIn(150)+slideIn(150)
+    `{ it/16 }` (70-73), exitTransition = fadeOut(150) (74-76), popEnterTransition = fadeIn(150)
+    (77-79) y popExitTransition = fadeOut(150)+slideOut(150) `{ it/16 }` (80-83). Rutas, argumentos
+    (followupId), popUpTo, launchSingleTop y pendingFollowupId intactos.
+  - `feature/diagnostics/DiagnosticsComponents.kt`: seccion tecnica plegable (ya con rememberSaveable,
+    107) anade `.animateContentSize()` a la Column interior (110-114).
+  - `feature/followups/FollowUpsScreen.kt` y `FollowUpDetailScreen.kt`: carga->contenido con
+    Crossfade (tween RenfeMotion.Normal) sin reordenar listas (items key=followupId) ni mover el
+    dialogo de borrado.
+- **Decision colores (badges/chips)**: cambio de golpe (NO animateColorAsState): interpolar entre
+  roles de container no garantiza contraste >= 4.5:1 en TODOS los intermedios; pares origen/destino
+  cumplen AA (FASE 3 + ColorContrastTest) y el cambio es instantaneo. Documentado en DESIGN.md.
+- **Escala de duracion del sistema**: los tween del NavHost y Crossfade respetan el animator
+  duration scale (0 detiene el movimiento y salta al estado final); Motion.kt lo documenta.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 37s (38 tareas: 6 ejecutadas, 32 up-to-date).
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> BUILD
+    SUCCESSFUL in 1m1s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53
+    warnings** (baseline); androidTest APK con MotionBehaviorTest compilado.
+- **Aceptacion**: movimiento corto (150-200 ms); sin doble callback (test de clic unico tras
+  Crossfade); sin Lottie ni shared transitions.
+- **Pendiente**: ejecutar los 8 tests instrumentales acumulados en Realme/emulador (ThemeModeSelector,
+  RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics, Pairing,
+  MotionBehavior); fase 13. Detenido a la espera de instrucciones.

@@ -1,5 +1,6 @@
 package com.pablovb019.renfenotifier.feature.diagnostics
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,6 +111,7 @@ fun DiagnosticsTechSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .animateContentSize()
                 .padding(RenfeSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(RenfeSpacing.sm),
         ) {

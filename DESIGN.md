@@ -97,7 +97,8 @@ Rutas relativas a `ROOT/`.
 | FOLLOWUP_DETAIL | `followup/{followupId}` | `FollowUpDetailUiState(detail, actionInProgress, deleted, ...)` | onPause / Resume / Renew / Acknowledge / Delete | load en arranque; `LaunchedEffect(deleted)` -> onDeleted (68-71) | Acciones: `!actionInProgress` (FollowUpDetailScreen.kt:312) |
 | DIAGNOSTICS (AJUSTES) | `diagnostics` | `DiagnosticsUiState(loading, diagnostics, error, lastServerContactAt, googlePlayServices, permisos, fcm, alertsEnabled, theme, testNotificationState, stages)` | onSelectTheme (ThemeViewModel), onSetAlertsEnabled, onSendTest | `LaunchedEffect(Unit)` refreshEnvironment + load (DiagnosticsScreen.kt:51-53); action "Refrescar" (60-67) | Enviar prueba: `enabled = testState != Sending` (DiagnosticsComponents.kt, DiagnosticsTestCard) |
 
-Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en `AppNavHost.kt:57-130`.
+Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en `AppNavHost.kt:67-155`
+(con transiciones fade+slide corto introducidas en FASE 12).
 
 ## PERIMETRO PROTEGIDO
 
@@ -705,3 +706,52 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   política que fases 3-10; acumulados pendientes de validación en Realme: ThemeModeSelector,
   RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics, Pairing).
 - **Pendiente**: fase 12 (motion). Detenido a la espera de instrucciones.
+
+## FASE 12 - MOTION (2026-09-22)
+
+- **Objetivo**: movimiento sutil; sin Lottie ni shared transitions. Aceptación: movimiento corto y
+  sin doble callback. Contingencia: si rompe foco o causa jank, eliminar.
+- **Archivos creados**:
+  - `src/main/.../ui/theme/Motion.kt`: `object RenfeMotion { Short=150, Normal=200, Medium=250 }` y
+    `renfeSpring(): SpringSpec<Float> = spring(dampingRatio=0.9f, stiffness=Spring.StiffnessMedium)`.
+  - `src/androidTest/.../ui/MotionBehaviorTest.kt`: 4 tests instrumentales (duraciones cortas y
+    ordenadas; resorte con stiffness `Spring.StiffnessMedium` y damping 0.9; Crossfade de carga en
+    FollowUpsContent conserva el orden de la lista y dispara un único callback por clic en tarjeta;
+    Crossfade de carga a contenido en FollowUpDetailContent muestra la cabecera).
+- **Archivos modificados**:
+  - `src/main/.../navigation/AppNavHost.kt`: el `NavHost` (67-155) gana `enterTransition`
+    (`fadeIn(tween(150)) + slideInHorizontally(tween(150)){it/16}`, 70-73), `exitTransition`
+    (`fadeOut(tween(150))`, 74-76), `popEnterTransition` (`fadeIn(tween(150))`, 77-79) y
+    `popExitTransition` (`fadeOut(tween(150)) + slideOutHorizontally(tween(150)){it/16}`, 80-83).
+    Rutas, argumentos (incluido `followupId`), `navController`, `popUpTo`, `launchSingleTop` y
+    `pendingFollowupId` se conservan intactos. Cita de duraciones: `RenfeMotion.Short` (150 ms).
+  - `src/main/.../feature/diagnostics/DiagnosticsComponents.kt`: la sección técnica plegable
+    (que ya usaba `rememberSaveable`, 107) añade `.animateContentSize()` a su `Column` interior
+    (110-114) para animar expandir/colapsar.
+  - `src/main/.../feature/followups/FollowUpsScreen.kt`: el bloque `if (uiState.loading)` pasa a un
+    `Crossfade(targetState = uiState.loading, animationSpec = tween(RenfeMotion.Normal))` que solo
+    alterna el árbol carga↔contenido (error/empty/LazyColumn). No reordena listas: los items se
+    enumeran con `key = followupId`.
+  - `src/main/.../feature/followups/FollowUpDetailScreen.kt`: igual, `Crossfade(targetState =
+    uiState.loading && detail == null, animationSpec = tween(RenfeMotion.Normal))` entre carga,
+    detalle y error; el diálogo de borrado permanece fuera del Crossfade.
+  - `DESIGN.md` (esta sección + nota del grafo en línea 100).
+- **Decisión colores (badges/chips)**: NO se anima el color de `RenfeStatusBadge` (ni de chips).
+  `animateColorAsState` interpola entre roles de la `colorScheme` (p. ej. primaryContainer ->
+  errorContainer); no se puede garantizar contraste texto/ fondo >= 4.5:1 en TODOS los estados
+  intermedios, por lo que se aplica la rama "cambio de golpe" del paso 3. Los pares origen/destino
+  sí cumplen AA (FASE 3 + ColorContrastTest), el cambio es instantáneo.
+- **Escala de duración del sistema**: las transiciones del `NavHost` y los `Crossfade` con
+  especificación finita (`tween`) respetan el "animator duration scale" de Android (0 detiene el
+  movimiento y salta al estado final); `Motion.kt` lo documenta.
+- **Verificación (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 37s (38 tareas).
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon`
+    -> BUILD SUCCESSFUL in 1m1s; reporte XML **13 suites / 100 tests / 0 failures / 0 errors**; lint
+    **0 errors / 53 warnings** (baseline); androidTest APK con `MotionBehaviorTest` compilado.
+- **Nota honesta**: `MotionBehaviorTest` compilado pero NO ejecutado en emulador/dispositivo
+  (misma política que fases 3-11; acumulados pendientes de validación en Realme/emulador:
+  ThemeModeSelector, RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics,
+  Pairing, MotionBehavior). El campo de entrada del PairingScreen conserva su teclado de texto
+  (sin foco alterado por las transiciones).
+- **Pendiente**: fase 13. Detenido a la espera de instrucciones.
