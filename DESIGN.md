@@ -436,3 +436,45 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
 - **Nota honesta**: `HomeContentTest` compilado con `assembleDebugAndroidTest` pero NO ejecutado
   en emulador/dispositivo (misma politica que fases 3-4).
 - **Pendiente**: pantalla de busqueda (fase 7). Detenido a la espera de instrucciones.
+
+## FASE 7 - SEARCH REDISENADA (2026-09-22)
+
+- **Objetivo cumplido**: campos (singleLine, 56 dp min), sugerencias EN FLUJO sin popup, CTA
+  Buscar fullWidth a 56 dp deshabilitada mientras busca, 4 modos en FlowRow, tarjeta por tren
+  con badge de disponibilidad y precio null → "Precio no disponible". Scaffold unificado.
+- **Archivos creados**:
+  - `feature/search/SearchComponents.kt`: `SearchStationField` (54) — sugerencias EN FLUJO bajo
+    el campo en `Surface`, contenedor `heightIn(max = 192.dp)` (77) y filas `heightIn(min =
+    48.dp)` (87) + `maxLines = 2`/Ellipsis, SIN `verticalScroll` anidado dentro del LazyColumn
+    de la pantalla; `SearchTrainCard` (117) — hora salida/llegada, badge `RenfeStatusBadge` de
+    disponibilidad, identificación del tren, precio; `SearchFollowUpModes` (185) — `FlowRow`
+    (190) con los 4 chips FIRST/LAST/ALL/SPECIFIC; `SearchDatePickerDialog` (220) y
+    `SearchFollowUpCreator` (254) — CTA `enabled = !isCreatingFollowUp` y diálogos conservados.
+  - `src/debug/.../feature/search/SearchPreviews.kt`: 4 previews 360×800, claro/oscuro ×
+    fontScale 1.0/2.0 (2 con formulario + showSystemUi, 2 con resultados y fuente 2×), spec
+    1080x2400/480; un tren de ejemplo con precio y otro con `price = null`.
+- **Archivos modificados**:
+  - `feature/search/SearchScreen.kt`: `SearchScreen` usa `RenfeScreenScaffold` (63) en vez de
+    Scaffold/TopAppBar propios; `SearchContent` con margen horizontal
+    `RenfeSpacing.screenMargin` (16 dp) y separación 12 dp; campos `heightIn(min = 56.dp)`;
+    resultados con `items(key = { it.identity })` (220) (antes `"identity#index"`); carga →
+    `RenfeLoadingState` (189) y error → `RenfeErrorState` con `onRetry = onSearch` (198) en
+    caja acotada (240 dp); vacío → texto `search_no_trains`.
+  - `res/values/strings.xml`: `search_price_unknown` → "Precio no disponible"; nuevas
+    `search_train_type` ("Tren %1$s"), `search_mode_specific` ("Un tren concreto"),
+    `search_error_title`; eliminada `cd_search_back` (el `RenfeScreenScaffold` usa
+    `common_back`; sin UnusedResources).
+- **Decision**: el prompt pedía "tipo" en la tarjeta; `TrainOut` (ApiModels.kt:47-54) no expone
+  tipo de tren — NO se inventa API. Se muestra el `identity` como identificación del tren
+  ("Tren %1$s") y el "tipo" de disponibilidad queda cubierto por el badge.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> 1er intento FAILED (faltaban imports de
+    `Row`/`Column` en `SearchScreen.kt`) -> corregido solo ese punto -> BUILD SUCCESSFUL in 43s.
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 59s;
+    reporte XML **13 suites / 100 tests / 0 failures / 0 errors**; lint **0 errors / 53 warnings**
+    (baseline, sin warnings nuevos por strings retiradas/añadidas).
+- **Aceptación**: sin popups (sugerencias en flujo); 4 modos accesibles en 360 dp a 2× (FlowRow
+  envuelve, no recorta); `price = null` → "Precio no disponible" y grep de "0 €" sin resultados
+  en UI (solo aparece en un comentario KDoc).
+- **Pendiente**: validación visual en Realme/emulador (FlowRow y tarjetas); Search ViewModel
+  intacto (validación/fecha sin cambios). Detenido a la espera de instrucciones.

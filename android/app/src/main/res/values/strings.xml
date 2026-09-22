@@ -27,6 +27,7 @@
 
     <!-- Pantalla de búsqueda -->
     <string name="search_title">Buscar viajes</string>
+    <string name="search_error_title">No se pudo completar la búsqueda</string>
     <string name="search_origin">Origen</string>
     <string name="search_destination">Destino</string>
     <string name="search_date_label">Fecha</string>
@@ -38,8 +39,9 @@
     <string name="search_station_group">%1$s (grupo)</string>
     <string name="search_results_title">Resultados</string>
     <string name="search_train_time">Salida: %1$s — Llegada: %2$s</string>
+    <string name="search_train_type">Tren %1$s</string>
     <string name="search_price">Precio: %1$s</string>
-    <string name="search_price_unknown">No disponible</string>
+    <string name="search_price_unknown">Precio no disponible</string>
     <string name="search_train_selected">Seleccionado para seguimiento</string>
     <string name="av_available">Disponible</string>
     <string name="av_none">Sin plazas</string>
@@ -48,6 +50,7 @@
     <string name="search_mode_first">Primer tren</string>
     <string name="search_mode_last">Último tren</string>
     <string name="search_mode_all">Todos los trenes</string>
+    <string name="search_mode_specific">Un tren concreto</string>
     <string name="search_specific_hint">Selecciona un tren de los resultados</string>
     <string name="search_create">Crear seguimiento</string>
     <string name="search_created">Seguimiento creado</string>
@@ -162,7 +165,6 @@
     <string name="common_retry">Reintentar</string>
 
     <!-- Accesibilidad -->
-    <string name="cd_search_back">Volver</string>
     <string name="cd_search_origin">Estación de origen</string>
     <string name="cd_search_destination">Estación de destino</string>
     <string name="cd_search_plaza_h">Filtro Plaza H</string>

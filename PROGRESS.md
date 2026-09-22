@@ -1270,3 +1270,33 @@ uff check .: All checks passed.
 - **Aceptacion**: boton no-op eliminado (riesgo 0/5 cerrado); callbacks operativos.
 - **Pendiente**: ejecutar HomeContentTest (+ anteriores) en Realme/emulador (validacion); Search
   (fase 7). Detenido a la espera de instrucciones.
+
+## Rediseno UI - Fase 7: Search rediseñada (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `e7556f3`.
+- **Archivos creados**:
+  - `feature/search/SearchComponents.kt`: `SearchStationField` (54; sugerencias en flujo,
+    contenedor heightIn(max=192dp) en 77, filas >= 48 dp en 87, 2 lineas Ellipsis, sin scroll
+    anidado), `SearchTrainCard` (117; badge disponibilidad + identity + precio), `SearchFollowUpModes`
+    (185; FlowRow en 190 con FIRST/LAST/ALL/SPECIFIC), `SearchDatePickerDialog` (220),
+    `SearchFollowUpCreator` (254; CTA enabled=!isCreatingFollowUp, dialogos intactos).
+  - `src/debug/.../feature/search/SearchPreviews.kt`: 4 previews 360x800 claro/oscuro x fuente
+    1.0/2.0 (2 formulario + showSystemUi, 2 resultados a 2x; un tren con price null).
+- **Archivos modificados**:
+  - `feature/search/SearchScreen.kt`: `RenfeScreenScaffold` (63); margen 16 dp screenMargin;
+    campos heightIn(min=56dp) singleLine; CTA Buscar fullWidth heightIn(min=56dp)
+    enabled=!isSearching; `items(key = { it.identity })` (220); carga `RenfeLoadingState` (189);
+    error `RenfeErrorState` onRetry=onSearch (198); vacio texto search_no_trains.
+  - `strings.xml`: `search_price_unknown` -> "Precio no disponible"; + `search_train_type`,
+    `search_mode_specific`, `search_error_title`; - `cd_search_back`.
+- **Decision**: `TrainOut` (ApiModels.kt:47-54) no tiene campo de tipo de tren; no se inventa
+  API, se muestra `identity` como identificación y el "tipo" de disponibilidad queda en el badge.
+- **Correccion durante la fase** (solo el punto que fallo): `assembleDebug` FAILED por imports
+  `Row`/`Column` ausentes en `SearchScreen.kt` -> añadidos; BUILD SUCCESSFUL in 43s.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 43s.
+  - `:app:testDebugUnitTest :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 59s; XML:
+    **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53 warnings** (baseline).
+- **Aceptacion**: sin popups; 4 modos en FlowRow (360 dp / 2x accesibles); price null -> "Precio
+  no disponible" (grep sin "0 €" en UI).
+- **Pendiente**: validacion visual en Realme/emulador; Search ViewModel intacto (validacion/fecha
+  sin cambios). Detenido a la espera de instrucciones.
