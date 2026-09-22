@@ -1512,3 +1512,18 @@ uff check .: All checks passed.
   RedesignRegressionTest), la matriz de 6 modos, persistencia, fuentes 1.0/2.0, TalkBack y fontScale
   1.3; resolver (o documentar como aceptado) el hallazgo de seleccion por color. Detenido a la espera
   de instrucciones.
+
+## Release v0.2.0 (2026-09-22) - Paso: bump de version y verificacion local COMPLETADO
+- **Estado**: nomenclatura decidida por el usuario = **v0.2.0** (semver; preserva la serie 0.x y
+  marca la UI rediseñada como hito). versionCode **12** (anterior 11) y versionName **"0.2.0"**
+  (anterior "0.1.10") en `android/app/build.gradle.kts:25-26`.
+- **Verificacion local (UNO a UNO, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 36s.
+  - `.\gradlew.bat :app:testDebugUnitTest --no-daemon` -> BUILD SUCCESSFUL in 20s;
+    XML **13 suites / 100 tests / 0 failures / 0 errors**.
+  - `.\gradlew.bat :app:lintDebug --no-daemon` -> BUILD SUCCESSFUL in 46s;
+    **0 errors / 53 warnings** (baseline).
+- **Commit**: bump de version en `redesign/ui-m3`.
+- **Pendiente**: autorizacion explicita del usuario para el merge `redesign/ui-m3` -> `main`
+  (AGENTS.md 4.1; este push SI activa CI), CI verde en main, tag `v0.2.0`, Release privada y
+  validacion del APK firmado en el realme GT Neo 2.
