@@ -95,7 +95,7 @@ Rutas relativas a `ROOT/`.
 | SEARCH | `search` | `SearchUiState` (consultas, sugerencias, fecha, plazaH, trenes, mode, creando, errores, createdFollowUpId, availableTrainNotice) | onOrigin/Destination... , onDateSelected, onPlazaHChange, onSearch, onModeSelected, onTrainSelected, onCreateFollowUp, onCreatedAccepted | `DatePickerDialog`; `AlertDialog` creado / ya-tiene-plazas; debounce en VM | Buscar: `!isSearching` (SearchScreen.kt:204); Crear: `!isCreatingFollowUp` (SearchScreen.kt:455) |
 | FOLLOWUPS | `followups` | `FollowUpsUiState(filter, items, loading, error)` | onFilterSelected, onRefresh(=load), onOpenDetail | `LaunchedEffect(Unit){load()}` (FollowUpsScreen.kt:58) | - |
 | FOLLOWUP_DETAIL | `followup/{followupId}` | `FollowUpDetailUiState(detail, actionInProgress, deleted, ...)` | onPause / Resume / Renew / Acknowledge / Delete | load en arranque; `LaunchedEffect(deleted)` -> onDeleted (68-71) | Acciones: `!actionInProgress` (FollowUpDetailScreen.kt:312) |
-| DIAGNOSTICS | `diagnostics` | `DiagnosticsUiState(theme, alertsEnabled, stages, diagnostics, testNotificationState...)` | onSetTheme, onSetAlertsEnabled, onSendTest | `LaunchedEffect` refreshEnvironment + load (63-66) | Enviar test: no `Sending` (DiagnosticsScreen.kt:163) |
+| DIAGNOSTICS (AJUSTES) | `diagnostics` | `DiagnosticsUiState(loading, diagnostics, error, lastServerContactAt, googlePlayServices, permisos, fcm, alertsEnabled, theme, testNotificationState, stages)` | onSelectTheme (ThemeViewModel), onSetAlertsEnabled, onSendTest | `LaunchedEffect(Unit)` refreshEnvironment + load (DiagnosticsScreen.kt:51-53); action "Refrescar" (60-67) | Enviar prueba: `enabled = testState != Sending` (DiagnosticsComponents.kt, DiagnosticsTestCard) |
 
 Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en `AppNavHost.kt:57-130`.
 
@@ -584,3 +584,69 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   emulador/dispositivo (misma política que fases 3-8; acumulados pendientes de validación en
   Realme: ThemeModeSelector, RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail).
 - **Pendiente**: Fase 10 del plan. Detenido a la espera de instrucciones.
+
+## FASE 10 - DIAGNOSTICS COMO AJUSTES (2026-09-22)
+
+- **Objetivo cumplido**: la pantalla de diagnóstico se convierte en Ajustes (`diag_title` =
+  "Ajustes") con tres secciones: **Apariencia** (reutiliza el `ThemeModeSelector` de la fase 3),
+  **Avisos** (switch) y **Diagnóstico técnico** (las 5 etapas del flujo + servidor + cifras +
+  notificación de prueba) **plegable con `rememberSaveable`**: al empezar colapsada, solo se
+  compone su contenido al expandirla, así la información previa sigue accesible sin ocupar la
+  pantalla. Ruta sin cambios (`diagnostics`, AppNavHost.kt:115).
+- **Archivos creados**:
+  - `feature/diagnostics/DiagnosticsComponents.kt`: `DiagnosticsThemeCard` (card "Tema" con
+    `ThemeModeSelector`), `DiagnosticsAlertsCard` (switch "Recibir avisos", testTag
+    `diagnostics_alerts_switch`), `DiagnosticsTechSection` (header clickable con testTag
+    `diagnostics_section_tech` + icono `KeyboardArrowUp/KeyboardArrowDown`, estado
+    `rememberSaveable`; contenido al expandir: `StageCard` por cada etapa, `DiagnosticsServerCard`,
+    `DiagnosticsCountsCard` y `DiagnosticsTestCard`), `DiagnosticsTestCard` con botón de título
+    corto "Enviar prueba", `enabled = testState != Sending`, y resultado en **texto adjunto**
+    (Enviando… / Enviada (id %1$s) / No enviada: %1$s); NO se muestran tokens, OTP ni
+    credenciales. Helpers privados `stageLabel/statusLabel/statusType/formatBytes`. Márgenes 16 dp
+    (`RenfeSpacing.lg` contenido, `screenMargin` pantalla).
+  - `src/debug/.../feature/diagnostics/DiagnosticsPreviews.kt`: 4 `@Preview` 360×800, claro/oscuro
+    × fontScale 1.0/2.0 (spec 1080x2400/480, `showSystemUi` en las 2 de fuente base), con
+    `DiagnosticsContent` y un `DiagnosticsUiState` de ejemplo (etapas vía `computeStages`).
+  - `src/androidTest/.../feature/diagnostics/DiagnosticsContentTest.kt`: 10 tests instrumentales
+    (título "Ajustes" + secciones visibles al inicio; diagnóstico empieza plegado; expandir muestra
+    las 5 etapas; recolapsar las oculta; expandir muestra info del servidor; botón prueba invoca
+    callback una vez; `Sending` deshabilita botón y muestra "Enviando…"; clic en botón
+    deshabilitado no reenvía; switch alterna `alertsEnabled`; selector de tema invocable con las 3
+    opciones). Los tests envuelven el contenido en `RenfeScreenScaffold(title = "Ajustes")`.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: Scaffold/TopAppBar propios sustituidos por
+    `RenfeScreenScaffold` (title `diag_title` = "Ajustes", `onBack`, action `Button` "Refrescar"
+    llamando a refreshEnvironment + load); `DiagnosticsContent` pasa a **público** (87) con
+    `verticalScroll` y márgenes 16 dp (`screenMargin` horizontal, `sm` vertical); secciones
+    `SectionTitle` "Apariencia"/"Avisos" + `DiagnosticsTechSection`. `LaunchedEffect(Unit)` de
+    carga (51-53) conservado. El ViewModel NO se toca (`load`, `refreshEnvironment`,
+    `sendTestNotification`, `computeStages` intactos; `setTheme` del VM queda sin uso en la UI:
+    el tema lo gestiona `ThemeViewModel.setMode` como en fases 2-3).
+  - `res/values/strings.xml`: `diag_title` -> "Ajustes"; nuevas `diag_section_appearance`
+    ("Apariencia"), `diag_section_alerts` ("Avisos"), `diag_section_tech` ("Diagnóstico técnico"),
+    `diag_section_tech_toggle_cd`; `diag_test_button` -> "Enviar prueba" (título corto);
+    eliminadas las huérfanas `diag_back_cd` (el scaffold usa `common_back`), `diag_stages_title`,
+    `diag_server_title`, `diag_counts_title`, `diag_settings_title` (los títulos de tarjetas se
+    pierden y `diag_theme_label`/`diag_alerts_label` siguen en sus cards). `diag_refresh` se
+    conserva (la usa también `RenfeThemePreviews.kt:94`).
+- **Nota honesta (VM)**: `DiagnosticsUiState.theme` y `DiagnosticsViewModel.setTheme` quedan
+  presentes pero sin uso en la UI (el tema se persiste vía `ThemeViewModel` desde la fase 3); no
+  se eliminan por instrucción de no tocar el VM.
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> 1er intento FAILED en `compileDebugKotlin`:
+    `ExpandLess`/`ExpandMore` no existen en `material-icons-core` (este proyecto usa solo core) y
+    falta `import androidx.compose.ui.unit.dp`; corregido: iconos `KeyboardArrowUp/KeyboardArrowDown`
+    y el import -> BUILD SUCCESSFUL in 54s.
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon`
+    -> BUILD SUCCESSFUL in 1m2s; reporte XML **13 suites / 100 tests / 0 failures / 0 errors**;
+    lint **0 errors / 53 warnings** (baseline; las strings retiradas no generan UnusedResources ni
+    quedan referencias — grep de `diag_back_cd|diag_stages_title|diag_server_title|diag_counts_title|
+    diag_settings_title` = 0). APK androidTest con `DiagnosticsContentTest` compilado.
+- **Aceptación**: título "Ajustes" visible (test `tituloYSeccionesVisiblesAlInicio`); información
+  previa accesible al expandir el diagnóstico (test `expandirMuestraInfoPreviaDelServidor`);
+  previews 360×800 x1/x2; margen 16 dp.
+- **Nota honesta**: `DiagnosticsContentTest` (10 tests) compilado con `assembleDebugAndroidTest`
+  pero NO ejecutado en emulador/dispositivo (misma política que fases 3-9; acumulados pendientes
+  de validación en Realme: ThemeModeSelector, RenfeComponents, HomeContent, FollowUpsContent,
+  FollowUpDetail, Diagnostics).
+- **Pendiente**: fase 11 (pairing). Detenido a la espera de instrucciones.

@@ -113,10 +113,12 @@
     <string name="notif_action_failed_body">No se pudo completar la acción sobre el seguimiento %1$s. Abre la app para reintentarlo.</string>
 
     <!-- Diagnóstico y ajustes -->
-    <string name="diag_title">Diagnóstico y ajustes</string>
-    <string name="diag_back_cd">Volver</string>
+    <string name="diag_title">Ajustes</string>
     <string name="diag_refresh">Refrescar</string>
-    <string name="diag_stages_title">Flujo de avisos</string>
+    <string name="diag_section_appearance">Apariencia</string>
+    <string name="diag_section_alerts">Avisos</string>
+    <string name="diag_section_tech">Diagnóstico técnico</string>
+    <string name="diag_section_tech_toggle_cd">Mostrar u ocultar el diagnóstico técnico</string>
     <string name="diag_stage_query">Consulta</string>
     <string name="diag_stage_detection">Detección</string>
     <string name="diag_stage_send">Envío</string>
@@ -126,7 +128,6 @@
     <string name="diag_status_attention">Revisar</string>
     <string name="diag_status_blocked">Bloqueado</string>
     <string name="diag_status_unknown">Desconocido</string>
-    <string name="diag_server_title">Servidor</string>
     <string name="diag_last_check">Última comprobación válida: %1$s</string>
     <string name="diag_no_last_check">Todavía no hay una comprobación válida registrada.</string>
     <string name="diag_google_play_ok">Google Play services disponibles</string>
@@ -135,18 +136,16 @@
     <string name="diag_permission_missing">Permiso de notificaciones denegado</string>
     <string name="diag_channel_enabled">Canal de avisos activo</string>
     <string name="diag_channel_disabled">Canal de avisos bloqueado</string>
-    <string name="diag_counts_title">Cifras del servidor</string>
     <string name="diag_count_devices">Dispositivos conectados: %1$d</string>
     <string name="diag_count_followups">Seguimientos activos: %1$d</string>
     <string name="diag_count_episodes">Episodios: %1$d</string>
     <string name="diag_count_logical">Consultas lógicas: %1$s</string>
     <string name="diag_count_http">Peticiones HTTP: %1$s</string>
     <string name="diag_count_bytes">Datos recibidos: %1$s</string>
-    <string name="diag_test_button">Enviar notificación de prueba</string>
+    <string name="diag_test_button">Enviar prueba</string>
     <string name="diag_test_pending">Enviando…</string>
     <string name="diag_test_sent">Enviada (id %1$s)</string>
     <string name="diag_test_failed">No enviada: %1$s</string>
-    <string name="diag_settings_title">Preferencias</string>
     <string name="diag_theme_label">Tema</string>
     <string name="diag_theme_system">Según el sistema</string>
     <string name="diag_theme_system_desc">La app usa el tema del dispositivo.</string>

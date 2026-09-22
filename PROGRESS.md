@@ -1365,3 +1365,41 @@ uff check .: All checks passed.
 - **Pendiente**: ejecutar los 5 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
   HomeContent, FollowUpsContent, FollowUpDetail) en Realme/emulador; fase 10. Detenido a la espera
   de instrucciones.
+
+## Rediseno UI - Fase 10: Diagnostics como Ajustes (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `396380b`.
+- **Archivos creados**:
+  - `feature/diagnostics/DiagnosticsComponents.kt`: `DiagnosticsThemeCard` (ThemeModeSelector fase 3),
+    `DiagnosticsAlertsCard` (switch testTag "diagnostics_alerts_switch"), `DiagnosticsTechSection`
+    (plegable con rememberSaveable, testTag "diagnostics_section_tech", iconos
+    KeyboardArrowUp/ArrowDown; al expandir: 5 StageCard + ServerCard + CountsCard + TestCard),
+    `DiagnosticsTestCard` (boton "Enviar prueba" corto, enabled = !Sending, resultado adjunto sin
+    tokens/OTP/credenciales). Helpers privados stageLabel/statusLabel/statusType/formatBytes.
+  - `src/debug/.../feature/diagnostics/DiagnosticsPreviews.kt`: 4 previews 360x800 claro/oscuro x
+    fuente 1.0/2.0 (spec 1080x2400/480).
+  - `src/androidTest/.../feature/diagnostics/DiagnosticsContentTest.kt`: 10 tests (titulo "Ajustes"
+    + secciones; plegado inicial; expandir muestra 5 etapas; recolapsar oculta; info servidor al
+    expandir; boton prueba invoca una vez; Sending deshabilita y muestra "Enviando…"; clic en boton
+    deshabilitado no reenvia; switch alterna; selector tema 3 opciones). Tests envueltos en
+    RenfeScreenScaffold.
+- **Archivos modificados**:
+  - `feature/diagnostics/DiagnosticsScreen.kt`: RenfeScreenScaffold (title diag_title="Ajustes",
+    onBack, action "Refrescar" -> refreshEnvironment+load); DiagnosticsContent publico (87) con
+    margenes 16 dp; LaunchedEffect de carga (51-53) conservado; VM NO tocado (load/
+    refreshEnvironment/sendTestNotification/computeStages intactos).
+  - `strings.xml`: diag_title -> "Ajustes"; + diag_section_appearance/alerts/tech/tech_toggle_cd;
+    diag_test_button -> "Enviar prueba"; - diag_back_cd, - diag_stages_title, - diag_server_title,
+    - diag_counts_title, - diag_settings_title (todas huerfanas; grep de referencias = 0).
+    diag_refresh se conserva (la usa RenfeThemePreviews.kt:94).
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> 1er intento FAILED (ExpandLess/ExpandMore no existen en
+    material-icons-core; falta import de dp) -> corregido (KeyboardArrowUp/ArrowDown + import) ->
+    BUILD SUCCESSFUL in 54s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> BUILD
+    SUCCESSFUL in 1m2s; XML **13 suites / 100 tests / 0 fallos / 0 errores**; lint **0 errors / 53
+    warnings** (baseline); androidTest APK con DiagnosticsContentTest compilado.
+- **Aceptacion**: titulo "Ajustes" visible; informacion previa accesible al expandir; margenes
+  16 dp; previews 360x800 1x/2x.
+- **Pendiente**: ejecutar los 6 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
+  HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics) en Realme/emulador; fase 11. Detenido
+  a la espera de instrucciones.
