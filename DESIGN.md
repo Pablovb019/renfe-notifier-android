@@ -91,7 +91,7 @@ Rutas relativas a `ROOT/`.
 | Pantalla | Ruta (AppNavHost) | Estado UI | Callbacks | Efectos | `enabled` clave |
 |---|---|---|---|---|---|
 | HOME | `home` | `HomeUiState(versionName, now, loading, isPaired)` | onNavigateToPairing / Search / FollowUps / Diagnostics; `onRefresh = {}` (vacio) | `LifecycleResumeEffect` refresca permiso notifs (HomeScreen.kt:51-54) | CTA emparejar solo si `!isPaired`; botones de navegacion siempre |
-| PAIRING | `pairing` | `PairingUiState(code, isLoading, error, paired)` | onCodeChange, onClaim | `LaunchedEffect(paired)` -> onPaired (PairingScreen.kt:65-67) | Claim: `!isLoading && code.isNotBlank` (PairingScreen.kt:118) |
+| PAIRING | `pairing` | `PairingUiState(code, isLoading, error, paired)` | onCodeChange, onClaim | `LaunchedEffect(paired)` -> onPaired (PairingScreen.kt:70-73) | Claim: `!isLoading && code.isNotBlank` + `heightIn(min=56.dp)` (PairingScreen.kt:140-143) |
 | SEARCH | `search` | `SearchUiState` (consultas, sugerencias, fecha, plazaH, trenes, mode, creando, errores, createdFollowUpId, availableTrainNotice) | onOrigin/Destination... , onDateSelected, onPlazaHChange, onSearch, onModeSelected, onTrainSelected, onCreateFollowUp, onCreatedAccepted | `DatePickerDialog`; `AlertDialog` creado / ya-tiene-plazas; debounce en VM | Buscar: `!isSearching` (SearchScreen.kt:204); Crear: `!isCreatingFollowUp` (SearchScreen.kt:455) |
 | FOLLOWUPS | `followups` | `FollowUpsUiState(filter, items, loading, error)` | onFilterSelected, onRefresh(=load), onOpenDetail | `LaunchedEffect(Unit){load()}` (FollowUpsScreen.kt:58) | - |
 | FOLLOWUP_DETAIL | `followup/{followupId}` | `FollowUpDetailUiState(detail, actionInProgress, deleted, ...)` | onPause / Resume / Renew / Acknowledge / Delete | load en arranque; `LaunchedEffect(deleted)` -> onDeleted (68-71) | Acciones: `!actionInProgress` (FollowUpDetailScreen.kt:312) |
@@ -650,3 +650,58 @@ Navegacion: 6 destinos declarados en `navigation/AppNavHost.kt:19-29`; grafo en 
   de validación en Realme: ThemeModeSelector, RenfeComponents, HomeContent, FollowUpsContent,
   FollowUpDetail, Diagnostics).
 - **Pendiente**: fase 11 (pairing). Detenido a la espera de instrucciones.
+
+## FASE 11 - EMPAREJAMIENTO (2026-09-22)
+
+- **Objetivo cumplido**: formulario RF-XXXXXX rediseñado: columna scrollable con márgenes 16 dp
+  e `imePadding`; campo con `KeyboardOptions(KeyboardType.Text)` (teclado de TEXTO, no numérico);
+  error asociado bajo el campo; botón `enabled = !isLoading && code.isNotBlank()` con spinner y
+  `heightIn(min = 56.dp)`; `onPaired` solo tras `uiState.paired`. Sin métodos nuevos de auth; sin
+  registrar/almacenar el código; Keystore, Android ID y vault intactos.
+- **Archivos modificados**:
+  - `feature/pairing/PairingScreen.kt`: Scaffold/TopAppBar propios sustituidos por
+    `RenfeScreenScaffold` (title `pairing_title`, `onBack = null` — la ruta pairing viene de home y
+    al emparejar navega a HOME con popUpTo inclusive, AppNavHost.kt:90-97). `PairingContent` pasa a
+    **público** (87) con `verticalScroll(rememberScrollState())` + `.imePadding()` +
+    `padding(horizontal = RenfeSpacing.screenMargin, vertical = RenfeSpacing.sm)` (márgenes 16 dp) y
+    `spacedBy(RenfeSpacing.md)`. El error se muestra **asociado al campo** (bajo él, antes del botón)
+    con semantics `cd_pairing_error` (128-136). Botón con `testTag("pairing_claim_button")`,
+    contenido spinner `CircularProgressIndicator(size(20.dp))` si `isLoading` (139-150).
+    `LaunchedEffect(uiState.paired)` (70-73) y el factory del ViewModel (incluidos
+    `deviceIdProvider`/`deviceNameProvider`) se conservan SIN tocar. `keyboardOptions` explícito con
+    `KeyboardType.Text` (126). Eliminados `@OptIn(ExperimentalMaterial3Api)`, imports de
+    Scaffold/TopAppBar; añadidos `verticalScroll`, `imePadding`, `heightIn`, `KeyboardOptions`,
+    `KeyboardType`, `RenfeScreenScaffold`, `RenfeSpacing`, `testTag`.
+  - `res/values/strings.xml`: sin cambios (se reutilizan `pairing_title`, `pairing_hint`,
+    `pairing_code_label`, `pairing_button`, `cd_pairing_code`, `cd_pairing_error`; ninguna string
+    queda huérfana).
+- **Archivos creados**:
+  - `src/debug/.../feature/pairing/PairingPreviews.kt`: 4 `@Preview` 360×800, claro/oscuro ×
+    fontScale 1.0/2.0 (spec 1080x2400/480, `showSystemUi` en las 2 de fuente base); estados:
+    vacío (por defecto), `isLoading` (botón con spinner) y `error` bajo el campo.
+  - `src/androidTest/.../feature/pairing/PairingContentTest.kt`: 6 tests instrumentales (hint
+    visible; botón deshabilitado sin código y habilitado con código → onClaim una vez; `isLoading`
+    deshabilita campo y botón y oculta el texto del botón; error asociado visible con su
+    contentDescription; escribir "RF-12AB34" invoca onCodeChange con el valor). Los tests envuelven
+    `PairingContent` en `RenfeNotifierTheme`.
+- **Nota sobre "Sin teclado numérico"**: compose-ui 1.7.6 (BOM 2024.12.01) NO expone la propiedad
+  semántica `SemanticsProperties.KeyboardType` (verificado con `javap` del `ui-release.aar`, solo
+  `ImeAction`/`Password`/`EditableText`), por lo que el teclado de texto NO es asertable vía
+  semántica; se garantiza por código (`keyboardOptions = KeyboardOptions(keyboardType =
+  KeyboardType.Text)`, PairingScreen.kt:126) y se prueba que el campo acepta entrada alfanumérica
+  ("RF-12AB34").
+- **Verificacion (salida real, exit 0)**:
+  - `.\gradlew.bat :app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 32s (6 ejecutados, 32 up-to-date).
+  - `.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon`
+    -> 1er intento FAILED en `compileDebugAndroidTestKotlin` (import `SemanticsMatcher` con paquete
+    erróneo `androidx.compose.ui.semantics` y `SemanticsProperties.KeyboardType` inexistente en esta
+    versión) -> eliminado ese test e imports -> BUILD SUCCESSFUL in 41s; reporte XML **13 suites /
+    100 tests / 0 failures / 0 errors**; lint **0 errors / 53 warnings** (baseline); androidTest APK
+    con `PairingContentTest` compilado.
+- **Aceptación**: teclado de texto (KeyboardType.Text en el campo); sin capturas del código (la UI
+  solo hace `onClaim`; el código no se almacena en local; el token solo se guarda en Keystore cuando
+  el backend responde OK, lógica intacta del `PairingViewModel`).
+- **Nota honesta**: `PairingContentTest` compilado pero NO ejecutado en emulador/dispositivo (misma
+  política que fases 3-10; acumulados pendientes de validación en Realme: ThemeModeSelector,
+  RenfeComponents, HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics, Pairing).
+- **Pendiente**: fase 12 (motion). Detenido a la espera de instrucciones.

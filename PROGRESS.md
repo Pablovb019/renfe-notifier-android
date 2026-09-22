@@ -1403,3 +1403,33 @@ uff check .: All checks passed.
 - **Pendiente**: ejecutar los 6 tests instrumentales acumulados (ThemeModeSelector, RenfeComponents,
   HomeContent, FollowUpsContent, FollowUpDetail, Diagnostics) en Realme/emulador; fase 11. Detenido
   a la espera de instrucciones.
+
+## Rediseno UI - Fase 11: Emparejamiento (2026-09-22) - COMPLETADO
+- **Estado**: implementado y probado localmente (JVM + compile). Commit previo `94b9cfa`.
+- **Archivos modificados**:
+  - `feature/pairing/PairingScreen.kt`: RenfeScreenScaffold (title pairing_title, onBack=null);
+    PairingContent publico (87) con verticalScroll + imePadding + margenes 16 dp (screenMargin/sm)
+    y spacedBy(RenfeSpacing.md); error asociado bajo el campo (cd_pairing_error, 128-136); boton con
+    testTag "pairing_claim_button", enabled = !isLoading && code.isNotBlank(), heightIn(min=56.dp)
+    (140-143) y spinner CircularProgressIndicator(20.dp); keyboardOptions KeyboardType.Text (126);
+    LaunchedEffect(paired) (70-73) y factory del VM intactos.
+  - `strings.xml`: sin cambios (reutiliza 6 strings de pairing).
+- **Archivos creados**:
+  - `src/debug/.../feature/pairing/PairingPreviews.kt`: 4 previews 360x800 claro/oscuro x fuente
+    1.0/2.0 (spec 1080x2400/480); estados vacio, isLoading y error.
+  - `src/androidTest/.../feature/pairing/PairingContentTest.kt`: 6 tests (hint; boton deshabilitado
+    sin codigo / habilitado con codigo -> onClaim una vez; isLoading deshabilita campo y boton; error
+    asociado visible; escribir "RF-12AB34" -> onCodeChange).
+- **Nota teclado**: compose-ui 1.7.6 no expone SemanticsProperties.KeyboardType (verificado con
+  javap del ui-release.aar); el teclado de texto se garantiza por codigo (KeyboardType.Text en
+  PairingScreen.kt:126) y con test de entrada alfanumerica, no por semantica.
+- **Verificacion (salida real, exit 0)**:
+  - `:app:assembleDebug --no-daemon` -> BUILD SUCCESSFUL in 32s.
+  - `:app:testDebugUnitTest :app:lintDebug :app:assembleDebugAndroidTest --no-daemon` -> 1er intento
+    FAILED en androidTest (SemanticsMatcher con paquete erroneo; SemanticsProperties.KeyboardType no
+    existe) -> quitado ese test -> BUILD SUCCESSFUL in 41s; XML **13 suites / 100 tests / 0 fallos /
+    0 errores**; lint **0 errors / 53 warnings** (baseline); androidTest APK con PairingContentTest.
+- **Aceptacion**: teclado de texto; sin capturas del codigo (la UI solo hace onClaim; el token solo
+  se guarda en Keystore tras respuesta OK del backend).
+- **Pendiente**: ejecutar los 7 tests instrumentales acumulados en Realme/emulador; fase 12. Detenido
+  a la espera de instrucciones.
