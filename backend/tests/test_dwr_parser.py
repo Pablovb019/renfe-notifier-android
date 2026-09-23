@@ -91,11 +91,11 @@ def test_parser_rejects_train_with_only_plaza_h_fare_in_normal_search() -> None:
         "{listviajeViewEnlaceBean: ["
         '{horaSalida: "15:54", horaLlegada: "16:54", tarifaMinima: "11,5", '
         'tipoTrenUno: "MD", completo: false, razonNoDisponible: "8", soloPlazaH: false, '
-        'plazaHDisponible: false, '
+        "plazaHDisponible: false, "
         'tarifasDisponibles: [{codigoTarifa: "VR010", plazaH: false, soloPlazasH: true}]}, '
         '{horaSalida: "06:45", horaLlegada: "07:45", tarifaMinima: "11,5", '
         'tipoTrenUno: "MD", completo: false, razonNoDisponible: "8", soloPlazaH: false, '
-        'plazaHDisponible: true, '
+        "plazaHDisponible: true, "
         'tarifasDisponibles: [{codigoTarifa: "VR010", plazaH: true, soloPlazasH: false}]}'
         "]}]});"
     )
