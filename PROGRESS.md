@@ -1670,6 +1670,29 @@ uff check .: All checks passed.
   disponible).
 - **Archivos modificados**: `backend/app/renfe/parser.py`, `backend/tests/test_dwr_parser.py`,
   `PROGRESS.md`.
-- **Pendientes**: commit + push del fix (avisaria: activa CI backend-ci); desplegar el fix en la VM
-  (`instance-renfe-notifier-android`) con la subida del backend; revalidar en el realme la
-  disponibilidad de 15:54 como "Sin plazas"; luego commit/push de README+PROGRESS si procede.
+
+## v0.2.3 (2026-09-23) - Fix DESPLEGADO en la VM (gcloud) + revalidacion backend
+
+- **Commit y push (main)**: commits `1cd5ca1` (fix parser + test + README/PROGRESS) y `a1913fd`
+  (ruff format del test). CI verde en `a1913fd`: backend-ci OK (gate all-checks-ok success),
+  android-ci OK. Nota: el primer push (`1cd5ca1`) dejo backend-ci en FAIL por `ruff format --check`
+  (test con comillas simples en 2 lineas); rectificado en `a1913fd` con `ruff format .` local y
+  re-push. CI correlativos: backend-ci 35817064046 OK, android-ci 35817064085 OK.
+- **Despliegue en la VM (gcloud) via workflow backend-cd** (run 35817275673, ambos jobs success):
+  disparado con DEPLOY_SHA=a1913fd3350bc49e5ed989b771a4bcd5330d480e y confirm='DEPLOY'. Log
+  transaccional del script deploy_backend.sh:
+  - Paso 1/5: Backup `/data/backups/backup_20260923_041145.db` verificado (SHA256
+    `40eae7fb9e0fbb21333427d4ff11fe22a4667b94f3f2b9472be439d3f41f6eab`).
+  - Paso 2/5: Checkout `899f740667a2ed3bc2fe3053f2e784b2cf27bc62` -> `a1913fd3350bc49e5ed989b771a4bcd5330d480e`.
+  - Paso 3/5: Migraciones aplicadas correctamente en `/data/renfe_notifier.db`.
+  - Paso 4/5: `systemctl restart renfe-notifier-backend` -> Servicio reiniciado.
+  - Paso 5/5: Health check 200 OK -> "=== DESPLIEGUE EXITOSO ===".
+- **Verificacion externa (local, sin tocar la VM)**: GET `http://34.26.252.164:8000/api/v1/diagnostics/health`
+  -> HTTP 200, `{"status":"ok","uptime_s":116.9}` (proceso nuevo tras el restart).
+- **Estado**: fix de disponibilidad desplegado y activo en produccion. La app del realme (v0.2.3,
+  codigo 15, ya instalada) consultara el backend nuevo: el tren 15:54 (con solo tarifas
+  `soloPlazasH`) deberia mostrar ahora "Sin plazas" en lugar de "Disponible".
+- **Pendientes**: revalidar en el realme la disponibilidad de 15:54 como "Sin plazas"
+  (consultar de nuevo la ruta Sevilla-Virgen del Rocio -> Jerez de la Frontera, plazas normales);
+  verificar que no queda ningun caso residual de la discrepancia (si Renfe vuelve a fluctuar,
+  confirmar contra la web). No se requieren mas consultas de backend.
