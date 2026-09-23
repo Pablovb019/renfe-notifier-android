@@ -83,3 +83,25 @@ def test_parser_counts_solo_plaza_h_when_plaza_h_requested() -> None:
     result_without_h = parse_train_list(payload, plaza_h_requested=False)
     assert result_without_h.trains[0].availability is Availability.NO_AVAILABILITY
     assert result_without_h.trains[1].availability is Availability.AVAILABLE
+
+
+def test_parser_rejects_train_with_only_plaza_h_fare_in_normal_search() -> None:
+    payload = (
+        'r.handleCallback("0", "0", {listadoTrenes: ['
+        "{listviajeViewEnlaceBean: ["
+        '{horaSalida: "15:54", horaLlegada: "16:54", tarifaMinima: "11,5", '
+        'tipoTrenUno: "MD", completo: false, razonNoDisponible: "8", soloPlazaH: false, '
+        'plazaHDisponible: false, '
+        'tarifasDisponibles: [{codigoTarifa: "VR010", plazaH: false, soloPlazasH: true}]}, '
+        '{horaSalida: "06:45", horaLlegada: "07:45", tarifaMinima: "11,5", '
+        'tipoTrenUno: "MD", completo: false, razonNoDisponible: "8", soloPlazaH: false, '
+        'plazaHDisponible: true, '
+        'tarifasDisponibles: [{codigoTarifa: "VR010", plazaH: true, soloPlazasH: false}]}'
+        "]}]});"
+    )
+
+    result = parse_train_list(payload, plaza_h_requested=False)
+
+    assert result.status is ParseStatus.OK
+    assert result.trains[0].availability is Availability.NO_AVAILABILITY
+    assert result.trains[1].availability is Availability.AVAILABLE

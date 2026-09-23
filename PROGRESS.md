@@ -1597,3 +1597,79 @@ uff check .: All checks passed.
 - **Verificacion local**: `testDebugUnitTest` (82), `lintDebug` y `assembleDebug` en verde (BUILD SUCCESSFUL en 20 s).
 - **Pendiente**: push a main (avisa que activa CI android-ci); build firmado v0.2.3; `adb install -r` en el realme; validacion visual del usuario.
 - **Nota**: el APK debug NO puede sobrescribir el release firmado instalado (firmas distintas -> `INSTALL_FAILED_UPDATE_INCOMPATIBLE`); para verlo en el realme se necesita el release firmado (mismo flujo que el icono).
+
+## v0.2.3 (2026-09-23) - Badge verde VALIDADO en realme (pixel) + publicacion release
+
+- **Validacion en dispositivo real (realme GT Neo 2, adb 1ecdc196, 1080x2400 @ 480dpi)**:
+  - Badge "Disponible" **CONFIRMADO en verde**: muestreo de pixel exacto en capturas sincronizadas
+    (`screencap`) -> bbox verde `x[768,982] y[1477,1502]`, color `rgb(0,82,46)` =
+    `#00522E` (DarkSuccessContainer). El dispositivo esta en modo oscuro (colores M3 dark).
+  - Mapeo dump->pantalla verificado: el bbox verde coincide con el badge "Disponible 06:45" del
+    dump uiautomator `[791,1489][960,1531]` (la captura es 1080x2400, el dump window 1080x2290;
+    en la practica el verde aparece en y~1477-1502, sin aplicar +110).
+  - Badge "Sin plazas" rojo: NO replicable en captura en vivo. El dump muestra "Sin plazas 14:51"
+    (`[796,1785][960,1827]`), pero el screencap (aunque se capture con `uiautomator dump && screencap`
+    en la misma shell) no muestra el rojo `DarkErrorContainer #93000A` (0 pixeles en 11 capturas):
+    Renfe fluctua la disponibilidad entre refrescos. El rojo queda garantizado por CODIGO+TEST:
+    `NO_AVAILABILITY -> BadgeType.ERROR -> colorScheme.errorContainer` (`SearchComponents.kt:335-338`,
+    `RenfeStatusBadge.kt:44`) y contraste AA verde/rojo cubierto en `ColorContrastTest`.
+  - Trace de capturas: green1, g2, g3, g5, sync, v, w, z, zz, s, f, q, r en
+    `C:\Users\pablo\AppData\Local\Temp\opencode\*.png` (hashes distintos -> descarta frame obsoleto).
+- **Release v0.2.3**: APK firmado del run `35795314444` (commit `a238f48`, main) ya instalado en el
+  realme (`install -r` Success, vinculacion conservada, versionCode 15). Pendiente tag + Release
+  GitHub (assets `app-release.apk` + `.sha256` del artifact `app-release-apk`).
+- **Cierre de release COMPLETADO**: tag anotado `v0.2.3` creado sobre `a238f48` (HEAD de main) y
+  pusheado -> disparo `android-release` (run `35815085492`, ambos jobs success; verifica CI previa:
+  backend-ci skipped/accepted, android-ci success, all-checks-ok success). Release privada "Release
+  v0.2.3" creada por `github-actions[bot]`
+  (https://github.com/Pablovb019/renfe-notifier-android/releases/tag/v0.2.3).
+  Assets verificados descargando de la Release: `app-release.apk` (**9.379.039 B**) y
+  `app-release.apk.sha256`. Checksum (leido del asset .sha256 y verificado con `Get-FileHash` local):
+  `de5719a741a7fa2bbee20df9a93bc0e5bcd85b11400e72741e8b57fa10823c21`.
+  README "Estado" actualizado a v0.2.3 (codigo 15, APK firmado + checksum).
+- **Pendiente**: subir la investigacion de la discrepancia de disponibilidad (app marca mas trenes
+  "Disponible" que la web de Renfe para Sevilla-Virgen del Rocio -> Jerez de la Frontera, plazas
+  normales; reproducido en realme con fecha 23/09: 06:45 Disponible, 14:51 Sin plazas, 15:54
+  Disponible). Analisis backend: `_parse_dwr_availability` en `parser.py` (base = no completo y
+  `razonNoDisponible in ("","8")` y tarifaMinima valida; luego gate `soloPlazaH`), replica de
+  `renfechecker.py:252-263`. Sin consultas reales a Renfe sin autorizacion (usar fixtures).
+
+## v0.2.3 (2026-09-23) - BUG de disponibilidad RESUELTO (tarifas `soloPlazasH`)
+
+- **Bug confirmado por comparacion REAL bot-vs-backend** (autorizada por el usuario: "lanza la misma
+  request con el backend y con el bot"). Consulta real de una sola vez con cliente requests del bot
+  original (`renfe-notifier-bot-2\python\renfechecker.py`, sin Selenium) y con `RenfeDwrClient` del
+  backend: Sevilla-Virgen del Rocio (51110) -> Jerez de la Frontera (51300), 25/09/2026, plazas
+  normales (`plaza_h=false`), 25/09/2026.
+- **Resultado antes del fix**: bot y backend daban EXACTAMENTE lo mismo (regla heredada clonada 1:1),
+  incluido el error: 06:45 Disponible, 15:54 Disponible. Evidencia en body DWR crudo (17.091 B)
+  guardado en temp para re-analisis sin consultas adicionales.
+- **Causa raiz**: la regla heredada solo miraba `soloPlazaH` a nivel de TREN. Renfe marca la tarifa
+  minima ofertada con `soloPlazasH:true` cuando las plazas NORMALES estan agotadas y solo quedan
+  plazas de la modalidad Plaza H. El tren de 15:54 tenia `soloPlazaH:false` (nivel tren) pero su
+  unica tarifa disponible tenia `soloPlazasH:true` -> la web no lo ofrece en plazas normales.
+- **Tabla de evidencia (6 trenes reales 25/09)**:
+  | Salida | tren `soloPlazaH` | tarifa `soloPlazasH` | tarifa `plazaH` | Web: disponible normal? |
+  |---|---|---|---|---|
+  | 06:45 | false | **false** | true | SI |
+  | 14:51 | true | true | true | NO |
+  | 15:54 | false | **true** | false | **NO** (antes SI) |
+  | 19:35 | false | (sin tarifas) | - | NO |
+  | 20:20 | true | true | true | NO |
+  | 20:20 | false | (sin tarifas) | - | NO |
+- **Fix** (`backend/app/renfe/parser.py` `_parse_dwr_availability`): tras `base_available`, si el tren
+  trae `tarifasDisponibles` (lista) -> `has_normal_fare = any(item.soloPlazasH is not True)`; si no
+  hay info de tarifas -> se conserva la regla heredada (`not soloPlazaH`). Dos ramas: con
+  `plaza_h_requested` se respeta que solo sean disponibles los trenes `soloPlazaH` (regla heredada
+  intacta); sin Plaza H -> `AVAILABLE` solo si `has_normal_fare`.
+- **Verificacion**: proceso el body DWR real capturado (sin nueva consulta) -> ahora 15:54 =
+  `no_availability`, solo 06:45 = `available`. Coincide con la web. Suite backend completa: 198
+  tests pass (`pytest`), `ruff check app tests` limpio. Anadido test de regresion
+  `test_parser_rejects_train_with_only_plaza_h_fare_in_normal_search` en `tests/test_dwr_parser.py`
+  (15:54 con tarifa `soloPlazasH:true` -> NO disponible; 06:45 con `soloPlazasH:false` ->
+  disponible).
+- **Archivos modificados**: `backend/app/renfe/parser.py`, `backend/tests/test_dwr_parser.py`,
+  `PROGRESS.md`.
+- **Pendientes**: commit + push del fix (avisaria: activa CI backend-ci); desplegar el fix en la VM
+  (`instance-renfe-notifier-android`) con la subida del backend; revalidar en el realme la
+  disponibilidad de 15:54 como "Sin plazas"; luego commit/push de README+PROGRESS si procede.

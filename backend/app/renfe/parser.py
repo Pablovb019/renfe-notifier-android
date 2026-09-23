@@ -198,23 +198,33 @@ def _parse_availability(row: dict[str, Any], plaza_h_requested: bool) -> Availab
 
 
 def _parse_dwr_availability(row: dict[str, Any], plaza_h_requested: bool) -> Availability:
-    """Disponibilidad del esquema real replicando la regla heredada de Plaza H.
+    """Disponibilidad del esquema real.
 
-    El bot original considera un tren disponible si base_available y, cuando se
-    solicitó Plaza H, solo los trenes ``soloPlazaH`` cuentan; sin Plaza H los
-    trenes ``soloPlazaH`` NO se consideran disponibles.
+    Un tren base_available (no completo, sin motivo de bloqueo y con tarifa
+    mínima) solo cuenta como disponible en una búsqueda normal si existe al
+    menos una tarifa ofertada con ``soloPlazasH false``: Renfe marca la tarifa
+    mínima como ``soloPlazasH true`` cuando las plazas normales están agotadas
+    y solo quedan plazas de la modalidad Plaza H. En ausencia de la lista de
+    tarifas se conserva la regla heredada basada en ``soloPlazaH`` del tren.
     """
     reason = str(row.get("razonNoDisponible") or "")
     fare = row.get("tarifaMinima")
     base_available = (
         not bool(row.get("completo")) and reason in ("", "8") and fare not in (None, "", "NaN")
     )
-    plaza_h_only = bool(row.get("soloPlazaH"))
     if not base_available:
         return Availability.NO_AVAILABILITY
+    plaza_h_only = bool(row.get("soloPlazaH"))
+    fares = row.get("tarifasDisponibles")
+    if isinstance(fares, list):
+        has_normal_fare = any(
+            isinstance(item, dict) and item.get("soloPlazasH") is not True for item in fares
+        )
+    else:
+        has_normal_fare = not plaza_h_only
     if plaza_h_requested:
         return Availability.AVAILABLE if plaza_h_only else Availability.NO_AVAILABILITY
-    return Availability.AVAILABLE if not plaza_h_only else Availability.NO_AVAILABILITY
+    return Availability.AVAILABLE if has_normal_fare else Availability.NO_AVAILABILITY
 
 
 def _string_value(value: Any) -> str | None:
